@@ -101,17 +101,17 @@
           <div id="detailNotes" class="bg-slate-955 p-3 rounded-lg border border-slate-800 text-slate-300 min-h-[50px] whitespace-pre-wrap"></div>
         </div>
 
-        <!-- Foto & Allegati -->
+        <!-- Foto & Documenti (Supporto Foto e PDF) -->
         <div>
           <div class="flex justify-between items-center mb-2">
-            <label class="text-xs text-slate-400 font-semibold uppercase tracking-wider block">Foto & Documenti (Tocca per ingrandire)</label>
+            <label class="text-xs text-slate-400 font-semibold uppercase tracking-wider block">Foto & Documenti PDF (Tocca per aprire)</label>
             <label class="bg-slate-800 hover:bg-slate-700 text-xs px-3 py-1.5 rounded-lg cursor-pointer flex items-center gap-1.5 text-slate-200">
-              <i data-lucide="camera" class="w-3.5 h-3.5"></i> Scatta / Allega
-              <input type="file" id="photoInput" accept="image/*" multiple class="hidden" onchange="handlePhotoUpload(event)">
+              <i data-lucide="paperclip" class="w-3.5 h-3.5"></i> Allega Foto / PDF
+              <input type="file" id="photoInput" accept="image/*,.pdf" multiple class="hidden" onchange="handleDocumentUpload(event)">
             </label>
           </div>
           <div id="attachmentsContainer" class="grid grid-cols-4 gap-2 bg-slate-950 p-2 rounded-lg border border-slate-800 max-h-36 overflow-y-auto">
-            <!-- Miniature foto -->
+            <!-- Miniature allegati -->
           </div>
         </div>
 
@@ -218,12 +218,12 @@
     </div>
   </div>
 
-  <!-- MODAL: GALLERIA FOTO -->
+  <!-- MODAL: VISUALIZZATORE MEDIA (FOTO E PDF) -->
   <div id="galleryModal" class="hidden fixed inset-0 bg-black/95 z-[60] flex flex-col items-center justify-center select-none">
     <div class="absolute top-0 w-full p-4 flex justify-between items-center z-10 bg-gradient-to-b from-black/80 to-transparent">
       <div id="galleryCounter" class="text-white font-mono text-sm font-bold bg-black/50 px-3 py-1 rounded-full"></div>
       <div class="flex gap-4">
-        <button onclick="rotateGalleryImage()" class="text-white p-2 bg-slate-800 hover:bg-slate-700 rounded-full transition-colors" title="Ruota immagine">
+        <button id="btnRotate" onclick="rotateGalleryImage()" class="text-white p-2 bg-slate-800 hover:bg-slate-700 rounded-full transition-colors" title="Ruota immagine">
           <i data-lucide="rotate-cw" class="w-5 h-5"></i>
         </button>
         <button onclick="closeGallery()" class="text-white p-2 bg-slate-800 hover:bg-slate-700 rounded-full transition-colors" title="Chiudi">
@@ -232,7 +232,9 @@
       </div>
     </div>
     <div class="relative w-full h-full flex items-center justify-center p-4">
-      <img id="galleryImage" src="" class="max-w-full max-h-[85vh] object-contain transition-transform duration-300">
+      <img id="galleryImage" src="" class="max-w-full max-h-[85vh] object-contain transition-transform duration-300 hidden">
+      <iframe id="galleryPdf" src="" class="w-full h-[85vh] bg-white rounded-lg hidden"></iframe>
+      
       <button onclick="prevGalleryImage()" class="absolute left-4 top-1/2 -translate-y-1/2 text-white p-3 bg-slate-800/80 hover:bg-slate-700 rounded-full transition-colors" id="btnPrevGallery">
         <i data-lucide="chevron-left" class="w-6 h-6"></i>
       </button>
@@ -359,7 +361,7 @@
       db.collection('workflow_sga_cards').doc(card.id).set(card).catch(err => {
          console.error("Errore Cloud:", err);
          if (err.message && err.message.includes('exceed')) {
-             alert("ATTENZIONE: Questa commessa contiene troppe foto ed è troppo pesante per il Cloud.");
+             alert("ATTENZIONE: Questa commessa contiene troppi allegati ed è troppo pesante per il Cloud.");
          }
       });
     }
@@ -399,7 +401,8 @@
       if (!card) return null;
       if (!Array.isArray(card.photos)) card.photos = [];
       card.photos = card.photos.map(p => {
-        if (typeof p === 'string') return { image: p, rotation: 0 };
+        if (typeof p === 'string') return { image: p, rotation: 0, type: 'image' };
+        if (!p.type) p.type = 'image';
         return p;
       });
       if (!Array.isArray(card.history)) card.history = [];
@@ -511,11 +514,14 @@
       const badgeStyle = getJobTypeClass(card.jobType);
       const thumbnailHTML = card.photos && card.photos.length > 0 
         ? `<div class="mt-2 flex gap-1 overflow-hidden h-10">
-             ${card.photos.map(p => `
-                <div class="w-10 h-10 shrink-0 overflow-hidden rounded border border-slate-700 bg-slate-900 flex items-center justify-center">
-                  <img src="${p.image}" style="transform: rotate(${p.rotation || 0}deg);" class="min-w-full min-h-full object-cover">
-                </div>
-             `).join('')}
+             ${card.photos.map(p => {
+               if (p.type === 'pdf') {
+                 return `<div class="w-10 h-10 shrink-0 rounded border border-slate-700 bg-red-950/50 flex flex-col items-center justify-center text-red-400 font-bold text-[9px]">PDF</div>`;
+               }
+               return `<div class="w-10 h-10 shrink-0 overflow-hidden rounded border border-slate-700 bg-slate-900 flex items-center justify-center">
+                 <img src="${p.image}" style="transform: rotate(${p.rotation || 0}deg);" class="min-w-full min-h-full object-cover">
+               </div>`;
+             }).join('')}
            </div>` 
         : '';
       const cardIdShort = card.id ? card.id.slice(-4).toUpperCase() : '0000';
@@ -668,34 +674,58 @@
         card.photos.forEach((photoObj, index) => {
           const thumb = document.createElement('div');
           thumb.className = "relative group w-full h-24 bg-slate-900 rounded border border-slate-700 overflow-hidden flex items-center justify-center cursor-pointer";
-          thumb.innerHTML = `
-            <img src="${photoObj.image}" onclick="openGallery(${index})" style="transform: rotate(${photoObj.rotation || 0}deg);" class="min-w-full min-h-full object-cover transition-transform duration-300">
-            <button onclick="removePhoto(event, ${index})" class="absolute top-1 right-1 bg-red-600/90 hover:bg-red-500 text-white p-1.5 rounded-md shadow-lg active:scale-90 opacity-0 group-hover:opacity-100 transition-opacity"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
-          `;
+          
+          if (photoObj.type === 'pdf') {
+            thumb.innerHTML = `
+              <div onclick="openGallery(${index})" class="w-full h-full flex flex-col items-center justify-center bg-red-950/30 text-red-400">
+                <i data-lucide="file-text" class="w-8 h-8 mb-1"></i>
+                <span class="text-[10px] font-bold">PDF #${index + 1}</span>
+              </div>
+              <button onclick="removePhoto(event, ${index})" class="absolute top-1 right-1 bg-red-600/95 hover:bg-red-500 text-white p-1.5 rounded-md shadow-lg active:scale-90 opacity-0 group-hover:opacity-100 transition-opacity"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+            `;
+          } else {
+            thumb.innerHTML = `
+              <img src="${photoObj.image}" onclick="openGallery(${index})" style="transform: rotate(${photoObj.rotation || 0}deg);" class="min-w-full min-h-full object-cover transition-transform duration-300">
+              <button onclick="removePhoto(event, ${index})" class="absolute top-1 right-1 bg-red-600/95 hover:bg-red-500 text-white p-1.5 rounded-md shadow-lg active:scale-90 opacity-0 group-hover:opacity-100 transition-opacity"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+            `;
+          }
           container.appendChild(thumb);
         });
         lucide.createIcons();
       } else {
-        container.innerHTML = `<div class="col-span-4 flex flex-col items-center justify-center py-6 text-slate-500 border border-dashed border-slate-800 rounded-lg bg-slate-950/50"><i data-lucide="image-off" class="w-6 h-6 mb-2 opacity-50"></i><span class="text-xs italic">Nessuna foto</span></div>`;
+        container.innerHTML = `<div class="col-span-4 flex flex-col items-center justify-center py-6 text-slate-500 border border-dashed border-slate-800 rounded-lg bg-slate-950/50"><i data-lucide="file-question" class="w-6 h-6 mb-2 opacity-50"></i><span class="text-xs italic">Nessun file o foto allegata</span></div>`;
       }
     }
 
-    function handlePhotoUpload(event) {
+    // CARICAMENTO FOTO O PDF
+    function handleDocumentUpload(event) {
       const files = Array.from(event.target.files);
       if (!files || files.length === 0) return;
       const card = state.cards.find(c => c.id === activeCardId);
       if (!card) return;
       if (!card.photos) card.photos = [];
 
-      Promise.all(files.map(file => compressImage(file))).then(compressedImages => {
-        compressedImages.forEach(imgData => {
-          card.photos.push({ image: imgData, rotation: 0 });
+      const promises = files.map(file => {
+        return new Promise((resolve) => {
+          if (file.type === 'application/pdf') {
+            const reader = new FileReader();
+            reader.onload = (e) => resolve({ image: e.target.result, rotation: 0, type: 'pdf' });
+            reader.readAsDataURL(file);
+          } else {
+            compressImage(file).then(imgData => {
+              resolve({ image: imgData, rotation: 0, type: 'image' });
+            }).catch(() => resolve(null));
+          }
+        });
+      });
+
+      Promise.all(promises).then(results => {
+        results.forEach(item => {
+          if (item) card.photos.push(item);
         });
         saveLocal();
         renderAttachments(card);
         syncCardToCloud(card);
-      }).catch(err => {
-        alert("Errore durante l'elaborazione dell'immagine.");
       });
       event.target.value = '';
     }
@@ -713,16 +743,36 @@
       }
     }
 
-    function openGallery(index) { currentGalleryIndex = index; updateGalleryView(); openModal('galleryModal'); }
+    function openGallery(index) {
+      currentGalleryIndex = index;
+      updateGalleryView();
+      openModal('galleryModal');
+    }
+
     function closeGallery() { closeModal('galleryModal'); }
 
     function updateGalleryView() {
       const card = state.cards.find(c => c.id === activeCardId);
       if (!card || !card.photos || card.photos.length === 0) return closeGallery();
-      const photo = card.photos[currentGalleryIndex];
+      const item = card.photos[currentGalleryIndex];
+      
       const imgEl = document.getElementById('galleryImage');
-      imgEl.src = photo.image;
-      imgEl.style.transform = `rotate(${photo.rotation || 0}deg)`;
+      const pdfEl = document.getElementById('galleryPdf');
+      const btnRotate = document.getElementById('btnRotate');
+
+      if (item.type === 'pdf') {
+        imgEl.classList.add('hidden');
+        pdfEl.classList.remove('hidden');
+        btnRotate.style.display = 'none';
+        pdfEl.src = item.image;
+      } else {
+        pdfEl.classList.add('hidden');
+        imgEl.classList.remove('hidden');
+        btnRotate.style.display = 'block';
+        imgEl.src = item.image;
+        imgEl.style.transform = `rotate(${item.rotation || 0}deg)`;
+      }
+
       document.getElementById('galleryCounter').innerText = `${currentGalleryIndex + 1} / ${card.photos.length}`;
       document.getElementById('btnPrevGallery').style.display = currentGalleryIndex === 0 ? 'none' : 'block';
       document.getElementById('btnNextGallery').style.display = currentGalleryIndex === card.photos.length - 1 ? 'none' : 'block';
@@ -737,12 +787,14 @@
     function rotateGalleryImage() {
       const card = state.cards.find(c => c.id === activeCardId);
       if (!card || !card.photos) return;
-      const photo = card.photos[currentGalleryIndex];
-      photo.rotation = ((photo.rotation || 0) + 90) % 360;
-      saveLocal(); 
-      updateGalleryView(); 
-      renderAttachments(card);
-      syncCardToCloud(card);
+      const item = card.photos[currentGalleryIndex];
+      if(item.type !== 'pdf') {
+        item.rotation = ((item.rotation || 0) + 90) % 360;
+        saveLocal(); 
+        updateGalleryView(); 
+        renderAttachments(card);
+        syncCardToCloud(card);
+      }
     }
 
     function deleteCurrentCard() {
@@ -754,10 +806,12 @@
       }
     }
 
+    // STAMPA PROFESSIONALE CON ALLEGATI VERTICALI IN PAGINE SEPARATE
     function printCard() {
       const card = state.cards.find(c => c.id === activeCardId);
       if (!card) return;
       const printWindow = window.open('', '_blank');
+
       const historyHtml = (card.history || []).map((h, i) => {
         return `<div style="margin-bottom: 12px; padding-left: 20px; border-left: 2px solid #cbd5e1; position: relative;">
                   <div style="position: absolute; left: -6px; top: 2px; width: 10px; height: 10px; border-radius: 50%; background: #475569;"></div>
@@ -765,15 +819,34 @@
                   <div style="font-size: 11px; color: #64748b;">Data: ${new Date(h.timestamp).toLocaleString('it-IT')}</div>
                 </div>`;
       }).join('');
-      const imagesHtml = card.photos && card.photos.length > 0 
-        ? `<div style="display: flex; gap: 15px; flex-wrap: wrap; margin-top: 15px;">
-             ${card.photos.map(p => `
-               <div style="width: 200px; height: 200px; border: 1px solid #e2e8f0; border-radius: 6px; display: flex; align-items: center; justify-content: center; overflow: hidden; background: #f8fafc;">
-                 <img src="${p.image}" style="max-width: 100\%; max-height: 100\%; object-fit: contain; transform: rotate(${p.rotation || 0}deg);">
-               </div>
-             `).join('')}
-           </div>`
-        : '<div style="font-size: 12px; color: #94a3b8; font-style: italic;">Nessuna foto</div>';
+
+      // Generazione pagine separate in verticale per ciascun allegato
+      let attachmentsPrintHtml = '';
+      if (card.photos && card.photos.length > 0) {
+        attachmentsPrintHtml = card.photos.map((p, idx) => {
+          if (p.type === 'pdf') {
+            return `<div class="print-page">
+                      <div class="print-header">
+                        <div class="logo-text">SGA STUDIO GRAFICO ASSOCIATO</div>
+                        <h2 style="font-size: 20px; margin: 0; color: #1e293b; text-transform: uppercase;">ALLEGATO PDF #${idx + 1}</h2>
+                        <div style="font-size: 12px; color: #64748b;">Commessa #${card.id.slice(-4).toUpperCase()} - ${card.title}</div>
+                      </div>
+                      <div class="pdf-notice">Documento PDF Allegato (Consultare il file digitale originale)</div>
+                    </div>`;
+          } else {
+            return `<div class="print-page">
+                      <div class="print-header">
+                        <div class="logo-text">SGA STUDIO GRAFICO ASSOCIATO</div>
+                        <h2 style="font-size: 20px; margin: 0; color: #1e293b; text-transform: uppercase;">ALLEGATO FOTOGRAFICO #${idx + 1}</h2>
+                        <div style="font-size: 12px; color: #64748b;">Commessa #${card.id.slice(-4).toUpperCase()} - ${card.title}</div>
+                      </div>
+                      <div class="image-container">
+                        <img src="${p.image}" style="transform: rotate(${p.rotation || 0}deg);">
+                      </div>
+                    </div>`;
+          }
+        }).join('');
+      }
 
       printWindow.document.write(`
         <html><head><title>Commessa SGA #${card.id.slice(-4).toUpperCase()}</title><style>
@@ -788,20 +861,29 @@
           .details label { font-size: 10px; color: #64748b; font-weight: bold; display: block; text-transform: uppercase; margin-bottom: 4px; }
           .details strong { font-size: 14px; color: #0f172a; }
           .notes-box { background: #f8fafc; border: 1px solid #e2e8f0; padding: 15px; border-radius: 6px; font-size: 13px; line-height: 1.6; min-height: 60px; white-space: pre-wrap; color: #334155; }
+          
+          /* Stili di stampa per pagine separate in verticale */
+          .print-page { page-break-before: always; break-before: page; height: 100vh; display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box; padding-top: 20px; padding-bottom: 20px; }
+          .print-header { border-bottom: 2px solid #4f46e5; padding-bottom: 15px; margin-bottom: 20px; }
+          .image-container { flex: 1; display: flex; align-items: center; justify-content: center; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; padding: 10px; }
+          .image-container img { max-width: 100%; max-height: 75vh; object-fit: contain; }
+          .pdf-notice { flex: 1; display: flex; align-items: center; justify-content: center; background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; color: #b91c1c; font-weight: bold; font-size: 18px; text-align: center; padding: 20px; }
         </style></head><body>
-          <div class="header"><div style="display: flex; justify-content: space-between; align-items: start;">
-            <div><div class="logo-text">SGA STUDIO GRAFICO ASSOCIATO</div><h1 class="title">SCHEDA COMMESSA</h1><span class="badge">STATO: ${COLUMNS_CONFIG.find(col => col.id === card.stage)?.label.toUpperCase() || card.stage}</span></div>
-            <div style="text-align: right; font-size: 12px; color: #64748b; line-height: 1.5;">Rif. Ordine: <strong style="color: #0f172a;">#${card.id.slice(-4).toUpperCase()}</strong><br>Data Creazione: <strong style="color: #0f172a;">${new Date(card.createdAt).toLocaleDateString('it-IT')}</strong></div>
-          </div></div>
-          <div class="details">
-            <div><label>Cliente / Titolo</label><strong>${card.title}</strong></div>
-            <div><label>Tipo Lavorazione</label><strong>${card.jobType}</strong></div>
-            <div style="grid-column: span 2;"><label>Referente / Contatto</label><strong>${card.client || 'Nessun referente'}</strong></div>
+          <div>
+            <div class="header"><div style="display: flex; justify-content: space-between; align-items: start;">
+              <div><div class="logo-text">SGA STUDIO GRAFICO ASSOCIATO</div><h1 class="title">SCHEDA COMMESSA</h1><span class="badge">STATO: ${COLUMNS_CONFIG.find(col => col.id === card.stage)?.label.toUpperCase() || card.stage}</span></div>
+              <div style="text-align: right; font-size: 12px; color: #64748b; line-height: 1.5;">Rif. Ordine: <strong style="color: #0f172a;">#${card.id.slice(-4).toUpperCase()}</strong><br>Data Creazione: <strong style="color: #0f172a;">${new Date(card.createdAt).toLocaleDateString('it-IT')}</strong></div>
+            </div></div>
+            <div class="details">
+              <div><label>Cliente / Titolo</label><strong>${card.title}</strong></div>
+              <div><label>Tipo Lavorazione</label><strong>${card.jobType}</strong></div>
+              <div style="grid-column: span 2;"><label>Referente / Contatto</label><strong>${card.client || 'Nessun referente'}</strong></div>
+            </div>
+            <div class="section-title">Note di Lavoro</div><div class="notes-box">${card.notes || '-'}</div>
+            <div class="section-title" style="margin-top: 40px;">Storyboard Lavorazione</div>
+            <div style="margin-top: 15px; background: #f8fafc; padding: 15px; border-radius: 6px; border: 1px solid #e2e8f0;">${historyHtml}</div>
           </div>
-          <div class="section-title">Note di Lavoro</div><div class="notes-box">${card.notes || '-'}</div>
-          <div class="section-title">Documenti e Immagini</div>${imagesHtml}
-          <div class="section-title" style="margin-top: 40px;">Storyboard Lavorazione</div>
-          <div style="margin-top: 15px; background: #f8fafc; padding: 15px; border-radius: 6px; border: 1px solid #e2e8f0;">${historyHtml}</div>
+          ${attachmentsPrintHtml}
           <script>window.onload = function(){ setTimeout(function(){ window.print(); }, 500); };<\/script>
         </body></html>
       `);
