@@ -17,7 +17,7 @@
     ::-webkit-scrollbar-thumb { background: #475569; border-radius: 3px; }
     .board-column { min-width: 280px; max-width: 280px; }
     /* Impedisce lo zoom al doppio tap su iOS */
-    touch-action: manipulation;
+    * { touch-action: manipulation; }
   </style>
 </head>
 <body class="bg-slate-950 text-slate-100 font-sans h-screen flex flex-col overflow-hidden">
@@ -86,7 +86,7 @@
               <input type="text" id="editClient" class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-1.5 text-slate-200 text-sm focus:outline-none focus:border-indigo-500">
             </div>
             <div>
-              <label class="text-[10px] text-slate-400 font-semibold uppercase tracking-wider block mb-1">Tipo Lavoro</label>
+              <label class="text-[10px] text-indigo-400 font-semibold uppercase tracking-wider block mb-1">Tipo Lavoro</label>
               <p id="detailJobType" class="text-sm font-medium text-slate-300 py-1.5">-</p>
             </div>
           </div>
@@ -244,7 +244,6 @@
 
   <!-- SCRIPT -->
   <script>
-    // 12 Fasi del workflow (aggiornato "In lavorazione")
     const COLUMNS_CONFIG = [
       { id: "prev-da-fare", label: "Prev. da fare", color: "bg-orange-600/20 border-orange-500/50 text-orange-400", border: "border-l-4 border-l-orange-500" },
       { id: "prev-inviato", label: "Prev. inviato", color: "bg-amber-600/20 border-amber-500/50 text-amber-400", border: "border-l-4 border-l-amber-500" },
@@ -264,7 +263,6 @@
     let currentGalleryIndex = 0;
     let db = null; 
 
-    // ----- GESTIONE CLOUD FIREBASE -----
     function initFirebase() {
       const cfgStr = localStorage.getItem('workflow_sga_firebase_config');
       if (!cfgStr) {
@@ -607,7 +605,6 @@
       closeModal('addCardModal');
     }
 
-    // MODIFICA DATI COMMESSA ESISTENTE
     function saveCardEdits() {
       const card = state.cards.find(c => c.id === activeCardId);
       if (!card) return;
@@ -637,7 +634,6 @@
       badge.textContent = currentStageObj ? currentStageObj.label : 'N/A';
       badge.className = `px-2 py-0.5 rounded text-[11px] font-bold text-white uppercase ${currentStageObj ? currentStageObj.color.split(' ')[0] : 'bg-slate-700'}`;
       
-      // Popola i campi editabili nel modale
       document.getElementById('editTitle').value = card.title || '';
       document.getElementById('editClient').value = card.client || '';
       document.getElementById('detailJobType').textContent = card.jobType || '-';
