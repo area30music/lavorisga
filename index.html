@@ -16,7 +16,6 @@
     ::-webkit-scrollbar-track { background: #1e293b; }
     ::-webkit-scrollbar-thumb { background: #475569; border-radius: 3px; }
     .board-column { min-width: 280px; max-width: 280px; }
-    /* Impedisce lo zoom al doppio tap su iOS */
     * { touch-action: manipulation; }
   </style>
 </head>
@@ -37,7 +36,6 @@
     </div>
     
     <div class="flex space-x-2 items-center">
-      <!-- Sistema di Backup -->
       <button onclick="exportBackup()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 active:scale-95 transition-transform" title="Scarica un file di sicurezza">
         <i data-lucide="download-cloud" class="w-4 h-4"></i> Backup
       </button>
@@ -48,7 +46,6 @@
       
       <div class="w-px h-6 bg-slate-700 mx-1"></div>
       
-      <!-- Nuova Commessa -->
       <button onclick="openModal('addCardModal')" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 active:scale-95 transition-transform shadow-lg shadow-indigo-900/20">
         <i data-lucide="plus" class="w-4 h-4"></i> Nuova Commessa
       </button>
@@ -57,10 +54,10 @@
 
   <!-- WORKSPACE A SCORRIMENTO ORIZZONTALE -->
   <main id="board" class="flex-1 overflow-x-auto overflow-y-hidden flex gap-4 p-4 items-start select-none">
-    <!-- Le colonne verranno generate qui via JS -->
+    <!-- Colonne generate via JS -->
   </main>
 
-  <!-- MODAL: DETTAGLIO SCHEDA / STORIA / ALLEGATI & MODIFICA -->
+  <!-- MODAL: DETTAGLIO SCHEDA -->
   <div id="detailModal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
     <div class="bg-slate-900 border border-slate-800 rounded-xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden shadow-2xl">
       <div class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-850">
@@ -74,7 +71,7 @@
       </div>
       
       <div class="p-5 overflow-y-auto space-y-5 flex-1 text-sm">
-        <!-- Modifica Titolo, Cliente e Referente -->
+        <!-- Modifica Anagrafica (Titolo e Cliente) -->
         <div class="space-y-3 bg-slate-950 p-3.5 rounded-lg border border-slate-800">
           <div>
             <label class="text-[10px] text-indigo-400 font-semibold uppercase tracking-wider block mb-1">Cliente / Titolo Progetto (Modificabile)</label>
@@ -95,26 +92,26 @@
           </button>
         </div>
 
-        <!-- Modifica Note & Specifiche -->
+        <!-- Modifica Note & Specifiche in qualsiasi momento -->
         <div class="space-y-2 bg-slate-950 p-3.5 rounded-lg border border-slate-800">
           <label class="text-[10px] text-indigo-400 font-semibold uppercase tracking-wider block">Dettagli & Note (Modificabili in ogni momento)</label>
           <textarea id="editNotes" rows="3" class="w-full bg-slate-900 border border-slate-700 rounded p-2.5 text-slate-200 text-sm focus:outline-none focus:border-indigo-500 resize-none"></textarea>
           <button onclick="saveNotesEdits()" class="bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-300 border border-indigo-500/30 text-xs px-3 py-1.5 rounded font-semibold flex items-center gap-1.5 transition-colors">
-            <i data-lucide="save" class="w-3.5 h-3.5"></i> Aggiorna Note
+            <i data-lucide="save" class="w-3.5 h-3.5"></i> Aggiorna Note e Specifiche
           </button>
         </div>
 
-        <!-- Foto & Documenti (Supporto Foto e PDF) -->
+        <!-- Foto & Documenti PDF -->
         <div>
           <div class="flex justify-between items-center mb-2">
-            <label class="text-xs text-slate-400 font-semibold uppercase tracking-wider block">Foto & Documenti PDF (Tocca per aprire)</label>
+            <label class="text-xs text-slate-400 font-semibold uppercase tracking-wider block">Foto & Documenti PDF (Tocca per visualizzare)</label>
             <label class="bg-slate-800 hover:bg-slate-700 text-xs px-3 py-1.5 rounded-lg cursor-pointer flex items-center gap-1.5 text-slate-200">
               <i data-lucide="paperclip" class="w-3.5 h-3.5"></i> Allega Foto / PDF
               <input type="file" id="photoInput" accept="image/*,.pdf" multiple class="hidden" onchange="handleDocumentUpload(event)">
             </label>
           </div>
           <div id="attachmentsContainer" class="grid grid-cols-4 gap-2 bg-slate-950 p-2 rounded-lg border border-slate-800 max-h-36 overflow-y-auto">
-            <!-- Miniature allegati -->
+            <!-- Miniature -->
           </div>
         </div>
 
@@ -144,7 +141,7 @@
     </div>
   </div>
 
-  <!-- MODAL: AGGIUNGI NUOVA COMMESSA -->
+  <!-- MODAL: NUOVA COMMESSA -->
   <div id="addCardModal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
     <div class="bg-slate-900 border border-slate-800 rounded-xl w-full max-w-md p-5 shadow-2xl">
       <div class="flex justify-between items-center mb-4">
@@ -221,11 +218,14 @@
     </div>
   </div>
 
-  <!-- MODAL: VISUALIZZATORE MEDIA (FOTO E PDF) -->
+  <!-- MODAL: VISUALIZZATORE IMMAGINI / PDF -->
   <div id="galleryModal" class="hidden fixed inset-0 bg-black/95 z-[60] flex flex-col items-center justify-center select-none">
     <div class="absolute top-0 w-full p-4 flex justify-between items-center z-10 bg-gradient-to-b from-black/80 to-transparent">
       <div id="galleryCounter" class="text-white font-mono text-sm font-bold bg-black/50 px-3 py-1 rounded-full"></div>
-      <div class="flex gap-4">
+      <div class="flex gap-4 items-center">
+        <a id="downloadPdfBtn" href="#" target="_blank" class="hidden text-white px-3 py-1.5 bg-red-600 hover:bg-red-500 rounded-lg text-xs font-semibold flex items-center gap-1.5">
+          <i data-lucide="download" class="w-4 h-4"></i> Apri PDF
+        </a>
         <button id="btnRotate" onclick="rotateGalleryImage()" class="text-white p-2 bg-slate-800 hover:bg-slate-700 rounded-full transition-colors" title="Ruota immagine">
           <i data-lucide="rotate-cw" class="w-5 h-5"></i>
         </button>
@@ -236,7 +236,14 @@
     </div>
     <div class="relative w-full h-full flex items-center justify-center p-4">
       <img id="galleryImage" src="" class="max-w-full max-h-[85vh] object-contain transition-transform duration-300 hidden">
-      <iframe id="galleryPdf" src="" class="w-full h-[85vh] bg-white rounded-lg hidden"></iframe>
+      <div id="galleryPdfContainer" class="hidden flex flex-col items-center justify-center text-center p-6 bg-slate-900 border border-slate-800 rounded-xl max-w-md w-full">
+        <i data-lucide="file-text" class="w-16 h-16 text-red-500 mb-3"></i>
+        <h4 class="font-bold text-lg text-white mb-2">Documento PDF Allegato</h4>
+        <p class="text-xs text-slate-400 mb-4">Puoi aprire o scaricare il documento PDF originale per visualizzarlo a pieno schermo.</p>
+        <a id="viewPdfModalBtn" href="#" target="_blank" class="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold px-4 py-2 rounded-lg text-sm flex items-center gap-2">
+          <i data-lucide="external-link" class="w-4 h-4"></i> Apri PDF in nuova scheda
+        </a>
+      </div>
       
       <button onclick="prevGalleryImage()" class="absolute left-4 top-1/2 -translate-y-1/2 text-white p-3 bg-slate-800/80 hover:bg-slate-700 rounded-full transition-colors" id="btnPrevGallery">
         <i data-lucide="chevron-left" class="w-6 h-6"></i>
@@ -363,9 +370,6 @@
       if (!db || !card) return;
       db.collection('workflow_sga_cards').doc(card.id).set(card).catch(err => {
          console.error("Errore Cloud:", err);
-         if (err.message && err.message.includes('exceed')) {
-             alert("ATTENZIONE: Questa commessa contiene troppi allegati ed è troppo pesante per il Cloud.");
-         }
       });
     }
 
@@ -614,35 +618,27 @@
       closeModal('addCardModal');
     }
 
-    // MODIFICA ANAGRAFICA COMMESSA
+    // SALVATAGGIO ANAGRAFICA (Titolo e Cliente)
     function saveCardEdits() {
       const card = state.cards.find(c => c.id === activeCardId);
       if (!card) return;
-
       const newTitle = document.getElementById('editTitle').value.trim();
       const newClient = document.getElementById('editClient').value.trim();
-
-      if (!newTitle) {
-        alert("Il titolo / cliente non può essere vuoto.");
-        return;
-      }
+      if (!newTitle) return alert("Il titolo / cliente non può essere vuoto.");
 
       card.title = newTitle;
       card.client = newClient;
-
       saveLocal();
       syncCardToCloud(card);
       alert("Anagrafica commessa aggiornata con successo!");
     }
 
-    // MODIFICA NOTE COMMESSA
+    // SALVATAGGIO NOTE (Modificabili in qualsiasi momento)
     function saveNotesEdits() {
       const card = state.cards.find(c => c.id === activeCardId);
       if (!card) return;
-
       const newNotes = document.getElementById('editNotes').value.trim();
       card.notes = newNotes;
-
       saveLocal();
       syncCardToCloud(card);
       alert("Note e specifiche aggiornate con successo!");
@@ -773,18 +769,23 @@
       const item = card.photos[currentGalleryIndex];
       
       const imgEl = document.getElementById('galleryImage');
-      const pdfEl = document.getElementById('galleryPdf');
+      const pdfContainer = document.getElementById('galleryPdfContainer');
       const btnRotate = document.getElementById('btnRotate');
+      const downloadPdfBtn = document.getElementById('downloadPdfBtn');
+      const viewPdfModalBtn = document.getElementById('viewPdfModalBtn');
 
       if (item.type === 'pdf') {
         imgEl.classList.add('hidden');
-        pdfEl.classList.remove('hidden');
+        pdfContainer.classList.remove('hidden');
         btnRotate.style.display = 'none';
-        pdfEl.src = item.image;
+        downloadPdfBtn.classList.remove('hidden');
+        downloadPdfBtn.href = item.image;
+        viewPdfModalBtn.href = item.image;
       } else {
-        pdfEl.classList.add('hidden');
+        pdfContainer.classList.add('hidden');
         imgEl.classList.remove('hidden');
         btnRotate.style.display = 'block';
+        downloadPdfBtn.classList.add('hidden');
         imgEl.src = item.image;
         imgEl.style.transform = `rotate(${item.rotation || 0}deg)`;
       }
@@ -792,6 +793,7 @@
       document.getElementById('galleryCounter').innerText = `${currentGalleryIndex + 1} / ${card.photos.length}`;
       document.getElementById('btnPrevGallery').style.display = currentGalleryIndex === 0 ? 'none' : 'block';
       document.getElementById('btnNextGallery').style.display = currentGalleryIndex === card.photos.length - 1 ? 'none' : 'block';
+      lucide.createIcons();
     }
 
     function prevGalleryImage() { if (currentGalleryIndex > 0) { currentGalleryIndex--; updateGalleryView(); } }
@@ -822,7 +824,7 @@
       }
     }
 
-    // STAMPA PROFESSIONALE CON ANTEPRIMA PDF INTEGRATA E FOTO VERTICALI
+    // STAMPA PROFESSIONALE CON VISUALIZZAZIONE DIRETTA DEI PDF E FOTO VERTICALI
     function printCard() {
       const card = state.cards.find(c => c.id === activeCardId);
       if (!card) return;
@@ -846,8 +848,10 @@
                         <h2 style="font-size: 20px; margin: 0; color: #1e293b; text-transform: uppercase;">ALLEGATO PDF #${idx + 1}</h2>
                         <div style="font-size: 12px; color: #64748b;">Commessa #${card.id.slice(-4).toUpperCase()} - ${card.title}</div>
                       </div>
-                      <div class="pdf-container">
-                        <iframe src="${p.image}" style="width:100%; height:100%; border:none;"></iframe>
+                      <div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; text-align: center;">
+                        <h3 style="font-size: 18px; color: #1e293b; margin-bottom: 10px;">Documento PDF Integrato</h3>
+                        <p style="font-size: 13px; color: #64748b; margin-bottom: 20px;">Questo allegato è un file PDF ufficiale associato alla commessa.</p>
+                        <a href="${p.image}" target="_blank" style="background: #4f46e5; color: white; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 14px;">Apri / Stampa PDF Originale</a>
                       </div>
                     </div>`;
           } else {
@@ -883,7 +887,6 @@
           .print-header { border-bottom: 2px solid #4f46e5; padding-bottom: 15px; margin-bottom: 20px; }
           .image-container { flex: 1; display: flex; align-items: center; justify-content: center; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; padding: 10px; }
           .image-container img { max-width: 100%; max-height: 75vh; object-fit: contain; }
-          .pdf-container { flex: 1; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; }
         </style></head><body>
           <div>
             <div class="header"><div style="display: flex; justify-content: space-between; align-items: start;">
