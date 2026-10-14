@@ -1,535 +1,630 @@
 <!DOCTYPE html>
-<html lang="it" class="h-full bg-gray-100">
+<html lang="it">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Gestione Lavorazioni & Ordini</title>
-    <!-- Tailwind CSS per una grafica pulita e schematica -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        /* Ottimizzazioni per touch e iPad */
-        body {
-            overscroll-behavior-y: none; /* Evita il rimbalzo su iOS */
-            touch-action: pan-x pan-y;
-            -webkit-tap-highlight-color: transparent;
-        }
-
-        /* Container orizzontale delle colonne */
-        .kanban-board {
-            display: flex;
-            gap: 1rem;
-            padding: 1rem;
-            overflow-x: auto;
-            overflow-y: hidden;
-            height: calc(100vh - 70px); /* Sottrae l'header */
-            -webkit-overflow-scrolling: touch;
-            align-items: flex-start;
-        }
-
-        /* Stile Colonna */
-        .kanban-column {
-            background-color: #f3f4f6; /* gray-100 */
-            border-radius: 0.5rem;
-            min-width: 300px;
-            max-width: 300px;
-            max-height: 100%;
-            display: flex;
-            flex-direction: column;
-            border: 1px solid #e5e7eb;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        }
-
-        .column-header {
-            padding: 0.75rem 1rem;
-            font-weight: 600;
-            color: #374151;
-            border-bottom: 2px solid #d1d5db;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .column-body {
-            padding: 0.5rem;
-            overflow-y: auto;
-            flex-grow: 1;
-            min-height: 150px;
-        }
-
-        /* Stile Scheda */
-        .kanban-card {
-            background-color: white;
-            border-radius: 0.375rem;
-            padding: 0.75rem;
-            margin-bottom: 0.5rem;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-            border: 1px solid #e5e7eb;
-            cursor: grab;
-            position: relative;
-            user-select: none;
-            -webkit-user-select: none;
-        }
-        
-        .kanban-card:active {
-            cursor: grabbing;
-        }
-
-        .card-title {
-            font-weight: 600;
-            color: #111827;
-            font-size: 0.875rem;
-            margin-bottom: 0.25rem;
-        }
-
-        .card-desc {
-            color: #6b7280;
-            font-size: 0.75rem;
-            display: -webkit-box;
-            -webkit-line-clamp: 3;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-        }
-
-        /* Effetti visivi Drag & Drop */
-        .dragging {
-            opacity: 0.4;
-        }
-        .drag-over {
-            background-color: #e5e7eb; /* Evidenzia la colonna quando ci passi sopra */
-        }
-        
-        /* Ghost element per il touch drag */
-        .touch-ghost {
-            position: fixed;
-            z-index: 1000;
-            pointer-events: none;
-            opacity: 0.9;
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-            transform: scale(1.05);
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Workflow SGA</title>
+  <!-- Tailwind CSS per lo stile rapido -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Icone Lucide per i pulsanti -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    /* Reset e personalizzazione scrollbar */
+    ::-webkit-scrollbar {
+      height: 6px;
+      width: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #1e293b;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #475569;
+      border-radius: 3px;
+    }
+    .board-column {
+      min-width: 280px;
+      max-width: 280px;
+    }
+    /* Impedisce lo zoom al doppio tap su iOS */
+    touch-action: manipulation;
+  </style>
 </head>
-<body class="bg-gray-200 overflow-hidden flex flex-col h-screen font-sans">
+<body class="bg-slate-950 text-slate-100 font-sans h-screen flex flex-col overflow-hidden">
 
-    <!-- Header / Navbar -->
-    <header class="bg-white shadow-sm h-[70px] flex-shrink-0 flex items-center justify-between px-6 z-10">
-        <div class="flex items-center gap-4">
-            <h1 class="text-xl font-bold text-gray-800">Workflow Lavorazioni</h1>
-            <span class="bg-blue-100 text-blue-800 text-xs font-semibold px-2.5 py-0.5 rounded">iPad Ready</span>
+  <!-- TOP BAR -->
+  <header class="bg-slate-900 border-b border-slate-800 px-4 py-3 flex justify-between items-center shrink-0 flex-wrap gap-3">
+    <div class="flex items-center space-x-3">
+      <div class="bg-indigo-600 p-2 rounded-lg text-white shadow-lg shadow-indigo-900/20">
+        <i data-lucide="layers" class="w-5 h-5"></i>
+      </div>
+      <div>
+        <h1 class="font-bold text-lg leading-tight text-white">Workflow SGA</h1>
+        <p class="text-xs text-slate-400 flex items-center gap-1">
+          <i data-lucide="check-circle-2" class="w-3 h-3 text-emerald-500"></i> Salvataggio automatico attivo
+        </p>
+      </div>
+    </div>
+    
+    <div class="flex space-x-2 items-center">
+      <!-- Sistema di Backup -->
+      <button onclick="exportBackup()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 active:scale-95 transition-transform" title="Scarica un file di sicurezza con tutti i tuoi dati">
+        <i data-lucide="download-cloud" class="w-4 h-4"></i> Backup
+      </button>
+      <label class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 cursor-pointer active:scale-95 transition-transform" title="Carica un file di backup salvato in precedenza">
+        <i data-lucide="upload-cloud" class="w-4 h-4"></i> Ripristina
+        <input type="file" accept=".json" class="hidden" onchange="importBackup(event)">
+      </label>
+      
+      <div class="w-px h-6 bg-slate-700 mx-1"></div>
+      
+      <!-- Nuova Commessa -->
+      <button onclick="openModal('addCardModal')" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 active:scale-95 transition-transform shadow-lg shadow-indigo-900/20">
+        <i data-lucide="plus" class="w-4 h-4"></i> Nuova Commessa
+      </button>
+    </div>
+  </header>
+
+  <!-- WORKSPACE A SCORRIMENTO ORIZZONTALE -->
+  <main id="board" class="flex-1 overflow-x-auto overflow-y-hidden flex gap-4 p-4 items-start select-none">
+    <!-- Le colonne verranno generate qui via JS -->
+  </main>
+
+  <!-- MODAL: DETTAGLIO SCHEDA / STORIA (STORYBOARD) / ALLEGATI -->
+  <div id="detailModal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden shadow-2xl">
+      <div class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-850">
+        <div class="flex items-center gap-2">
+          <span id="detailBadge" class="px-2 py-0.5 rounded text-xs font-bold text-white uppercase"></span>
+          <h2 id="detailTitle" class="text-lg font-bold">Dettaglio Commessa</h2>
+        </div>
+        <button onclick="closeModal('detailModal')" class="text-slate-400 hover:text-slate-200 bg-slate-800 rounded-full p-1">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      
+      <div class="p-5 overflow-y-auto space-y-6 flex-1 text-sm">
+        <!-- Info Generali -->
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="text-xs text-slate-400 font-semibold uppercase tracking-wider block mb-1">Cliente</label>
+            <p id="detailClient" class="text-base font-medium text-slate-200">-</p>
+          </div>
+          <div>
+            <label class="text-xs text-slate-400 font-semibold uppercase tracking-wider block mb-1">Tipo Lavoro</label>
+            <p id="detailJobType" class="text-base font-medium text-slate-200">-</p>
+          </div>
+        </div>
+
+        <!-- Note / Dettagli -->
+        <div>
+          <label class="text-xs text-slate-400 font-semibold uppercase tracking-wider block mb-1">Dettagli & Note</label>
+          <div id="detailNotes" class="bg-slate-955 p-3 rounded-lg border border-slate-800 text-slate-300 min-h-[60px] whitespace-pre-wrap"></div>
+        </div>
+
+        <!-- Foto & Allegati -->
+        <div>
+          <div class="flex justify-between items-center mb-2">
+            <label class="text-xs text-slate-400 font-semibold uppercase tracking-wider block">Foto & Documenti Allegati</label>
+            <label class="bg-slate-800 hover:bg-slate-700 text-xs px-3 py-1.5 rounded-lg cursor-pointer flex items-center gap-1.5 text-slate-200">
+              <i data-lucide="camera" class="w-3.5 h-3.5"></i> Scatta / Aggiungi Foto
+              <input type="file" id="photoInput" accept="image/*" class="hidden" onchange="handlePhotoUpload(event)">
+            </label>
+          </div>
+          <div id="attachmentsContainer" class="grid grid-cols-3 gap-2 bg-slate-950 p-2 rounded-lg border border-slate-800 max-h-32 overflow-y-auto">
+            <!-- Miniature foto generate qui -->
+          </div>
+        </div>
+
+        <!-- STORYBOARD (Cronologia dei passaggi) -->
+        <div>
+          <label class="text-xs text-slate-400 font-semibold uppercase tracking-wider block mb-3">Storyboard Lavorazione (Cronologia Passaggi)</label>
+          <div id="storyboardTimeline" class="relative pl-6 space-y-3 before:absolute before:left-2 before:top-1.5 before:bottom-1.5 before:w-0.5 before:bg-slate-800">
+            <!-- Step dello storyboard generati qui -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Footer con pulsanti azione -->
+      <div class="p-4 border-t border-slate-800 bg-slate-950 flex justify-between gap-3">
+        <button onclick="deleteCurrentCard()" class="bg-red-950/40 hover:bg-red-900/60 text-red-400 border border-red-900/50 px-4 py-2 rounded-lg font-semibold flex items-center gap-2 active:scale-95 transition-all text-xs">
+          <i data-lucide="trash-2" class="w-4 h-4"></i> Elimina Commessa
+        </button>
+        <div class="flex gap-2">
+          <button onclick="printCard()" class="bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded-lg font-semibold flex items-center gap-2 active:scale-95 transition-all text-xs">
+            <i data-lucide="printer" class="w-4 h-4"></i> Stampa Scheda
+          </button>
+          <button onclick="closeModal('detailModal')" class="bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-2 rounded-lg font-semibold active:scale-95 transition-all text-xs shadow-lg shadow-indigo-900/20">
+            Chiudi Scheda
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: AGGIUNGI NUOVA COMMESSA -->
+  <div id="addCardModal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-xl w-full max-w-md p-5 shadow-2xl">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="font-bold text-lg text-slate-100">Nuova Commessa SGA</h3>
+        <button onclick="closeModal('addCardModal')" class="text-slate-400 hover:text-slate-200 bg-slate-800 rounded-full p-1">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+      <form id="newCardForm" class="space-y-4 text-sm" onsubmit="createNewCard(event)">
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Cliente / Titolo</label>
+          <input type="text" id="formTitle" required placeholder="Es. Rossi S.r.l. - Striscione PVC" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-indigo-500">
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Referente / Contatto</label>
+            <input type="text" id="formClient" placeholder="Es. Marco Rossi" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-indigo-500">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Tipo Lavorazione</label>
+            <select id="formJobType" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-indigo-500">
+              <option value="Stampa Digitale / Banner">Stampa Digitale / Banner</option>
+              <option value="Abbigliamento / Ricamo">Abbigliamento / Ricamo</option>
+              <option value="Insegne & Vetrofanie">Insegne & Vetrofanie</option>
+              <option value="Etichette & Adesivi">Etichette & Adesivi</option>
+              <option value="Grafica / Progettazione">Grafica / Progettazione</option>
+              <option value="Altro">Altro</option>
+            </select>
+          </div>
         </div>
         <div>
-            <button onclick="openModal()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow flex items-center gap-2 transition-colors">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-                Nuovo Ordine / Lavorazione
+          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Note & Specifiche</label>
+          <textarea id="formNotes" placeholder="Dettagli lavorazione, misure, finiture, capi da ordinare..." rows="3" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-indigo-500 resize-none"></textarea>
+        </div>
+        <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2 px-4 rounded-lg active:scale-[0.98] transition-transform flex items-center justify-center gap-2 shadow-lg shadow-indigo-900/20">
+          <i data-lucide="plus" class="w-4 h-4"></i> Inserisci in Workflow
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- SCRIPT DI LOGICA E GESTIONE -->
+  <script>
+    // 12 Fasi personalizzate del workflow con relativo set di colori coerente
+    const COLUMNS_CONFIG = [
+      { id: "prev-da-fare", label: "Prev. da fare", color: "bg-orange-600/20 border-orange-500/50 text-orange-400", border: "border-l-4 border-l-orange-500" },
+      { id: "prev-inviato", label: "Prev. inviato", color: "bg-amber-600/20 border-amber-500/50 text-amber-400", border: "border-l-4 border-l-amber-500" },
+      { id: "accettato-mod", label: "Accettato/Modifica", color: "bg-yellow-600/20 border-yellow-500/50 text-yellow-300", border: "border-l-4 border-l-yellow-500" },
+      { id: "da-ordinare", label: "Da ordinare", color: "bg-rose-600/20 border-rose-500/50 text-rose-400", border: "border-l-4 border-l-rose-500" },
+      { id: "ordinato", label: "Ordinato", color: "bg-pink-600/20 border-pink-500/50 text-pink-400", border: "border-l-4 border-l-pink-500" },
+      { id: "in-arrivo", label: "In arrivo", color: "bg-purple-600/20 border-purple-500/50 text-purple-400", border: "border-l-4 border-l-purple-500" },
+      { id: "magazzino", label: "In magazzino", color: "bg-fuchsia-600/20 border-fuchsia-500/50 text-fuchsia-400", border: "border-l-4 border-l-fuchsia-500" },
+      { id: "da-lavorare", label: "Da lavorare", color: "bg-cyan-600/20 border-cyan-500/50 text-cyan-400", border: "border-l-4 border-l-cyan-500" },
+      { id: "lavorato", label: "Lavorato", color: "bg-emerald-600/20 border-emerald-500/50 text-emerald-400", border: "border-l-4 border-l-emerald-500" },
+      { id: "consegnato", label: "Consegnato", color: "bg-teal-600/20 border-teal-500/50 text-teal-400", border: "border-l-4 border-l-teal-500" },
+      { id: "fatturato", label: "Fatturato", color: "bg-blue-600/20 border-blue-500/50 text-blue-400", border: "border-l-4 border-l-blue-500" }
+    ];
+
+    let state = { cards: [] };
+    let activeCardId = null;
+
+    // ----- SISTEMA DI SALVATAGGIO AUTOMATICO (LOCALSTORAGE) -----
+    function loadState() {
+      const saved = localStorage.getItem('workflow_sga_state');
+      if (saved) {
+        try { state = JSON.parse(saved); } catch(e) { console.error(e); }
+      }
+    }
+
+    function saveState() {
+      localStorage.setItem('workflow_sga_state', JSON.stringify(state));
+      renderBoard();
+    }
+
+    // ----- SISTEMA DI BACKUP E RIPRISTINO (FILE ESTERNO) -----
+    function exportBackup() {
+      // Converte lo stato in un file JSON scaricabile
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state));
+      const downloadAnchorNode = document.createElement('a');
+      downloadAnchorNode.setAttribute("href", dataStr);
+      downloadAnchorNode.setAttribute("download", "workflow_sga_backup.json");
+      document.body.appendChild(downloadAnchorNode);
+      downloadAnchorNode.click();
+      downloadAnchorNode.remove();
+    }
+
+    function importBackup(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const importedState = JSON.parse(e.target.result);
+          if (importedState && importedState.cards) {
+            state = importedState;
+            saveState(); // Salva i nuovi dati importati nel browser e riavvia la grafica
+            alert("Backup ripristinato con successo! Tutti i dati sono stati caricati.");
+          } else {
+            alert("Il file caricato non sembra un backup valido del Workflow SGA.");
+          }
+        } catch(err) {
+          alert("Errore durante la lettura del file di backup.");
+        }
+      };
+      reader.readAsText(file);
+      // Reset input in modo da poter ricaricare lo stesso file se necessario
+      event.target.value = ''; 
+    }
+
+    // ----- INIZIALIZZAZIONE -----
+    function init() {
+      loadState();
+      renderBoard();
+      lucide.createIcons();
+    }
+
+    // Costruisce visivamente il flusso delle 12 colonne con le relative schede
+    function renderBoard() {
+      const board = document.getElementById('board');
+      board.innerHTML = '';
+
+      COLUMNS_CONFIG.forEach(col => {
+        const colCards = state.cards.filter(c => c.stage === col.id);
+        
+        const colEl = document.createElement('div');
+        colEl.className = `board-column flex flex-col h-full bg-slate-900/60 rounded-xl border border-slate-800 shrink-0 overflow-hidden`;
+        
+        colEl.innerHTML = `
+          <div class="p-3 border-b border-slate-800 ${col.color} ${col.border} flex justify-between items-center bg-opacity-30">
+            <h3 class="font-bold text-xs uppercase tracking-wide truncate max-w-[80%]">${col.label}</h3>
+            <span class="text-xs font-semibold bg-slate-950/60 px-2 py-0.5 rounded-full shadow-inner">${colCards.length}</span>
+          </div>
+          <div class="flex-1 overflow-y-auto p-2 space-y-2 card-dropzone" data-col="${col.id}" ondragover="allowDrop(event)" ondrop="handleDrop(event)">
+            ${colCards.map(card => createCardHTML(card, col)).join('')}
+          </div>
+        `;
+        board.appendChild(colEl);
+      });
+      lucide.createIcons();
+    }
+
+    // HTML della singola scheda della commessa
+    function createCardHTML(card, col) {
+      const badgeStyle = getJobTypeClass(card.jobType);
+      const thumbnailHTML = card.photos && card.photos.length > 0 
+        ? `<div class="mt-2 flex gap-1 overflow-hidden h-8">
+             ${card.photos.map(p => `<img src="${p}" class="w-8 h-8 object-cover rounded border border-slate-700">`).join('')}
+           </div>` 
+        : '';
+
+      return `
+        <div draggable="true" ondragstart="handleDragStart(event)" id="card-${card.id}" data-id="${card.id}" onclick="openDetail('${card.id}')"
+             class="bg-slate-950 border border-slate-800 hover:border-indigo-500/50 p-3 rounded-lg shadow-md cursor-pointer transition-all active:scale-95 space-y-2 group">
+          <div class="flex justify-between items-start gap-1">
+            <span class="text-[10px] px-1.5 py-0.5 rounded font-medium ${badgeStyle}">${card.jobType}</span>
+            <span class="text-[9px] text-slate-500">${new Date(card.createdAt).toLocaleDateString('it-IT', {day: 'numeric', month: 'short'})}</span>
+          </div>
+          <h4 class="font-bold text-sm text-slate-100 leading-snug truncate group-hover:text-indigo-300 transition-colors">${card.title}</h4>
+          ${card.client ? `<p class="text-[11px] text-slate-400 truncate flex items-center gap-1"><i data-lucide="user" class="w-3 h-3 text-slate-500"></i> ${card.client}</p>` : ''}
+          ${thumbnailHTML}
+          
+          <!-- Bottoncini sposta rapidi per facilitare l'uso con iPad/Touch in mobilità -->
+          <div class="pt-2 border-t border-slate-800/80 flex justify-between items-center" onclick="event.stopPropagation()">
+            <span class="text-[9px] text-slate-600 font-mono">#${card.id.slice(-4).toUpperCase()}</span>
+            <div class="flex gap-1.5">
+              <button onclick="moveCardStep('${card.id}', -1)" class="p-1 rounded bg-slate-900 hover:bg-slate-700 text-slate-400 hover:text-slate-200 transition-colors" title="Sposta Indietro">
+                <i data-lucide="chevron-left" class="w-3.5 h-3.5"></i>
+              </button>
+              <button onclick="moveCardStep('${card.id}', 1)" class="p-1 rounded bg-slate-900 hover:bg-slate-700 text-slate-400 hover:text-slate-200 transition-colors" title="Sposta Avanti">
+                <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    // Colori badge per categoria di prodotto/attività (adattati per SGA)
+    function getJobTypeClass(type) {
+      switch (type) {
+        case 'Stampa Digitale / Banner': return 'bg-blue-900/40 text-blue-300 border border-blue-800';
+        case 'Abbigliamento / Ricamo': return 'bg-purple-900/40 text-purple-300 border border-purple-800';
+        case 'Insegne & Vetrofanie': return 'bg-amber-900/40 text-amber-300 border border-amber-800';
+        case 'Etichette & Adesivi': return 'bg-teal-900/40 text-teal-300 border border-teal-800';
+        case 'Grafica / Progettazione': return 'bg-rose-900/40 text-rose-300 border border-rose-800';
+        default: return 'bg-slate-800 text-slate-300 border border-slate-700';
+      }
+    }
+
+    // Gestione Drag & Drop
+    function allowDrop(ev) { ev.preventDefault(); }
+    function handleDragStart(ev) { ev.dataTransfer.setData("text/plain", ev.target.dataset.id); }
+    function handleDrop(ev) {
+      ev.preventDefault();
+      const cardId = ev.dataTransfer.getData("text");
+      const targetColId = ev.currentTarget.dataset.col;
+      if (cardId && targetColId) changeCardStage(cardId, targetColId);
+    }
+
+    // Funzione sposta avanti-indietro rapida utile per iPad/Tablet
+    function moveCardStep(cardId, direction) {
+      const card = state.cards.find(c => c.id === cardId);
+      if (!card) return;
+      const currentIndex = COLUMNS_CONFIG.findIndex(col => col.id === card.stage);
+      let targetIndex = currentIndex + direction;
+      if (targetIndex >= 0 && targetIndex < COLUMNS_CONFIG.length) {
+        changeCardStage(cardId, COLUMNS_CONFIG[targetIndex].id);
+      }
+    }
+
+    // Aggiornamento dello stage di una commessa con storico
+    function changeCardStage(cardId, targetStageId) {
+      const card = state.cards.find(c => c.id === cardId);
+      if (card && card.stage !== targetStageId) {
+        const oldStage = card.stage;
+        card.stage = targetStageId;
+        
+        // Registrazione per lo Storyboard
+        const stageLabel = COLUMNS_CONFIG.find(col => col.id === targetStageId)?.label || targetStageId;
+        card.history.push({
+          stage: targetStageId,
+          label: stageLabel,
+          timestamp: new Date().toISOString()
+        });
+        
+        saveState();
+      }
+    }
+
+    // Gestione Inserimento Nuova Commessa
+    function createNewCard(event) {
+      event.preventDefault();
+      const title = document.getElementById('formTitle').value.trim();
+      const client = document.getElementById('formClient').value.trim();
+      const jobType = document.getElementById('formJobType').value;
+      const notes = document.getElementById('formNotes').value.trim();
+
+      const newCard = {
+        id: 'c' + Date.now().toString(36),
+        title,
+        client,
+        jobType,
+        notes,
+        stage: 'prev-da-fare', // Parte sempre da "Prev. da fare"
+        createdAt: new Date().toISOString(),
+        photos: [],
+        history: [{
+          stage: 'prev-da-fare',
+          label: 'Inserito in "Prev. da fare"',
+          timestamp: new Date().toISOString()
+        }]
+      };
+
+      state.cards.unshift(newCard);
+      saveState();
+      
+      // Resetta form e chiudi modal
+      document.getElementById('newCardForm').reset();
+      closeModal('addCardModal');
+    }
+
+    // Apertura Dettaglio / Edit con Gestione Storyboard & Foto
+    function openDetail(id) {
+      const card = state.cards.find(c => c.id === id);
+      if (!card) return;
+      activeCardId = id;
+
+      const currentStageObj = COLUMNS_CONFIG.find(col => col.id === card.stage);
+      const badge = document.getElementById('detailBadge');
+      badge.textContent = currentStageObj ? currentStageObj.label : 'N/A';
+      badge.className = `px-2 py-0.5 rounded text-[11px] font-bold text-white uppercase ${currentStageObj ? currentStageObj.color.split(' ')[0] : 'bg-slate-700'}`;
+
+      document.getElementById('detailTitle').textContent = card.title;
+      document.getElementById('detailClient').textContent = card.client || 'Nessuno specificato';
+      document.getElementById('detailJobType').textContent = card.jobType;
+      document.getElementById('detailNotes').textContent = card.notes || 'Nessuna specifica o nota presente.';
+
+      // Costruzione Miniature Foto
+      renderAttachments(card);
+
+      // Costruzione Timeline dello Storyboard con i colori di ogni fase passata
+      const timeline = document.getElementById('storyboardTimeline');
+      timeline.innerHTML = '';
+      card.history.forEach((h, idx) => {
+        const hStageObj = COLUMNS_CONFIG.find(col => col.id === h.stage);
+        const circleBg = hStageObj ? hStageObj.color.split(' ')[0] : 'bg-slate-700';
+        
+        const dateStr = new Date(h.timestamp).toLocaleString('it-IT', {
+          day: '2-digit', month: '2-digit', hour: '2-digit', minute:'2-digit'
+        });
+
+        const item = document.createElement('div');
+        item.className = "flex items-start gap-3 relative";
+        item.innerHTML = `
+          <div class="absolute -left-[23px] mt-1.5 w-4.5 h-4.5 rounded-full border border-slate-900 ${circleBg} flex items-center justify-center text-[8px] font-bold text-slate-100 shadow-sm">
+            ${idx+1}
+          </div>
+          <div class="flex-1 bg-slate-950/40 p-2.5 rounded border border-slate-800/80 hover:border-slate-700 transition-colors">
+            <div class="flex justify-between items-center mb-0.5">
+              <span class="font-bold text-xs text-slate-200 uppercase">${h.label}</span>
+              <span class="text-[10px] text-slate-500">${dateStr}</span>
+            </div>
+          </div>
+        `;
+        timeline.appendChild(item);
+      });
+
+      openModal('detailModal');
+    }
+
+    // Rendering Galleria Allegati
+    function renderAttachments(card) {
+      const container = document.getElementById('attachmentsContainer');
+      container.innerHTML = '';
+      if (card.photos && card.photos.length > 0) {
+        card.photos.forEach((base64, index) => {
+          const thumb = document.createElement('div');
+          thumb.className = "relative group w-full h-24 bg-slate-800 rounded border border-slate-700 overflow-hidden";
+          thumb.innerHTML = `
+            <img src="${base64}" class="w-full h-full object-cover">
+            <button onclick="removePhoto(${index})" class="absolute top-1 right-1 bg-red-600/90 hover:bg-red-500 text-white p-1.5 rounded-md shadow-lg active:scale-90 opacity-0 group-hover:opacity-100 transition-opacity" title="Rimuovi Foto">
+              <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
             </button>
-        </div>
-    </header>
+          `;
+          container.appendChild(thumb);
+        });
+        lucide.createIcons();
+      } else {
+        container.innerHTML = `<div class="col-span-3 flex flex-col items-center justify-center py-6 text-slate-500 border border-dashed border-slate-800 rounded-lg bg-slate-950/50">
+          <i data-lucide="image-off" class="w-6 h-6 mb-2 opacity-50"></i>
+          <span class="text-xs italic">Nessuna foto allegata</span>
+        </div>`;
+      }
+    }
 
-    <!-- Main Kanban Board -->
-    <main class="kanban-board" id="board">
-        <!-- Le colonne verranno generate qui dal JavaScript -->
-    </main>
+    // Caricamento Foto / Allegati con conversione Base64 (salvataggio locale)
+    function handlePhotoUpload(event) {
+      const file = event.target.files[0];
+      if (!file) return;
 
-    <!-- Modale per aggiungere/modificare una scheda -->
-    <div id="cardModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
-        <div class="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden">
-            <div class="bg-gray-50 px-4 py-3 border-b border-gray-200 flex justify-between items-center">
-                <h3 class="text-lg font-bold text-gray-900" id="modalTitle">Nuova Scheda</h3>
-                <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-                </button>
-            </div>
-            <form id="cardForm" onsubmit="saveCard(event)" class="p-4 space-y-4">
-                <input type="hidden" id="cardId">
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const card = state.cards.find(c => c.id === activeCardId);
+        if (card) {
+          if (!card.photos) card.photos = [];
+          card.photos.push(e.target.result); // Base64
+          saveState();
+          renderAttachments(card);
+        }
+      };
+      reader.readAsDataURL(file);
+      // Reset file input
+      event.target.value = '';
+    }
+
+    // Rimozione Foto
+    function removePhoto(index) {
+      const card = state.cards.find(c => c.id === activeCardId);
+      if (card && card.photos) {
+        if(confirm("Eliminare definitivamente questa foto?")) {
+          card.photos.splice(index, 1);
+          saveState();
+          renderAttachments(card);
+        }
+      }
+    }
+
+    // Eliminazione Commessa
+    function deleteCurrentCard() {
+      if (confirm("Sei sicuro di voler eliminare definitivamente questa commessa di SGA?")) {
+        state.cards = state.cards.filter(c => c.id !== activeCardId);
+        saveState();
+        closeModal('detailModal');
+      }
+    }
+
+    // GENERAZIONE PDF / STAMPA DELLA COMMESSA (STORYBOARD + DETTAGLI)
+    function printCard() {
+      const card = state.cards.find(c => c.id === activeCardId);
+      if (!card) return;
+
+      const printWindow = window.open('', '_blank');
+      
+      const historyHtml = card.history.map((h, i) => {
+        return `
+          <div style="margin-bottom: 12px; padding-left: 20px; border-left: 2px solid #cbd5e1; position: relative;">
+            <div style="position: absolute; left: -6px; top: 2px; width: 10px; height: 10px; border-radius: 50%; background: #475569;"></div>
+            <div style="font-weight: bold; font-size: 13px; color: #1e293b;">Passaggio #${i+1}: ${h.label}</div>
+            <div style="font-size: 11px; color: #64748b;">Data: ${new Date(h.timestamp).toLocaleString('it-IT')}</div>
+          </div>
+        `;
+      }).join('');
+
+      const imagesHtml = card.photos && card.photos.length > 0 
+        ? `<div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 15px;">
+             ${card.photos.map(p => `<img src="${p}" style="width: 180px; height: 140px; object-fit: cover; border: 1px solid #e2e8f0; border-radius: 6px;">`).join('')}
+           </div>`
+        : '<div style="font-size: 12px; color: #94a3b8; font-style: italic;">Nessuna foto allegata</div>';
+
+      printWindow.document.write(`
+        <html>
+          <head>
+            <title>Commessa SGA #${card.id.slice(-4).toUpperCase()}</title>
+            <style>
+              body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; padding: 40px; color: #0f172a; max-width: 800px; margin: 0 auto; }
+              .header { border-bottom: 3px solid #4f46e5; padding-bottom: 20px; margin-bottom: 30px; }
+              .logo-text { font-size: 14px; color: #64748b; font-weight: bold; letter-spacing: 1px; margin-bottom: 5px; }
+              .title { font-size: 26px; font-weight: 800; margin: 0 0 8px; color: #1e293b; text-transform: uppercase; }
+              .badge { font-size: 11px; font-weight: bold; background: #e0e7ff; color: #4338ca; padding: 4px 10px; border-radius: 4px; display: inline-block; letter-spacing: 0.5px; }
+              .section-title { font-size: 13px; font-weight: bold; text-transform: uppercase; color: #475569; margin-top: 30px; margin-bottom: 12px; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; letter-spacing: 0.5px; }
+              .details { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+              .details div { background: #f8fafc; padding: 12px; border-radius: 6px; border: 1px solid #e2e8f0; }
+              .details label { font-size: 10px; color: #64748b; font-weight: bold; display: block; text-transform: uppercase; margin-bottom: 4px; letter-spacing: 0.5px; }
+              .details strong { font-size: 14px; color: #0f172a; }
+              .notes-box { background: #f8fafc; border: 1px solid #e2e8f0; padding: 15px; border-radius: 6px; font-size: 13px; line-height: 1.6; min-height: 60px; white-space: pre-wrap; color: #334155; }
+            </style>
+          </head>
+          <body>
+            <div class="header">
+              <div style="display: flex; justify-content: space-between; align-items: start;">
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Titolo / Cliente *</label>
-                    <input type="text" id="titleInput" required class="w-full border border-gray-300 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Es. Mario Rossi - Modello 883">
+                  <div class="logo-text">SGA STUDIO GRAFICO ASSOCIATO</div>
+                  <h1 class="title">SCHEDA COMMESSA</h1>
+                  <span class="badge">
+                    STATO ATTUALE: ${COLUMNS_CONFIG.find(col => col.id === card.stage)?.label.toUpperCase() || card.stage}
+                  </span>
                 </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Dettagli Lavorazione / Note</label>
-                    <textarea id="descInput" rows="3" class="w-full border border-gray-300 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Es. Sostituzione scarichi, preventivo pezzi..."></textarea>
+                <div style="text-align: right; font-size: 12px; color: #64748b; line-height: 1.5;">
+                  Rif. Ordine: <strong style="color: #0f172a;">#${card.id.slice(-4).toUpperCase()}</strong><br>
+                  Data Creazione: <strong style="color: #0f172a;">${new Date(card.createdAt).toLocaleDateString('it-IT')}</strong>
                 </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Stato Attuale</label>
-                    <select id="colInput" class="w-full border border-gray-300 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500">
-                        <!-- Opzioni generate da JS -->
-                    </select>
-                </div>
-                <div class="pt-4 flex justify-between items-center border-t border-gray-100">
-                    <button type="button" id="deleteBtn" onclick="deleteCard()" class="text-red-600 hover:text-red-800 text-sm font-medium hidden">Elimina Scheda</button>
-                    <div class="flex gap-2 ml-auto">
-                        <button type="button" onclick="closeModal()" class="bg-gray-200 text-gray-800 px-4 py-2 rounded-md hover:bg-gray-300 font-medium">Annulla</button>
-                        <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 font-medium">Salva</button>
-                    </div>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- Modale per spostamento rapido (Utile per iPad se il drag and drop è scomodo) -->
-    <div id="moveModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-end sm:items-center justify-center sm:p-4">
-        <div class="bg-white rounded-t-xl sm:rounded-xl shadow-xl w-full max-w-sm overflow-hidden pb-6 sm:pb-0">
-            <div class="bg-gray-50 px-4 py-3 border-b border-gray-200 flex justify-between items-center">
-                <h3 class="text-lg font-bold text-gray-900">Sposta in...</h3>
-                <button onclick="closeMoveModal()" class="text-gray-400 hover:text-gray-600">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-                </button>
+              </div>
             </div>
-            <div id="moveOptions" class="p-2 max-h-[60vh] overflow-y-auto">
-                <!-- Opzioni generate da JS -->
+
+            <div class="details">
+              <div>
+                <label>Cliente / Titolo Progetto</label>
+                <strong>${card.title}</strong>
+              </div>
+              <div>
+                <label>Tipologia di Lavorazione</label>
+                <strong>${card.jobType}</strong>
+              </div>
+              <div style="grid-column: span 2;">
+                <label>Referente / Contatto</label>
+                <strong>${card.client || 'Nessun referente specificato'}</strong>
+              </div>
             </div>
-        </div>
-    </div>
 
-    <script>
-        // Configurazione delle 12 Colonne richieste
-        const COLUMNS = [
-            { id: 'prev_da_fare', title: 'Preventivo da fare' },
-            { id: 'prev_inviato', title: 'Preventivo inviato' },
-            { id: 'accettato', title: 'Accettato' },
-            { id: 'da_modificare', title: 'Da modificare' },
-            { id: 'da_ordinare', title: 'Da ordinare' },
-            { id: 'ordinato', title: 'Ordinato' },
-            { id: 'in_arrivo', title: 'In arrivo' },
-            { id: 'in_magazzino', title: 'In magazzino' },
-            { id: 'da_lavorare', title: 'Da lavorare' },
-            { id: 'lavorato', title: 'Lavorato' },
-            { id: 'consegnato', title: 'Consegnato' },
-            { id: 'fatturato', title: 'Fatturato' }
-        ];
+            <div class="section-title">Specifiche & Note di Lavoro</div>
+            <div class="notes-box">${card.notes || 'Nessuna specifica aggiuntiva inserita in fase di creazione.'}</div>
 
-        // Stato dell'applicazione
-        let cards = [];
-        let selectedCardIdForMove = null;
+            <div class="section-title">Galleria Immagini / Allegati</div>
+            ${imagesHtml}
 
-        // Inizializzazione
-        function init() {
-            loadData();
-            renderBoard();
-            populateSelects();
-        }
+            <div class="section-title" style="margin-top: 40px;">Storyboard Lavorazione (Flusso dei Passaggi)</div>
+            <div style="margin-top: 15px; background: #f8fafc; padding: 15px; border-radius: 6px; border: 1px solid #e2e8f0;">
+              ${historyHtml}
+            </div>
 
-        // Gestione Dati (LocalStorage)
-        function loadData() {
-            const saved = localStorage.getItem('kanban_data_v1');
-            if (saved) {
-                cards = JSON.parse(saved);
-            } else {
-                // Dati di esempio al primo avvio
-                cards = [
-                    { id: '1', title: 'Moto Cliente A', desc: 'Controllo generale e gomme', col: 'prev_da_fare' },
-                    { id: '2', title: 'Pezzi Custom HD 883', desc: 'Scarichi e sella', col: 'da_ordinare' }
-                ];
-                saveData();
-            }
-        }
+            <script>
+              window.onload = function() { 
+                setTimeout(function() { window.print(); }, 500);
+              };
+            <\/script>
+          </body>
+        </html>
+      `);
+      printWindow.document.close();
+    }
 
-        function saveData() {
-            localStorage.setItem('kanban_data_v1', JSON.stringify(cards));
-        }
+    // Funzioni Helpers per l'Apertura/Chiusura dei popup modal
+    function openModal(modalId) {
+      document.getElementById(modalId).classList.remove('hidden');
+    }
 
-        // Rendering Interfaccia
-        function renderBoard() {
-            const board = document.getElementById('board');
-            board.innerHTML = '';
+    function closeModal(modalId) {
+      document.getElementById(modalId).classList.add('hidden');
+    }
 
-            COLUMNS.forEach(col => {
-                const colCards = cards.filter(c => c.col === col.id);
-                
-                const colDiv = document.createElement('div');
-                colDiv.className = 'kanban-column';
-                colDiv.dataset.colId = col.id;
-                
-                // Eventi per Drag & Drop Mouse
-                colDiv.addEventListener('dragover', handleDragOver);
-                colDiv.addEventListener('dragleave', handleDragLeave);
-                colDiv.addEventListener('drop', handleDrop);
-
-                colDiv.innerHTML = `
-                    <div class="column-header">
-                        <span>${col.title}</span>
-                        <span class="bg-gray-200 text-gray-600 text-xs py-1 px-2 rounded-full">${colCards.length}</span>
-                    </div>
-                    <div class="column-body" id="body-${col.id}">
-                        ${colCards.length === 0 ? '<div class="text-center text-gray-400 text-sm mt-4 italic">Nessun elemento</div>' : ''}
-                    </div>
-                `;
-
-                const body = colDiv.querySelector('.column-body');
-                
-                colCards.forEach(card => {
-                    const cardDiv = document.createElement('div');
-                    cardDiv.className = 'kanban-card group';
-                    cardDiv.dataset.id = card.id;
-                    cardDiv.draggable = true;
-
-                    // Eventi per Drag & Drop Mouse
-                    cardDiv.addEventListener('dragstart', handleDragStart);
-                    cardDiv.addEventListener('dragend', handleDragEnd);
-
-                    // Eventi per Touch (iPad/Mobile)
-                    setupTouchEvents(cardDiv, card);
-
-                    cardDiv.innerHTML = `
-                        <div class="flex justify-between items-start">
-                            <div class="card-title pr-6" onclick="editCard('${card.id}')">${escapeHTML(card.title)}</div>
-                            <button class="text-gray-400 hover:text-blue-600 p-1" onclick="openMoveModal('${card.id}')" title="Sposta rapidamente">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg>
-                            </button>
-                        </div>
-                        <div class="card-desc" onclick="editCard('${card.id}')">${escapeHTML(card.desc || '')}</div>
-                    `;
-                    
-                    body.appendChild(cardDiv);
-                });
-
-                board.appendChild(colDiv);
-            });
-        }
-
-        // ==========================================
-        // SISTEMA DRAG AND DROP (MOUSE)
-        // ==========================================
-        function handleDragStart(e) {
-            e.dataTransfer.setData('text/plain', e.target.dataset.id);
-            setTimeout(() => e.target.classList.add('dragging'), 0);
-        }
-
-        function handleDragEnd(e) {
-            e.target.classList.remove('dragging');
-            document.querySelectorAll('.kanban-column').forEach(c => c.classList.remove('drag-over'));
-        }
-
-        function handleDragOver(e) {
-            e.preventDefault();
-            const col = e.target.closest('.kanban-column');
-            if (col) col.classList.add('drag-over');
-        }
-
-        function handleDragLeave(e) {
-            const col = e.target.closest('.kanban-column');
-            if (col) col.classList.remove('drag-over');
-        }
-
-        function handleDrop(e) {
-            e.preventDefault();
-            const col = e.target.closest('.kanban-column');
-            if (col) {
-                col.classList.remove('drag-over');
-                const id = e.dataTransfer.getData('text/plain');
-                const newColId = col.dataset.colId;
-                moveCard(id, newColId);
-            }
-        }
-
-        // ==========================================
-        // SISTEMA DRAG AND DROP CUSTOM (TOUCH IPAD)
-        // ==========================================
-        function setupTouchEvents(element, cardData) {
-            let timer;
-            let isDragging = false;
-            let ghost = null;
-            let initialX, initialY;
-            let currentColHighlight = null;
-
-            element.addEventListener('touchstart', (e) => {
-                // Non attivare il drag se l'utente ha toccato il bottone "sposta" rapido
-                if(e.target.closest('button')) return; 
-
-                const touch = e.touches[0];
-                initialX = touch.clientX;
-                initialY = touch.clientY;
-
-                // Ritardo per distinguere tra un tap (per aprire) e uno scroll
-                timer = setTimeout(() => {
-                    isDragging = true;
-                    element.classList.add('opacity-50');
-
-                    // Crea l'elemento fantasma che segue il dito
-                    ghost = element.cloneNode(true);
-                    ghost.classList.add('touch-ghost');
-                    ghost.style.width = element.offsetWidth + 'px';
-                    document.body.appendChild(ghost);
-                    
-                    updateGhostPosition(touch);
-                }, 200); // 200ms per attivare il drag
-            }, { passive: true });
-
-            element.addEventListener('touchmove', (e) => {
-                if (!isDragging) {
-                    // Se l'utente si muove subito, annulla il timer (sta scrollando la pagina)
-                    clearTimeout(timer);
-                    return;
-                }
-                
-                e.preventDefault(); // Blocca lo scroll della pagina mentre trascini
-                const touch = e.touches[0];
-                updateGhostPosition(touch);
-
-                // Evidenzia la colonna sotto il dito
-                ghost.style.display = 'none'; // Nascondi temporaneamente per trovare l'elemento sotto
-                const elemBelow = document.elementFromPoint(touch.clientX, touch.clientY);
-                ghost.style.display = 'block';
-
-                if (currentColHighlight) currentColHighlight.classList.remove('drag-over');
-                
-                if (elemBelow) {
-                    const col = elemBelow.closest('.kanban-column');
-                    if (col) {
-                        col.classList.add('drag-over');
-                        currentColHighlight = col;
-                    }
-                }
-            }, { passive: false });
-
-            element.addEventListener('touchend', (e) => {
-                clearTimeout(timer);
-                if (!isDragging) return; // Era un tap normale o uno scroll
-
-                isDragging = false;
-                element.classList.remove('opacity-50');
-                if (ghost) {
-                    ghost.remove();
-                    ghost = null;
-                }
-
-                if (currentColHighlight) {
-                    const newColId = currentColHighlight.dataset.colId;
-                    currentColHighlight.classList.remove('drag-over');
-                    moveCard(cardData.id, newColId);
-                }
-            });
-
-            function updateGhostPosition(touch) {
-                if (!ghost) return;
-                ghost.style.left = (touch.clientX - ghost.offsetWidth / 2) + 'px';
-                ghost.style.top = (touch.clientY - ghost.offsetHeight / 2) + 'px';
-            }
-        }
-
-        function moveCard(id, newColId) {
-            const card = cards.find(c => c.id === id);
-            if (card && card.col !== newColId) {
-                card.col = newColId;
-                saveData();
-                renderBoard();
-            }
-        }
-
-        // ==========================================
-        // GESTIONE MODALI (Aggiungi/Modifica)
-        // ==========================================
-        function populateSelects() {
-            const select = document.getElementById('colInput');
-            select.innerHTML = COLUMNS.map(c => `<option value="${c.id}">${c.title}</option>`).join('');
-            
-            const moveSelect = document.getElementById('moveOptions');
-            moveSelect.innerHTML = COLUMNS.map(c => `
-                <button onclick="executeMove('${c.id}')" class="w-full text-left px-4 py-3 border-b border-gray-100 hover:bg-blue-50 focus:bg-blue-100 font-medium text-gray-700 rounded-md transition-colors mb-1">
-                    ${c.title}
-                </button>
-            `).join('');
-        }
-
-        function openModal() {
-            document.getElementById('cardForm').reset();
-            document.getElementById('cardId').value = '';
-            document.getElementById('modalTitle').innerText = 'Nuovo Ordine / Lavorazione';
-            document.getElementById('deleteBtn').classList.add('hidden');
-            document.getElementById('cardModal').classList.remove('hidden');
-        }
-
-        function editCard(id) {
-            const card = cards.find(c => c.id === id);
-            if (!card) return;
-
-            document.getElementById('cardId').value = card.id;
-            document.getElementById('titleInput').value = card.title;
-            document.getElementById('descInput').value = card.desc || '';
-            document.getElementById('colInput').value = card.col;
-            
-            document.getElementById('modalTitle').innerText = 'Modifica Scheda';
-            document.getElementById('deleteBtn').classList.remove('hidden');
-            document.getElementById('cardModal').classList.remove('hidden');
-        }
-
-        function closeModal() {
-            document.getElementById('cardModal').classList.add('hidden');
-        }
-
-        function saveCard(e) {
-            e.preventDefault();
-            const id = document.getElementById('cardId').value;
-            const title = document.getElementById('titleInput').value;
-            const desc = document.getElementById('descInput').value;
-            const col = document.getElementById('colInput').value;
-
-            if (id) {
-                // Modifica
-                const index = cards.findIndex(c => c.id === id);
-                if (index !== -1) {
-                    cards[index] = { ...cards[index], title, desc, col };
-                }
-            } else {
-                // Nuovo
-                cards.push({
-                    id: Date.now().toString(),
-                    title,
-                    desc,
-                    col
-                });
-            }
-
-            saveData();
-            renderBoard();
-            closeModal();
-        }
-
-        function deleteCard() {
-            if(confirm('Sei sicuro di voler eliminare questa scheda?')) {
-                const id = document.getElementById('cardId').value;
-                cards = cards.filter(c => c.id !== id);
-                saveData();
-                renderBoard();
-                closeModal();
-            }
-        }
-
-        // ==========================================
-        // GESTIONE MODALE SPOSTAMENTO RAPIDO
-        // ==========================================
-        function openMoveModal(cardId) {
-            selectedCardIdForMove = cardId;
-            document.getElementById('moveModal').classList.remove('hidden');
-        }
-
-        function closeMoveModal() {
-            document.getElementById('moveModal').classList.add('hidden');
-            selectedCardIdForMove = null;
-        }
-
-        function executeMove(newColId) {
-            if (selectedCardIdForMove) {
-                moveCard(selectedCardIdForMove, newColId);
-                closeMoveModal();
-            }
-        }
-
-        // Utility
-        function escapeHTML(str) {
-            return str.replace(/[&<>'"]/g, 
-                tag => ({
-                    '&': '&amp;',
-                    '<': '&lt;',
-                    '>': '&gt;',
-                    "'": '&#39;',
-                    '"': '&quot;'
-                }[tag] || tag)
-            );
-        }
-
-        // Avvio app
-        window.addEventListener('DOMContentLoaded', init);
-    </script>
+    // Avvio applicazione
+    window.onload = init;
+  </script>
 </body>
 </html>
