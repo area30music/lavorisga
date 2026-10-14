@@ -565,7 +565,6 @@
       });
       if (!Array.isArray(card.history)) card.history = [];
       if (!Array.isArray(card.articles)) {
-        // Conversione retrocompatibile se c'erano note testuali
         card.articles = [];
         if (card.notes && card.notes.trim()) {
           card.articles.push({ code: '', desc: card.notes, qty: 1, price: 0 });
@@ -775,7 +774,7 @@
     function createNewCard(event) {
       event.preventDefault();
       const title = document.getElementById('formTitle').value.trim();
-      const client = document.getElementById('formClient') ? document.getElementById('formClient'].value.trim() : '';
+      const client = document.getElementById('formClient') ? document.getElementById('formClient').value.trim() : '';
       let jobType = document.getElementById('formJobType').value;
       if (jobType === 'custom') {
         jobType = document.getElementById('formCustomJobType').value.trim() || 'Altro';
@@ -820,7 +819,6 @@
       alert("Anagrafica e tipo lavorazione aggiornati con successo!");
     }
 
-    // Gestione Tabella Articoli
     function renderArticlesTable(card) {
       const tbody = document.getElementById('articlesTableBody');
       tbody.innerHTML = '';
@@ -857,7 +855,6 @@
 
       card.articles[idx][field] = input.value;
 
-      // Ricalcola al volo il totale della singola riga
       if (field === 'qty' || field === 'price') {
         const qty = parseFloat(card.articles[idx].qty) || 0;
         const price = parseFloat(card.articles[idx].price) || 0;
@@ -1110,7 +1107,6 @@
       }
     }
 
-    // STAMPA OTTIMIZZATA CON TABELLA ARTICOLI E TOTALI
     function printCard() {
       const card = state.cards.find(c => c.id === activeCardId);
       if (!card) return;
