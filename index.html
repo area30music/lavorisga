@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="it" class="h-full bg-gray-100">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Gestione Lavorazioni & Ordini</title>
+    <!-- Tailwind CSS per una grafica pulita e schematica -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Ottimizzazioni per touch e iPad */
+        body {
+            overscroll-behavior-y: none; /* Evita il rimbalzo su iOS */
+            touch-action: pan-x pan-y;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* Container orizzontale delle colonne */
+        .kanban-board {
+            display: flex;
+            gap: 1rem;
+            padding: 1rem;
+            overflow-x: auto;
+            overflow-y: hidden;
+            height: calc(100vh - 70px); /* Sottrae l'header */
+            -webkit-overflow-scrolling: touch;
+            align-items: flex-start;
+        }
+
+        /* Stile Colonna */
+        .kanban-column {
+            background-color: #f3f4f6; /* gray-100 */
+            border-radius: 0.5rem;
+            min-width: 300px;
+            max-width: 300px;
+            max-height: 100%;
+            display: flex;
+            flex-direction: column;
+            border: 1px solid #e5e7eb;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .column-header {
+            padding: 0.75rem 1rem;
+            font-weight: 600;
+            color: #374151;
+            border-bottom: 2px solid #d1d5db;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .column-body {
+            padding: 0.5rem;
+            overflow-y: auto;
+            flex-grow: 1;
+            min-height: 150px;
+        }
+
+        /* Stile Scheda */
+        .kanban-card {
+            background-color: white;
+            border-radius: 0.375rem;
+            padding: 0.75rem;
+            margin-bottom: 0.5rem;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            border: 1px solid #e5e7eb;
+            cursor: grab;
+            position: relative;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        
+        .kanban-card:active {
+            cursor: grabbing;
+        }
+
+        .card-title {
+            font-weight: 600;
+            color: #111827;
+            font-size: 0.875rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .card-desc {
+            color: #6b7280;
+            font-size: 0.75rem;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        /* Effetti visivi Drag & Drop */
+        .dragging {
+            opacity: 0.4;
+        }
+        .drag-over {
+            background-color: #e5e7eb; /* Evidenzia la colonna quando ci passi sopra */
+        }
+        
+        /* Ghost element per il touch drag */
+        .touch-ghost {
+            position: fixed;
+            z-index: 1000;
+            pointer-events: none;
+            opacity: 0.9;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            transform: scale(1.05);
+        }
+    </style>
+</head>
+<body class="bg-gray-200 overflow-hidden flex flex-col h-screen font-sans">
+
+    <!-- Header / Navbar -->
+    <header class="bg-white shadow-sm h-[70px] flex-shrink-0 flex items-center justify-between px-6 z-10">
+        <div class="flex items-center gap-4">
+            <h1 class="text-xl font-bold text-gray-800">Workflow Lavorazioni</h1>
+            <span class="bg-blue-100 text-blue-800 text-xs font-semibold px-2.5 py-0.5 rounded">iPad Ready</span>
+        </div>
+        <div>
+            <button onclick="openModal()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow flex items-center gap-2 transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                Nuovo Ordine / Lavorazione
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Kanban Board -->
+    <main class="kanban-board" id="board">
+        <!-- Le colonne verranno generate qui dal JavaScript -->
+    </main>
+
+    <!-- Modale per aggiungere/modificare una scheda -->
+    <div id="cardModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden">
+            <div class="bg-gray-50 px-4 py-3 border-b border-gray-200 flex justify-between items-center">
+                <h3 class="text-lg font-bold text-gray-900" id="modalTitle">Nuova Scheda</h3>
+                <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            <form id="cardForm" onsubmit="saveCard(event)" class="p-4 space-y-4">
+                <input type="hidden" id="cardId">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Titolo / Cliente *</label>
+                    <input type="text" id="titleInput" required class="w-full border border-gray-300 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Es. Mario Rossi - Modello 883">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Dettagli Lavorazione / Note</label>
+                    <textarea id="descInput" rows="3" class="w-full border border-gray-300 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Es. Sostituzione scarichi, preventivo pezzi..."></textarea>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Stato Attuale</label>
+                    <select id="colInput" class="w-full border border-gray-300 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500">
+                        <!-- Opzioni generate da JS -->
+                    </select>
+                </div>
+                <div class="pt-4 flex justify-between items-center border-t border-gray-100">
+                    <button type="button" id="deleteBtn" onclick="deleteCard()" class="text-red-600 hover:text-red-800 text-sm font-medium hidden">Elimina Scheda</button>
+                    <div class="flex gap-2 ml-auto">
+                        <button type="button" onclick="closeModal()" class="bg-gray-200 text-gray-800 px-4 py-2 rounded-md hover:bg-gray-300 font-medium">Annulla</button>
+                        <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 font-medium">Salva</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modale per spostamento rapido (Utile per iPad se il drag and drop è scomodo) -->
+    <div id="moveModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-end sm:items-center justify-center sm:p-4">
+        <div class="bg-white rounded-t-xl sm:rounded-xl shadow-xl w-full max-w-sm overflow-hidden pb-6 sm:pb-0">
+            <div class="bg-gray-50 px-4 py-3 border-b border-gray-200 flex justify-between items-center">
+                <h3 class="text-lg font-bold text-gray-900">Sposta in...</h3>
+                <button onclick="closeMoveModal()" class="text-gray-400 hover:text-gray-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            <div id="moveOptions" class="p-2 max-h-[60vh] overflow-y-auto">
+                <!-- Opzioni generate da JS -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configurazione delle 12 Colonne richieste
+        const COLUMNS = [
+            { id: 'prev_da_fare', title: 'Preventivo da fare' },
+            { id: 'prev_inviato', title: 'Preventivo inviato' },
+            { id: 'accettato', title: 'Accettato' },
+            { id: 'da_modificare', title: 'Da modificare' },
+            { id: 'da_ordinare', title: 'Da ordinare' },
+            { id: 'ordinato', title: 'Ordinato' },
+            { id: 'in_arrivo', title: 'In arrivo' },
+            { id: 'in_magazzino', title: 'In magazzino' },
+            { id: 'da_lavorare', title: 'Da lavorare' },
+            { id: 'lavorato', title: 'Lavorato' },
+            { id: 'consegnato', title: 'Consegnato' },
+            { id: 'fatturato', title: 'Fatturato' }
+        ];
+
+        // Stato dell'applicazione
+        let cards = [];
+        let selectedCardIdForMove = null;
+
+        // Inizializzazione
+        function init() {
+            loadData();
+            renderBoard();
+            populateSelects();
+        }
+
+        // Gestione Dati (LocalStorage)
+        function loadData() {
+            const saved = localStorage.getItem('kanban_data_v1');
+            if (saved) {
+                cards = JSON.parse(saved);
+            } else {
+                // Dati di esempio al primo avvio
+                cards = [
+                    { id: '1', title: 'Moto Cliente A', desc: 'Controllo generale e gomme', col: 'prev_da_fare' },
+                    { id: '2', title: 'Pezzi Custom HD 883', desc: 'Scarichi e sella', col: 'da_ordinare' }
+                ];
+                saveData();
+            }
+        }
+
+        function saveData() {
+            localStorage.setItem('kanban_data_v1', JSON.stringify(cards));
+        }
+
+        // Rendering Interfaccia
+        function renderBoard() {
+            const board = document.getElementById('board');
+            board.innerHTML = '';
+
+            COLUMNS.forEach(col => {
+                const colCards = cards.filter(c => c.col === col.id);
+                
+                const colDiv = document.createElement('div');
+                colDiv.className = 'kanban-column';
+                colDiv.dataset.colId = col.id;
+                
+                // Eventi per Drag & Drop Mouse
+                colDiv.addEventListener('dragover', handleDragOver);
+                colDiv.addEventListener('dragleave', handleDragLeave);
+                colDiv.addEventListener('drop', handleDrop);
+
+                colDiv.innerHTML = `
+                    <div class="column-header">
+                        <span>${col.title}</span>
+                        <span class="bg-gray-200 text-gray-600 text-xs py-1 px-2 rounded-full">${colCards.length}</span>
+                    </div>
+                    <div class="column-body" id="body-${col.id}">
+                        ${colCards.length === 0 ? '<div class="text-center text-gray-400 text-sm mt-4 italic">Nessun elemento</div>' : ''}
+                    </div>
+                `;
+
+                const body = colDiv.querySelector('.column-body');
+                
+                colCards.forEach(card => {
+                    const cardDiv = document.createElement('div');
+                    cardDiv.className = 'kanban-card group';
+                    cardDiv.dataset.id = card.id;
+                    cardDiv.draggable = true;
+
+                    // Eventi per Drag & Drop Mouse
+                    cardDiv.addEventListener('dragstart', handleDragStart);
+                    cardDiv.addEventListener('dragend', handleDragEnd);
+
+                    // Eventi per Touch (iPad/Mobile)
+                    setupTouchEvents(cardDiv, card);
+
+                    cardDiv.innerHTML = `
+                        <div class="flex justify-between items-start">
+                            <div class="card-title pr-6" onclick="editCard('${card.id}')">${escapeHTML(card.title)}</div>
+                            <button class="text-gray-400 hover:text-blue-600 p-1" onclick="openMoveModal('${card.id}')" title="Sposta rapidamente">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg>
+                            </button>
+                        </div>
+                        <div class="card-desc" onclick="editCard('${card.id}')">${escapeHTML(card.desc || '')}</div>
+                    `;
+                    
+                    body.appendChild(cardDiv);
+                });
+
+                board.appendChild(colDiv);
+            });
+        }
+
+        // ==========================================
+        // SISTEMA DRAG AND DROP (MOUSE)
+        // ==========================================
+        function handleDragStart(e) {
+            e.dataTransfer.setData('text/plain', e.target.dataset.id);
+            setTimeout(() => e.target.classList.add('dragging'), 0);
+        }
+
+        function handleDragEnd(e) {
+            e.target.classList.remove('dragging');
+            document.querySelectorAll('.kanban-column').forEach(c => c.classList.remove('drag-over'));
+        }
+
+        function handleDragOver(e) {
+            e.preventDefault();
+            const col = e.target.closest('.kanban-column');
+            if (col) col.classList.add('drag-over');
+        }
+
+        function handleDragLeave(e) {
+            const col = e.target.closest('.kanban-column');
+            if (col) col.classList.remove('drag-over');
+        }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            const col = e.target.closest('.kanban-column');
+            if (col) {
+                col.classList.remove('drag-over');
+                const id = e.dataTransfer.getData('text/plain');
+                const newColId = col.dataset.colId;
+                moveCard(id, newColId);
+            }
+        }
+
+        // ==========================================
+        // SISTEMA DRAG AND DROP CUSTOM (TOUCH IPAD)
+        // ==========================================
+        function setupTouchEvents(element, cardData) {
+            let timer;
+            let isDragging = false;
+            let ghost = null;
+            let initialX, initialY;
+            let currentColHighlight = null;
+
+            element.addEventListener('touchstart', (e) => {
+                // Non attivare il drag se l'utente ha toccato il bottone "sposta" rapido
+                if(e.target.closest('button')) return; 
+
+                const touch = e.touches[0];
+                initialX = touch.clientX;
+                initialY = touch.clientY;
+
+                // Ritardo per distinguere tra un tap (per aprire) e uno scroll
+                timer = setTimeout(() => {
+                    isDragging = true;
+                    element.classList.add('opacity-50');
+
+                    // Crea l'elemento fantasma che segue il dito
+                    ghost = element.cloneNode(true);
+                    ghost.classList.add('touch-ghost');
+                    ghost.style.width = element.offsetWidth + 'px';
+                    document.body.appendChild(ghost);
+                    
+                    updateGhostPosition(touch);
+                }, 200); // 200ms per attivare il drag
+            }, { passive: true });
+
+            element.addEventListener('touchmove', (e) => {
+                if (!isDragging) {
+                    // Se l'utente si muove subito, annulla il timer (sta scrollando la pagina)
+                    clearTimeout(timer);
+                    return;
+                }
+                
+                e.preventDefault(); // Blocca lo scroll della pagina mentre trascini
+                const touch = e.touches[0];
+                updateGhostPosition(touch);
+
+                // Evidenzia la colonna sotto il dito
+                ghost.style.display = 'none'; // Nascondi temporaneamente per trovare l'elemento sotto
+                const elemBelow = document.elementFromPoint(touch.clientX, touch.clientY);
+                ghost.style.display = 'block';
+
+                if (currentColHighlight) currentColHighlight.classList.remove('drag-over');
+                
+                if (elemBelow) {
+                    const col = elemBelow.closest('.kanban-column');
+                    if (col) {
+                        col.classList.add('drag-over');
+                        currentColHighlight = col;
+                    }
+                }
+            }, { passive: false });
+
+            element.addEventListener('touchend', (e) => {
+                clearTimeout(timer);
+                if (!isDragging) return; // Era un tap normale o uno scroll
+
+                isDragging = false;
+                element.classList.remove('opacity-50');
+                if (ghost) {
+                    ghost.remove();
+                    ghost = null;
+                }
+
+                if (currentColHighlight) {
+                    const newColId = currentColHighlight.dataset.colId;
+                    currentColHighlight.classList.remove('drag-over');
+                    moveCard(cardData.id, newColId);
+                }
+            });
+
+            function updateGhostPosition(touch) {
+                if (!ghost) return;
+                ghost.style.left = (touch.clientX - ghost.offsetWidth / 2) + 'px';
+                ghost.style.top = (touch.clientY - ghost.offsetHeight / 2) + 'px';
+            }
+        }
+
+        function moveCard(id, newColId) {
+            const card = cards.find(c => c.id === id);
+            if (card && card.col !== newColId) {
+                card.col = newColId;
+                saveData();
+                renderBoard();
+            }
+        }
+
+        // ==========================================
+        // GESTIONE MODALI (Aggiungi/Modifica)
+        // ==========================================
+        function populateSelects() {
+            const select = document.getElementById('colInput');
+            select.innerHTML = COLUMNS.map(c => `<option value="${c.id}">${c.title}</option>`).join('');
+            
+            const moveSelect = document.getElementById('moveOptions');
+            moveSelect.innerHTML = COLUMNS.map(c => `
+                <button onclick="executeMove('${c.id}')" class="w-full text-left px-4 py-3 border-b border-gray-100 hover:bg-blue-50 focus:bg-blue-100 font-medium text-gray-700 rounded-md transition-colors mb-1">
+                    ${c.title}
+                </button>
+            `).join('');
+        }
+
+        function openModal() {
+            document.getElementById('cardForm').reset();
+            document.getElementById('cardId').value = '';
+            document.getElementById('modalTitle').innerText = 'Nuovo Ordine / Lavorazione';
+            document.getElementById('deleteBtn').classList.add('hidden');
+            document.getElementById('cardModal').classList.remove('hidden');
+        }
+
+        function editCard(id) {
+            const card = cards.find(c => c.id === id);
+            if (!card) return;
+
+            document.getElementById('cardId').value = card.id;
+            document.getElementById('titleInput').value = card.title;
+            document.getElementById('descInput').value = card.desc || '';
+            document.getElementById('colInput').value = card.col;
+            
+            document.getElementById('modalTitle').innerText = 'Modifica Scheda';
+            document.getElementById('deleteBtn').classList.remove('hidden');
+            document.getElementById('cardModal').classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('cardModal').classList.add('hidden');
+        }
+
+        function saveCard(e) {
+            e.preventDefault();
+            const id = document.getElementById('cardId').value;
+            const title = document.getElementById('titleInput').value;
+            const desc = document.getElementById('descInput').value;
+            const col = document.getElementById('colInput').value;
+
+            if (id) {
+                // Modifica
+                const index = cards.findIndex(c => c.id === id);
+                if (index !== -1) {
+                    cards[index] = { ...cards[index], title, desc, col };
+                }
+            } else {
+                // Nuovo
+                cards.push({
+                    id: Date.now().toString(),
+                    title,
+                    desc,
+                    col
+                });
+            }
+
+            saveData();
+            renderBoard();
+            closeModal();
+        }
+
+        function deleteCard() {
+            if(confirm('Sei sicuro di voler eliminare questa scheda?')) {
+                const id = document.getElementById('cardId').value;
+                cards = cards.filter(c => c.id !== id);
+                saveData();
+                renderBoard();
+                closeModal();
+            }
+        }
+
+        // ==========================================
+        // GESTIONE MODALE SPOSTAMENTO RAPIDO
+        // ==========================================
+        function openMoveModal(cardId) {
+            selectedCardIdForMove = cardId;
+            document.getElementById('moveModal').classList.remove('hidden');
+        }
+
+        function closeMoveModal() {
+            document.getElementById('moveModal').classList.add('hidden');
+            selectedCardIdForMove = null;
+        }
+
+        function executeMove(newColId) {
+            if (selectedCardIdForMove) {
+                moveCard(selectedCardIdForMove, newColId);
+                closeMoveModal();
+            }
+        }
+
+        // Utility
+        function escapeHTML(str) {
+            return str.replace(/[&<>'"]/g, 
+                tag => ({
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    "'": '&#39;',
+                    '"': '&quot;'
+                }[tag] || tag)
+            );
+        }
+
+        // Avvio app
+        window.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
