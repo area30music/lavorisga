@@ -8,7 +8,7 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Icone Lucide -->
   <script src="https://unpkg.com/lucide@latest"></script>
-  <!-- Firebase SDK (compat mode per utilizzo semplice) -->
+  <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
   <style>
@@ -30,7 +30,6 @@
       </div>
       <div>
         <h1 class="font-bold text-lg leading-tight text-white">Workflow SGA</h1>
-        <!-- Testo di stato cliccabile per aprire le impostazioni Cloud -->
         <p id="cloudStatus" onclick="openModal('cloudModal')" class="text-xs flex items-center gap-1 cursor-pointer transition-colors mt-0.5" title="Clicca per impostazioni Cloud">
           <i data-lucide="hard-drive" class="w-3 h-3 text-slate-400"></i> <span class="text-slate-400 hover:text-slate-200">Modalità Locale (Clicca per configurare)</span>
         </p>
@@ -103,7 +102,7 @@
             </label>
           </div>
           <div id="attachmentsContainer" class="grid grid-cols-4 gap-2 bg-slate-950 p-2 rounded-lg border border-slate-800 max-h-40 overflow-y-auto">
-            <!-- Miniature foto generate qui -->
+            <!-- Miniature foto -->
           </div>
         </div>
 
@@ -111,12 +110,12 @@
         <div>
           <label class="text-xs text-slate-400 font-semibold uppercase tracking-wider block mb-3">Storyboard Lavorazione (Cronologia Passaggi)</label>
           <div id="storyboardTimeline" class="relative pl-6 space-y-3 before:absolute before:left-2 before:top-1.5 before:bottom-1.5 before:w-0.5 before:bg-slate-800">
-            <!-- Step dello storyboard generati qui -->
+            <!-- Step -->
           </div>
         </div>
       </div>
 
-      <!-- Footer con pulsanti azione -->
+      <!-- Footer -->
       <div class="p-4 border-t border-slate-800 bg-slate-950 flex justify-between gap-3">
         <button onclick="deleteCurrentCard()" class="bg-red-950/40 hover:bg-red-900/60 text-red-400 border border-red-900/50 px-4 py-2 rounded-lg font-semibold flex items-center gap-2 active:scale-95 transition-all text-xs">
           <i data-lucide="trash-2" class="w-4 h-4"></i> Elimina
@@ -187,7 +186,7 @@
         </button>
       </div>
       <p class="text-xs text-slate-400 mb-4">
-        Inserisci qui i dati del tuo progetto gratuito Firebase per consentire la sincronizzazione in tempo reale tra dispositivi.
+        Inserisci qui i dati del tuo progetto Firebase per sincronizzare in tempo reale i dispositivi.
       </p>
       <div class="space-y-4 text-sm">
         <div>
@@ -210,7 +209,7 @@
     </div>
   </div>
 
-  <!-- MODAL: GALLERIA FOTO (VIEWER & ROTAZIONE) -->
+  <!-- MODAL: GALLERIA FOTO -->
   <div id="galleryModal" class="hidden fixed inset-0 bg-black/95 z-[60] flex flex-col items-center justify-center select-none">
     <div class="absolute top-0 w-full p-4 flex justify-between items-center z-10 bg-gradient-to-b from-black/80 to-transparent">
       <div id="galleryCounter" class="text-white font-mono text-sm font-bold bg-black/50 px-3 py-1 rounded-full"></div>
@@ -223,10 +222,8 @@
         </button>
       </div>
     </div>
-    
     <div class="relative w-full h-full flex items-center justify-center p-4">
       <img id="galleryImage" src="" class="max-w-full max-h-[85vh] object-contain transition-transform duration-300">
-      
       <button onclick="prevGalleryImage()" class="absolute left-4 top-1/2 -translate-y-1/2 text-white p-3 bg-slate-800/80 hover:bg-slate-700 rounded-full transition-colors" id="btnPrevGallery">
         <i data-lucide="chevron-left" class="w-6 h-6"></i>
       </button>
@@ -236,9 +233,8 @@
     </div>
   </div>
 
-  <!-- SCRIPT DI LOGICA E GESTIONE -->
+  <!-- SCRIPT -->
   <script>
-    // 12 Fasi del workflow
     const COLUMNS_CONFIG = [
       { id: "prev-da-fare", label: "Prev. da fare", color: "bg-orange-600/20 border-orange-500/50 text-orange-400", border: "border-l-4 border-l-orange-500" },
       { id: "prev-inviato", label: "Prev. inviato", color: "bg-amber-600/20 border-amber-500/50 text-amber-400", border: "border-l-4 border-l-amber-500" },
@@ -265,7 +261,6 @@
         updateCloudStatus(false);
         return;
       }
-
       try {
         const config = JSON.parse(cfgStr);
         if (config.apiKey && config.projectId) {
@@ -284,7 +279,6 @@
           updateCloudStatus(false);
         }
       } catch (e) {
-        console.error("Errore inizializzazione Firebase:", e);
         updateCloudStatus(false);
       }
     }
@@ -302,59 +296,68 @@
     function saveFirebaseConfig() {
       const apiKey = document.getElementById('cfgApiKey').value.trim();
       const projectId = document.getElementById('cfgProjectId').value.trim();
-      if (!apiKey || !projectId) {
-        alert("Inserisci sia l'API Key che il Project ID.");
-        return;
-      }
+      if (!apiKey || !projectId) return alert("Inserisci sia l'API Key che il Project ID.");
       localStorage.setItem('workflow_sga_firebase_config', JSON.stringify({ apiKey, projectId }));
       closeModal('cloudModal');
       location.reload(); 
     }
 
     function resetFirebaseConfig() {
-      if (confirm("Vuoi disconnettere il Cloud e tornare a salvare solo in locale su questo dispositivo?")) {
+      if (confirm("Vuoi disconnettere il Cloud?")) {
         localStorage.removeItem('workflow_sga_firebase_config');
         closeModal('cloudModal');
         location.reload();
       }
     }
 
-    // Ascolto passivo del Cloud: aggiorna lo schermo ma NON reinvia i dati al cloud.
+    // LISTENER SICURO BASATO SUGLI EVENTI (Non sovrascrive ciecamente la memoria!)
     function listenToCloudUpdates() {
       if (!db) return;
       db.collection('workflow_sga_cards').onSnapshot((snapshot) => {
-        const cloudCards = [];
-        snapshot.forEach(doc => {
-          cloudCards.push(doc.data());
+        
+        // Se il Cloud è totalmente vuoto ma noi abbiamo dati locali (es. primissima installazione)
+        if (snapshot.empty && state.cards.length > 0) {
+          state.cards.forEach(card => syncCardToCloud(card));
+          return;
+        }
+
+        // Merge intelligente: gestiamo solo le carte che sono cambiate, aggiunte o rimosse sul server
+        snapshot.docChanges().forEach((change) => {
+          const docData = change.doc.data();
+          if (change.type === "added" || change.type === "modified") {
+            const existingIndex = state.cards.findIndex(c => c.id === docData.id);
+            if (existingIndex >= 0) {
+              state.cards[existingIndex] = sanitizeCard(docData);
+            } else {
+              state.cards.push(sanitizeCard(docData));
+            }
+          }
+          if (change.type === "removed") {
+            state.cards = state.cards.filter(c => c.id !== docData.id);
+          }
         });
         
-        if (snapshot.empty) {
-          if (state.cards.length > 0) {
-            state.cards.forEach(card => syncCardToCloud(card));
-          }
-        } else {
-          // Quando il cloud manda un aggiornamento, il dispositivo aggiorna solo il proprio schermo
-          state.cards = sanitizeCards(cloudCards).sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
-          saveLocal(); // Modifica solo la RAM del browser e l'HTML, senza triggerare un nuovo push
-          
-          if (activeCardId) {
-            const activeCard = state.cards.find(c => c.id === activeCardId);
-            if (activeCard) renderAttachments(activeCard);
-            else closeModal('detailModal');
-          }
+        // Riordiniamo cronologicamente e salviamo a schermo
+        state.cards.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
+        saveLocal(); 
+        
+        // Aggiorna modal dettagli se è aperta
+        if (activeCardId) {
+          const activeCard = state.cards.find(c => c.id === activeCardId);
+          if (activeCard) renderAttachments(activeCard);
+          else closeModal('detailModal');
         }
       }, (err) => {
         console.error("Errore sincro cloud:", err);
       });
     }
 
-    // Carica attivamente sul Cloud solo la scheda che ha subito una modifica manuale
     function syncCardToCloud(card) {
       if (!db || !card) return;
       db.collection('workflow_sga_cards').doc(card.id).set(card).catch(err => {
-         console.error("Errore salvataggio Cloud:", err);
-         if (err.message && (err.message.includes('exceeds the maximum') || err.message.includes('exceeded'))) {
-             alert("ATTENZIONE: Troppe foto in questa commessa! Hai superato il limite di peso di 1MB per scheda sul Cloud. Rimuovi qualche foto.");
+         console.error("Errore Cloud:", err);
+         if (err.message && err.message.includes('exceed')) {
+             alert("ATTENZIONE: Questa commessa contiene troppe foto ed è troppo pesante per il Cloud. Alcuni dispositivi potrebbero non vederla.");
          }
       });
     }
@@ -364,54 +367,43 @@
       db.collection('workflow_sga_cards').doc(cardId).delete().catch(e => console.error(e));
     }
 
-    // ----- COMPRESSIONE IMMAGINI OTTIMIZZATA PER IPAD (0.5 quality, 800px max) -----
-    function compressImage(file, maxWidth = 800, maxHeight = 800, quality = 0.5) {
+    // ----- COMPRESSIONE MASSIMA PER IPAD (800px, 45% Quality) -----
+    function compressImage(file, maxWidth = 800, maxHeight = 800, quality = 0.45) {
       return new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = (e) => {
           const img = new Image();
           img.onload = () => {
-            let width = img.width;
-            let height = img.height;
-
+            let width = img.width; let height = img.height;
             if (width > maxWidth || height > maxHeight) {
               if (width / height > maxWidth / maxHeight) {
-                height = Math.round((height * maxWidth) / width);
-                width = maxWidth;
+                height = Math.round((height * maxWidth) / width); width = maxWidth;
               } else {
-                width = Math.round((width * maxHeight) / height);
-                height = maxHeight;
+                width = Math.round((width * maxHeight) / height); height = maxHeight;
               }
             }
             const canvas = document.createElement('canvas');
-            canvas.width = width;
-            canvas.height = height;
+            canvas.width = width; canvas.height = height;
             const ctx = canvas.getContext('2d');
             ctx.drawImage(img, 0, 0, width, height);
-
             resolve(canvas.toDataURL('image/jpeg', quality));
           };
-          img.onerror = reject;
-          img.src = e.target.result;
+          img.onerror = reject; img.src = e.target.result;
         };
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
+        reader.onerror = reject; reader.readAsDataURL(file);
       });
     }
 
-    // ----- SANITIZZAZIONE E GESTIONE LOCALE -----
-    function sanitizeCards(cardsArray) {
-      if (!Array.isArray(cardsArray)) return [];
-      return cardsArray.map(card => {
-        if (!card) return null;
-        if (!Array.isArray(card.photos)) card.photos = [];
-        card.photos = card.photos.map(p => {
-          if (typeof p === 'string') return { image: p, rotation: 0 };
-          return p;
-        });
-        if (!Array.isArray(card.history)) card.history = [];
-        return card;
-      }).filter(c => c !== null);
+    // ----- SANITIZZAZIONE SINGOLA CARTA -----
+    function sanitizeCard(card) {
+      if (!card) return null;
+      if (!Array.isArray(card.photos)) card.photos = [];
+      card.photos = card.photos.map(p => {
+        if (typeof p === 'string') return { image: p, rotation: 0 };
+        return p;
+      });
+      if (!Array.isArray(card.history)) card.history = [];
+      return card;
     }
 
     function loadState() {
@@ -420,30 +412,20 @@
         try { 
           const parsed = JSON.parse(saved); 
           if (parsed && Array.isArray(parsed.cards)) {
-            state.cards = sanitizeCards(parsed.cards);
+            state.cards = parsed.cards.map(c => sanitizeCard(c)).filter(c => c !== null);
           } else {
             state = { cards: [] };
           }
-        } catch(e) { 
-          console.error("Errore lettura locale:", e); 
-          state = { cards: [] };
-        }
-      } else {
-        state = { cards: [] };
-      }
+        } catch(e) { state = { cards: [] }; }
+      } else { state = { cards: [] }; }
     }
 
-    // Salva SOLO sul browser (non spinge sul cloud)
     function saveLocal() {
       renderBoard();
-      try {
-        localStorage.setItem('workflow_sga_state', JSON.stringify(state));
-      } catch(e) {
-        console.error("Errore salvataggio localStorage:", e);
-      }
+      try { localStorage.setItem('workflow_sga_state', JSON.stringify(state)); } catch(e){}
     }
 
-    // ----- BACKUP E RIPRISTINO -----
+    // ----- BACKUP E RIPRISTINO SICURO -----
     function exportBackup() {
       const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state));
       const downloadAnchorNode = document.createElement('a');
@@ -462,31 +444,36 @@
         try {
           const importedState = JSON.parse(e.target.result);
           if (importedState && Array.isArray(importedState.cards)) {
-            state.cards = sanitizeCards(importedState.cards);
+            let count = 0;
+            importedState.cards.forEach(card => {
+               const safeCard = sanitizeCard(card);
+               if (safeCard) {
+                 // ASSEGNA ID NUOVO: Evita assolutamente di sovrascrivere carte altrui sul cloud!
+                 safeCard.id = 'c' + Date.now().toString(36) + Math.random().toString(36).substring(2, 7);
+                 state.cards.push(safeCard);
+                 syncCardToCloud(safeCard);
+                 count++;
+               }
+            });
+            state.cards.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
             saveLocal(); 
-            // Invio massivo manuale sul nuovo formato Cloud
-            if (db) {
-               state.cards.forEach(card => syncCardToCloud(card));
-            }
-            alert("Backup ripristinato con successo e caricato sul Cloud!");
+            alert(`Backup ripristinato con successo! Sono state importate ${count} commesse.`);
           } else {
-            alert("Il file caricato non sembra un backup valido.");
+            alert("File non valido.");
           }
         } catch(err) {
-          alert("Errore durante la lettura del file di backup.");
+          alert("Errore durante la lettura del file.");
         }
       };
       reader.readAsText(file);
       event.target.value = ''; 
     }
 
-    // ----- INIZIALIZZAZIONE -----
     function init() {
       loadState();
       renderBoard();
       initFirebase();
       lucide.createIcons();
-
       const cfgStr = localStorage.getItem('workflow_sga_firebase_config');
       if (cfgStr) {
         try {
@@ -497,21 +484,16 @@
       }
     }
 
-    // Costruzione Grafica
     function renderBoard() {
       const board = document.getElementById('board');
       if (!board) return;
       board.innerHTML = '';
-
-      if (!state || !Array.isArray(state.cards)) {
-        state = { cards: [] };
-      }
+      if (!state || !Array.isArray(state.cards)) state = { cards: [] };
 
       COLUMNS_CONFIG.forEach(col => {
         const colCards = state.cards.filter(c => c && c.stage === col.id);
         const colEl = document.createElement('div');
         colEl.className = `board-column flex flex-col h-full bg-slate-900/60 rounded-xl border border-slate-800 shrink-0 overflow-hidden`;
-        
         colEl.innerHTML = `
           <div class="p-3 border-b border-slate-800 ${col.color} ${col.border} flex justify-between items-center bg-opacity-30">
             <h3 class="font-bold text-xs uppercase tracking-wide truncate max-w-[80%]">${col.label}</h3>
@@ -538,7 +520,6 @@
              `).join('')}
            </div>` 
         : '';
-
       const cardIdShort = card.id ? card.id.slice(-4).toUpperCase() : '0000';
 
       return `
@@ -551,16 +532,11 @@
           <h4 class="font-bold text-sm text-slate-100 leading-snug truncate group-hover:text-indigo-300 transition-colors">${card.title || 'Senza Titolo'}</h4>
           ${card.client ? `<p class="text-[11px] text-slate-400 truncate flex items-center gap-1"><i data-lucide="user" class="w-3 h-3 text-slate-500"></i> ${card.client}</p>` : ''}
           ${thumbnailHTML}
-          
           <div class="pt-2 border-t border-slate-800/80 flex justify-between items-center" onclick="event.stopPropagation()">
             <span class="text-[9px] text-slate-600 font-mono">#${cardIdShort}</span>
             <div class="flex gap-1.5">
-              <button onclick="moveCardStep('${card.id}', -1)" class="p-1 rounded bg-slate-900 hover:bg-slate-700 text-slate-400 hover:text-slate-200 transition-colors">
-                <i data-lucide="chevron-left" class="w-3.5 h-3.5"></i>
-              </button>
-              <button onclick="moveCardStep('${card.id}', 1)" class="p-1 rounded bg-slate-900 hover:bg-slate-700 text-slate-400 hover:text-slate-200 transition-colors">
-                <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
-              </button>
+              <button onclick="moveCardStep('${card.id}', -1)" class="p-1 rounded bg-slate-900 hover:bg-slate-700 text-slate-400 hover:text-slate-200 transition-colors"><i data-lucide="chevron-left" class="w-3.5 h-3.5"></i></button>
+              <button onclick="moveCardStep('${card.id}', 1)" class="p-1 rounded bg-slate-900 hover:bg-slate-700 text-slate-400 hover:text-slate-200 transition-colors"><i data-lucide="chevron-right" class="w-3.5 h-3.5"></i></button>
             </div>
           </div>
         </div>
@@ -592,9 +568,7 @@
       if (!card) return;
       const currentIndex = COLUMNS_CONFIG.findIndex(col => col.id === card.stage);
       let targetIndex = currentIndex + direction;
-      if (targetIndex >= 0 && targetIndex < COLUMNS_CONFIG.length) {
-        changeCardStage(cardId, COLUMNS_CONFIG[targetIndex].id);
-      }
+      if (targetIndex >= 0 && targetIndex < COLUMNS_CONFIG.length) changeCardStage(cardId, COLUMNS_CONFIG[targetIndex].id);
     }
 
     function changeCardStage(cardId, targetStageId) {
@@ -604,7 +578,6 @@
         const stageLabel = COLUMNS_CONFIG.find(col => col.id === targetStageId)?.label || targetStageId;
         if (!Array.isArray(card.history)) card.history = [];
         card.history.push({ stage: targetStageId, label: stageLabel, timestamp: new Date().toISOString() });
-        
         saveLocal();
         syncCardToCloud(card);
       }
@@ -616,11 +589,10 @@
       const client = document.getElementById('formClient') ? document.getElementById('formClient').value.trim() : '';
       const jobType = document.getElementById('formJobType').value;
       const notes = document.getElementById('formNotes') ? document.getElementById('formNotes').value.trim() : '';
-
       if (!title) return;
 
       const newCard = {
-        id: 'c' + Date.now().toString(36) + Math.random().toString(36).substring(2, 5),
+        id: 'c' + Date.now().toString(36) + Math.random().toString(36).substring(2, 7),
         title, client, jobType, notes,
         stage: 'prev-da-fare',
         createdAt: new Date().toISOString(),
@@ -631,7 +603,6 @@
       state.cards.unshift(newCard);
       saveLocal();
       syncCardToCloud(newCard);
-      
       document.getElementById('newCardForm').reset();
       closeModal('addCardModal');
     }
@@ -640,12 +611,10 @@
       const card = state.cards.find(c => c.id === id);
       if (!card) return;
       activeCardId = id;
-
       const currentStageObj = COLUMNS_CONFIG.find(col => col.id === card.stage);
       const badge = document.getElementById('detailBadge');
       badge.textContent = currentStageObj ? currentStageObj.label : 'N/A';
       badge.className = `px-2 py-0.5 rounded text-[11px] font-bold text-white uppercase ${currentStageObj ? currentStageObj.color.split(' ')[0] : 'bg-slate-700'}`;
-
       document.getElementById('detailTitle').textContent = card.title;
       document.getElementById('detailClient').textContent = card.client || 'Nessuno specificato';
       document.getElementById('detailJobType').textContent = card.jobType;
@@ -660,20 +629,13 @@
           const hStageObj = COLUMNS_CONFIG.find(col => col.id === h.stage);
           const circleBg = hStageObj ? hStageObj.color.split(' ')[0] : 'bg-slate-700';
           const dateStr = new Date(h.timestamp).toLocaleString('it-IT', { day: '2-digit', month: '2-digit', hour: '2-digit', minute:'2-digit' });
-
           const item = document.createElement('div');
           item.className = "flex items-start gap-3 relative";
           item.innerHTML = `
-            <div class="absolute -left-[23px] mt-1.5 w-4.5 h-4.5 rounded-full border border-slate-900 ${circleBg} flex items-center justify-center text-[8px] font-bold text-slate-100 shadow-sm">
-              ${idx+1}
-            </div>
+            <div class="absolute -left-[23px] mt-1.5 w-4.5 h-4.5 rounded-full border border-slate-900 ${circleBg} flex items-center justify-center text-[8px] font-bold text-slate-100 shadow-sm">${idx+1}</div>
             <div class="flex-1 bg-slate-950/40 p-2.5 rounded border border-slate-800/80 hover:border-slate-700 transition-colors">
-              <div class="flex justify-between items-center mb-0.5">
-                <span class="font-bold text-xs text-slate-200 uppercase">${h.label}</span>
-                <span class="text-[10px] text-slate-500">${dateStr}</span>
-              </div>
-            </div>
-          `;
+              <div class="flex justify-between items-center mb-0.5"><span class="font-bold text-xs text-slate-200 uppercase">${h.label}</span><span class="text-[10px] text-slate-500">${dateStr}</span></div>
+            </div>`;
           timeline.appendChild(item);
         });
       }
@@ -689,25 +651,19 @@
           thumb.className = "relative group w-full h-24 bg-slate-900 rounded border border-slate-700 overflow-hidden flex items-center justify-center cursor-pointer";
           thumb.innerHTML = `
             <img src="${photoObj.image}" onclick="openGallery(${index})" style="transform: rotate(${photoObj.rotation || 0}deg);" class="min-w-full min-h-full object-cover transition-transform duration-300">
-            <button onclick="removePhoto(event, ${index})" class="absolute top-1 right-1 bg-red-600/90 hover:bg-red-500 text-white p-1.5 rounded-md shadow-lg active:scale-90 opacity-0 group-hover:opacity-100 transition-opacity" title="Rimuovi Foto">
-              <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-            </button>
+            <button onclick="removePhoto(event, ${index})" class="absolute top-1 right-1 bg-red-600/90 hover:bg-red-500 text-white p-1.5 rounded-md shadow-lg active:scale-90 opacity-0 group-hover:opacity-100 transition-opacity"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
           `;
           container.appendChild(thumb);
         });
         lucide.createIcons();
       } else {
-        container.innerHTML = `<div class="col-span-4 flex flex-col items-center justify-center py-6 text-slate-500 border border-dashed border-slate-800 rounded-lg bg-slate-950/50">
-          <i data-lucide="image-off" class="w-6 h-6 mb-2 opacity-50"></i>
-          <span class="text-xs italic">Nessuna foto o documento</span>
-        </div>`;
+        container.innerHTML = `<div class="col-span-4 flex flex-col items-center justify-center py-6 text-slate-500 border border-dashed border-slate-800 rounded-lg bg-slate-950/50"><i data-lucide="image-off" class="w-6 h-6 mb-2 opacity-50"></i><span class="text-xs italic">Nessuna foto</span></div>`;
       }
     }
 
     function handlePhotoUpload(event) {
       const files = Array.from(event.target.files);
       if (!files || files.length === 0) return;
-
       const card = state.cards.find(c => c.id === activeCardId);
       if (!card) return;
       if (!card.photos) card.photos = [];
@@ -720,10 +676,8 @@
         renderAttachments(card);
         syncCardToCloud(card);
       }).catch(err => {
-        console.error("Errore caricamento foto:", err);
-        alert("Si è verificato un errore durante l'elaborazione dell'immagine.");
+        alert("Errore durante l'elaborazione dell'immagine.");
       });
-
       event.target.value = '';
     }
 
@@ -740,34 +694,22 @@
       }
     }
 
-    // GALLERIA E ROTAZIONE
-    function openGallery(index) {
-      currentGalleryIndex = index;
-      updateGalleryView();
-      openModal('galleryModal');
-    }
-
+    function openGallery(index) { currentGalleryIndex = index; updateGalleryView(); openModal('galleryModal'); }
     function closeGallery() { closeModal('galleryModal'); }
 
     function updateGalleryView() {
       const card = state.cards.find(c => c.id === activeCardId);
       if (!card || !card.photos || card.photos.length === 0) return closeGallery();
-
       const photo = card.photos[currentGalleryIndex];
       const imgEl = document.getElementById('galleryImage');
       imgEl.src = photo.image;
       imgEl.style.transform = `rotate(${photo.rotation || 0}deg)`;
-
       document.getElementById('galleryCounter').innerText = `${currentGalleryIndex + 1} / ${card.photos.length}`;
-
       document.getElementById('btnPrevGallery').style.display = currentGalleryIndex === 0 ? 'none' : 'block';
       document.getElementById('btnNextGallery').style.display = currentGalleryIndex === card.photos.length - 1 ? 'none' : 'block';
     }
 
-    function prevGalleryImage() {
-      if (currentGalleryIndex > 0) { currentGalleryIndex--; updateGalleryView(); }
-    }
-
+    function prevGalleryImage() { if (currentGalleryIndex > 0) { currentGalleryIndex--; updateGalleryView(); } }
     function nextGalleryImage() {
       const card = state.cards.find(c => c.id === activeCardId);
       if (currentGalleryIndex < card.photos.length - 1) { currentGalleryIndex++; updateGalleryView(); }
@@ -776,19 +718,16 @@
     function rotateGalleryImage() {
       const card = state.cards.find(c => c.id === activeCardId);
       if (!card || !card.photos) return;
-      
       const photo = card.photos[currentGalleryIndex];
       photo.rotation = ((photo.rotation || 0) + 90) % 360;
-      
       saveLocal(); 
       updateGalleryView(); 
       renderAttachments(card);
       syncCardToCloud(card);
     }
 
-    // ELIMINAZIONE E STAMPA
     function deleteCurrentCard() {
-      if (confirm("Sei sicuro di voler eliminare definitivamente questa commessa di SGA?")) {
+      if (confirm("Eliminare definitivamente questa commessa di SGA?")) {
         state.cards = state.cards.filter(c => c.id !== activeCardId);
         saveLocal();
         syncDeleteToCloud(activeCardId);
@@ -799,7 +738,6 @@
     function printCard() {
       const card = state.cards.find(c => c.id === activeCardId);
       if (!card) return;
-
       const printWindow = window.open('', '_blank');
       const historyHtml = (card.history || []).map((h, i) => {
         return `<div style="margin-bottom: 12px; padding-left: 20px; border-left: 2px solid #cbd5e1; position: relative;">
@@ -808,7 +746,6 @@
                   <div style="font-size: 11px; color: #64748b;">Data: ${new Date(h.timestamp).toLocaleString('it-IT')}</div>
                 </div>`;
       }).join('');
-
       const imagesHtml = card.photos && card.photos.length > 0 
         ? `<div style="display: flex; gap: 15px; flex-wrap: wrap; margin-top: 15px;">
              ${card.photos.map(p => `
@@ -817,56 +754,37 @@
                </div>
              `).join('')}
            </div>`
-        : '<div style="font-size: 12px; color: #94a3b8; font-style: italic;">Nessuna foto o documento allegato</div>';
+        : '<div style="font-size: 12px; color: #94a3b8; font-style: italic;">Nessuna foto</div>';
 
       printWindow.document.write(`
-        <html>
-          <head>
-            <title>Commessa SGA #${card.id.slice(-4).toUpperCase()}</title>
-            <style>
-              body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; padding: 40px; color: #0f172a; max-width: 800px; margin: 0 auto; }
-              .header { border-bottom: 3px solid #4f46e5; padding-bottom: 20px; margin-bottom: 30px; }
-              .logo-text { font-size: 14px; color: #64748b; font-weight: bold; letter-spacing: 1px; margin-bottom: 5px; }
-              .title { font-size: 26px; font-weight: 800; margin: 0 0 8px; color: #1e293b; text-transform: uppercase; }
-              .badge { font-size: 11px; font-weight: bold; background: #e0e7ff; color: #4338ca; padding: 4px 10px; border-radius: 4px; display: inline-block; letter-spacing: 0.5px; }
-              .section-title { font-size: 13px; font-weight: bold; text-transform: uppercase; color: #475569; margin-top: 30px; margin-bottom: 12px; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; letter-spacing: 0.5px; }
-              .details { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
-              .details div { background: #f8fafc; padding: 12px; border-radius: 6px; border: 1px solid #e2e8f0; }
-              .details label { font-size: 10px; color: #64748b; font-weight: bold; display: block; text-transform: uppercase; margin-bottom: 4px; letter-spacing: 0.5px; }
-              .details strong { font-size: 14px; color: #0f172a; }
-              .notes-box { background: #f8fafc; border: 1px solid #e2e8f0; padding: 15px; border-radius: 6px; font-size: 13px; line-height: 1.6; min-height: 60px; white-space: pre-wrap; color: #334155; }
-            </style>
-          </head>
-          <body>
-            <div class="header">
-              <div style="display: flex; justify-content: space-between; align-items: start;">
-                <div>
-                  <div class="logo-text">SGA STUDIO GRAFICO ASSOCIATO</div>
-                  <h1 class="title">SCHEDA COMMESSA</h1>
-                  <span class="badge">STATO ATTUALE: ${COLUMNS_CONFIG.find(col => col.id === card.stage)?.label.toUpperCase() || card.stage}</span>
-                </div>
-                <div style="text-align: right; font-size: 12px; color: #64748b; line-height: 1.5;">
-                  Rif. Ordine: <strong style="color: #0f172a;">#${card.id.slice(-4).toUpperCase()}</strong><br>
-                  Data Creazione: <strong style="color: #0f172a;">${new Date(card.createdAt).toLocaleDateString('it-IT')}</strong>
-                </div>
-              </div>
-            </div>
-            <div class="details">
-              <div><label>Cliente / Titolo Progetto</label><strong>${card.title}</strong></div>
-              <div><label>Tipologia di Lavorazione</label><strong>${card.jobType}</strong></div>
-              <div style="grid-column: span 2;"><label>Referente / Contatto</label><strong>${card.client || 'Nessun referente specificato'}</strong></div>
-            </div>
-            <div class="section-title">Specifiche & Note di Lavoro</div>
-            <div class="notes-box">${card.notes || 'Nessuna specifica aggiuntiva inserita.'}</div>
-            <div class="section-title">Documenti e Immagini</div>
-            ${imagesHtml}
-            <div class="section-title" style="margin-top: 40px;">Storyboard Lavorazione (Flusso dei Passaggi)</div>
-            <div style="margin-top: 15px; background: #f8fafc; padding: 15px; border-radius: 6px; border: 1px solid #e2e8f0;">
-              ${historyHtml}
-            </div>
-            <script>window.onload = function(){ setTimeout(function(){ window.print(); }, 500); };<\/script>
-          </body>
-        </html>
+        <html><head><title>Commessa SGA #${card.id.slice(-4).toUpperCase()}</title><style>
+          body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; padding: 40px; color: #0f172a; max-width: 800px; margin: 0 auto; }
+          .header { border-bottom: 3px solid #4f46e5; padding-bottom: 20px; margin-bottom: 30px; }
+          .logo-text { font-size: 14px; color: #64748b; font-weight: bold; letter-spacing: 1px; margin-bottom: 5px; }
+          .title { font-size: 26px; font-weight: 800; margin: 0 0 8px; color: #1e293b; text-transform: uppercase; }
+          .badge { font-size: 11px; font-weight: bold; background: #e0e7ff; color: #4338ca; padding: 4px 10px; border-radius: 4px; display: inline-block; }
+          .section-title { font-size: 13px; font-weight: bold; text-transform: uppercase; color: #475569; margin-top: 30px; margin-bottom: 12px; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; }
+          .details { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+          .details div { background: #f8fafc; padding: 12px; border-radius: 6px; border: 1px solid #e2e8f0; }
+          .details label { font-size: 10px; color: #64748b; font-weight: bold; display: block; text-transform: uppercase; margin-bottom: 4px; }
+          .details strong { font-size: 14px; color: #0f172a; }
+          .notes-box { background: #f8fafc; border: 1px solid #e2e8f0; padding: 15px; border-radius: 6px; font-size: 13px; line-height: 1.6; min-height: 60px; white-space: pre-wrap; color: #334155; }
+        </style></head><body>
+          <div class="header"><div style="display: flex; justify-content: space-between; align-items: start;">
+            <div><div class="logo-text">SGA STUDIO GRAFICO ASSOCIATO</div><h1 class="title">SCHEDA COMMESSA</h1><span class="badge">STATO: ${COLUMNS_CONFIG.find(col => col.id === card.stage)?.label.toUpperCase() || card.stage}</span></div>
+            <div style="text-align: right; font-size: 12px; color: #64748b; line-height: 1.5;">Rif. Ordine: <strong style="color: #0f172a;">#${card.id.slice(-4).toUpperCase()}</strong><br>Data Creazione: <strong style="color: #0f172a;">${new Date(card.createdAt).toLocaleDateString('it-IT')}</strong></div>
+          </div></div>
+          <div class="details">
+            <div><label>Cliente / Titolo</label><strong>${card.title}</strong></div>
+            <div><label>Tipo Lavorazione</label><strong>${card.jobType}</strong></div>
+            <div style="grid-column: span 2;"><label>Referente / Contatto</label><strong>${card.client || 'Nessun referente'}</strong></div>
+          </div>
+          <div class="section-title">Note di Lavoro</div><div class="notes-box">${card.notes || '-'}</div>
+          <div class="section-title">Documenti e Immagini</div>${imagesHtml}
+          <div class="section-title" style="margin-top: 40px;">Storyboard Lavorazione</div>
+          <div style="margin-top: 15px; background: #f8fafc; padding: 15px; border-radius: 6px; border: 1px solid #e2e8f0;">${historyHtml}</div>
+          <script>window.onload = function(){ setTimeout(function(){ window.print(); }, 500); };<\/script>
+        </body></html>
       `);
       printWindow.document.close();
     }
