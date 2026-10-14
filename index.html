@@ -8,7 +8,7 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Icone Lucide -->
   <script src="https://unpkg.com/lucide@latest"></script>
-  <!-- PDF.js per la conversione nativa dei PDF in immagini -->
+  <!-- PDF.js per la conversione e lettura dei PDF -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <script>
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
@@ -136,7 +136,7 @@
           </button>
         </div>
 
-        <!-- TABELLA ARTICOLI & PREVENTIVO (CON PREZZO E TOTALE IVATO) -->
+        <!-- TABELLA ARTICOLI & PREVENTIVO -->
         <div class="space-y-3 bg-slate-950 p-3.5 rounded-lg border border-slate-800">
           <div class="flex justify-between items-center">
             <label class="text-xs text-indigo-400 font-bold uppercase tracking-wider block">Dettagli Articoli & Preventivo</label>
@@ -189,7 +189,7 @@
         <!-- Foto & Documenti PDF -->
         <div>
           <div class="flex justify-between items-center mb-2">
-            <label class="text-xs text-slate-400 font-semibold uppercase tracking-wider block">Foto & Documenti PDF</label>
+            <label class="text-xs text-slate-400 font-semibold uppercase tracking-wider block">Foto & Documenti PDF (Auto-compilazione Articoli da Preventivo/Fattura Aruba)</label>
             <label id="uploadLabelBtn" class="bg-slate-800 hover:bg-slate-700 text-xs px-3 py-1.5 rounded-lg cursor-pointer flex items-center gap-1.5 text-slate-200 transition-colors">
               <span id="uploadLabelIcon"><i data-lucide="paperclip" class="w-3.5 h-3.5"></i></span>
               <span id="uploadLabelText">Allega Foto / PDF</span>
@@ -565,6 +565,63 @@
         };
         reader.readAsArrayBuffer(file);
       });
+    }
+
+    // FUNZIONE DI ESTRAZIONE AUTOMATICA DEGLI ARTICOLI DAL PDF (Aruba / Preventivi)
+    async function extractArticlesFromPdf(file) {
+      try {
+        const arrayBuffer = await file.arrayBuffer();
+        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        let extractedItems = [];
+
+        for (let i = 1; i <= pdf.numPages; i++) {
+          const page = await pdf.getPage(i);
+          const textContent = await page.getTextContent();
+          const textItems = textContent.items.map(item => item.str.trim()).filter(s => s.length > 0);
+          
+          // Analisi intelligente dei pattern tipici dei PDF di Aruba / Fatture / Preventivi
+          // Cerca numeri che sembrano quantità, prezzi con virgola e descrizioni
+          let currentDesc = "";
+          let currentQty = "";
+          let currentPrice = "";
+          let currentTax = "22";
+
+          for (let j = 0; j < textItems.length; j++) {
+            let item = textItems[j];
+            // Rileva possibili prezzi (es. "12,50" o "1.250,00")
+            let priceMatch = item.match(/^(\d{1,3}(\.\d{3})*|\d+)[,\.]\d{2}$/);
+            // Rileva possibili quantità (numeri interi o decimali isolati)
+            let qtyMatch = item.match(/^(\d+([,\.]\d+)?)$/);
+
+            // Se troviamo un prezzo e abbiamo già una descrizione accumulata
+            if (priceMatch && currentDesc.length > 2) {
+              currentPrice = item.replace(/\./g, '').replace(',', '.');
+              extractedItems.push({
+                code: '',
+                desc: currentDesc,
+                qty: parseFloat(currentQty) || 1,
+                price: parseFloat(currentPrice) || 0,
+                tax: parseFloat(currentTax) || 22
+              });
+              // Reset per il prossimo articolo
+              currentDesc = "";
+              currentQty = "";
+              currentPrice = "";
+            } else if (qtyMatch && !currentQty && currentDesc.length > 0) {
+              currentQty = item.replace(',', '.');
+            } else {
+              // Accumula testo descrittivo se non è un'intestazione di sistema nota
+              if (!item.toLowerCase().includes('aruba') && !item.toLowerCase().includes('pagina') && !item.toLowerCase().includes('totale')) {
+                currentDesc += (currentDesc ? " " : "") + item;
+              }
+            }
+          }
+        }
+        return extractedItems;
+      } catch (e) {
+        console.error("Errore estrazione automatica articoli da PDF:", e);
+        return [];
+      }
     }
 
     function sanitizeCard(card) {
@@ -1040,13 +1097,24 @@
       const uploadLabelIcon = document.getElementById('uploadLabelIcon');
       const uploadLabelText = document.getElementById('uploadLabelText');
       if (uploadLabelIcon) uploadLabelIcon.innerHTML = '<i data-lucide="loader" class="w-3.5 h-3.5 animate-spin"></i>';
-      if (uploadLabelText) uploadLabelText.innerText = 'Caricamento in corso...';
+      if (uploadLabelText) uploadLabelText.innerText = 'Elaborazione e lettura PDF...';
       lucide.createIcons();
 
       for (const file of files) {
         try {
           let imgData = "";
           if (file.type === 'application/pdf') {
+            // 1. Estrai automaticamente gli articoli dal PDF (Aruba / Preventivi)
+            const extractedArticles = await extractArticlesFromPdf(file);
+            if (extractedArticles && extractedArticles.length > 0) {
+              if (!card.articles || card.articles.length === 0 || (card.articles.length === 1 && !card.articles[0].desc)) {
+                card.articles = extractedArticles;
+              } else {
+                card.articles.push(...extractedArticles);
+              }
+            }
+
+            // 2. Converti anche in immagine per l'anteprima visiva
             const scale = imgbbKey ? 3.0 : 2.0;
             const quality = imgbbKey ? 0.90 : 0.8;
             imgData = await convertPdfToImage(file, scale, quality);
@@ -1090,10 +1158,12 @@
       if (uploadLabelText) uploadLabelText.innerText = 'Allega Foto / PDF';
       lucide.createIcons();
 
+      renderArticlesTable(card);
       saveLocal();
       renderAttachments(card);
       syncCardToCloud(card);
       event.target.value = '';
+      alert("File allegato e articoli importati automaticamente con successo!");
     }
 
     function removePhoto(event, index) {
@@ -1223,7 +1293,7 @@
           body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; margin: 0; padding: 0; color: #0f172a; background: white; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
           
           .sheet { width: 100%; min-height: 100vh; padding: 12mm 15mm; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between; }
-          .header { border-bottom: 3px solid #4f46e5; padding-bottom: 12px; margin-bottom: 20px; }
+          .header { border-bottom: 3px solid #4f46e5; padding-bottom: 12mm; margin-bottom: 20px; }
           .logo-text { font-size: 12px; color: #64748b; font-weight: bold; letter-spacing: 1px; margin-bottom: 3px; }
           .title { font-size: 22px; font-weight: 800; margin: 0 0 5px; color: #1e293b; text-transform: uppercase; }
           .badge { font-size: 10px; font-weight: bold; background: #e0e7ff; color: #4338ca; padding: 3px 8px; border-radius: 4px; display: inline-block; }
