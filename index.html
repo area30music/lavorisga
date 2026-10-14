@@ -40,7 +40,7 @@
       <div>
         <h1 class="font-bold text-lg leading-tight text-white">Workflow SGA</h1>
         <p class="text-xs text-slate-400 flex items-center gap-1">
-          <i data-lucide="check-circle-2" class="w-3 h-3 text-emerald-500"></i> Salvataggio automatico attivo
+          <i data-lucide="check-circle-2" class="w-3 h-3 text-emerald-500"></i> Gestione Commesse Attiva
         </p>
       </div>
     </div>
@@ -107,7 +107,7 @@
             <label class="text-xs text-slate-400 font-semibold uppercase tracking-wider block">Foto & Documenti (Tocca per ingrandire)</label>
             <label class="bg-slate-800 hover:bg-slate-700 text-xs px-3 py-1.5 rounded-lg cursor-pointer flex items-center gap-1.5 text-slate-200">
               <i data-lucide="camera" class="w-3.5 h-3.5"></i> Scatta / Allega
-              <input type="file" id="photoInput" accept="image/*" class="hidden" onchange="handlePhotoUpload(event)">
+              <input type="file" id="photoInput" accept="image/*" multiple class="hidden" onchange="handlePhotoUpload(event)">
             </label>
           </div>
           <div id="attachmentsContainer" class="grid grid-cols-4 gap-2 bg-slate-950 p-2 rounded-lg border border-slate-800 max-h-40 overflow-y-auto">
@@ -152,7 +152,7 @@
       </div>
       <form id="newCardForm" class="space-y-4 text-sm" onsubmit="createNewCard(event)">
         <div>
-          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Cliente / Titolo</label>
+          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Cliente / Titolo Progetto</label>
           <input type="text" id="formTitle" required placeholder="Es. Rossi S.r.l. - Striscione PVC" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-indigo-500">
         </div>
         <div class="grid grid-cols-2 gap-3">
@@ -233,31 +233,88 @@
     let activeCardId = null;
     let currentGalleryIndex = 0;
 
-    // ----- SISTEMA DI SALVATAGGIO AUTOMATICO -----
+    // ----- COMPRESSIONE IMMAGINI OTTIMIZZATA PER IPAD -----
+    function compressImage(file, maxWidth = 1000, maxHeight = 1000, quality = 0.6) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const img = new Image();
+          img.onload = () => {
+            let width = img.width;
+            let height = img.height;
+
+            if (width > maxWidth || height > maxHeight) {
+              if (width / height > maxWidth / maxHeight) {
+                height = Math.round((height * maxWidth) / width);
+                width = maxWidth;
+              } else {
+                width = Math.round((width * maxHeight) / height);
+                height = maxHeight;
+              }
+            }
+
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+
+            const dataUrl = canvas.toDataURL('image/jpeg', quality);
+            resolve(dataUrl);
+          };
+          img.onerror = reject;
+          img.src = e.target.result;
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+
+    // ----- SISTEMA DI SALVATAGGIO ROBUSTO -----
     function loadState() {
       const saved = localStorage.getItem('workflow_sga_state');
       if (saved) {
         try { 
-          state = JSON.parse(saved); 
-          // Migrazione vecchie foto (da formato stringa Base64 a oggetto {image, rotation})
+          const parsed = JSON.parse(saved); 
+          if (parsed && Array.isArray(parsed.cards)) {
+            state = parsed;
+          } else {
+            state = { cards: [] };
+          }
+          // Migrazione e sanificazione dati
           state.cards.forEach(card => {
-            if (card.photos && card.photos.length > 0) {
-              card.photos = card.photos.map(p => {
-                if (typeof p === 'string') return { image: p, rotation: 0 };
-                return p;
-              });
-            }
+            if (!Array.isArray(card.photos)) card.photos = [];
+            card.photos = card.photos.map(p => {
+              if (typeof p === 'string') return { image: p, rotation: 0 };
+              return p;
+            });
+            if (!Array.isArray(card.history)) card.history = [];
           });
-        } catch(e) { console.error(e); }
+        } catch(e) { 
+          console.error("Errore lettura dati salvati:", e); 
+          state = { cards: [] };
+        }
+      } else {
+        state = { cards: [] };
       }
     }
 
     function saveState() {
-      localStorage.setItem('workflow_sga_state', JSON.stringify(state));
+      // 1. Renderizza sempre a schermo per garantire che la nuova commessa sia subito visibile
       renderBoard();
+
+      // 2. Tenta il salvataggio in memoria locale
+      try {
+        localStorage.setItem('workflow_sga_state', JSON.stringify(state));
+      } catch(e) {
+        console.error("Errore salvataggio localStorage:", e);
+        if (e.name === 'QuotaExceededError' || e.code === 22) {
+          alert("Nota: La commessa è stata aggiunta a schermo, ma la memoria per le foto sul tablet è quasi piena. Ti consigliamo di fare un Backup dal tasto in alto per non rischiare di perdere dati!");
+        }
+      }
     }
 
-    // ----- SISTEMA DI BACKUP E RIPRISTINO -----
+    // ----- BACKUP E RIPRISTINO -----
     function exportBackup() {
       const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state));
       const downloadAnchorNode = document.createElement('a');
@@ -275,7 +332,7 @@
       reader.onload = function(e) {
         try {
           const importedState = JSON.parse(e.target.result);
-          if (importedState && importedState.cards) {
+          if (importedState && Array.isArray(importedState.cards)) {
             state = importedState;
             saveState(); 
             alert("Backup ripristinato con successo!");
@@ -283,7 +340,7 @@
             alert("Il file caricato non sembra un backup valido.");
           }
         } catch(err) {
-          alert("Errore durante la lettura del file.");
+          alert("Errore durante la lettura del file di backup.");
         }
       };
       reader.readAsText(file);
@@ -300,10 +357,15 @@
     // Costruzione delle colonne
     function renderBoard() {
       const board = document.getElementById('board');
+      if (!board) return;
       board.innerHTML = '';
 
+      if (!state || !Array.isArray(state.cards)) {
+        state = { cards: [] };
+      }
+
       COLUMNS_CONFIG.forEach(col => {
-        const colCards = state.cards.filter(c => c.stage === col.id);
+        const colCards = state.cards.filter(c => c && c.stage === col.id);
         const colEl = document.createElement('div');
         colEl.className = `board-column flex flex-col h-full bg-slate-900/60 rounded-xl border border-slate-800 shrink-0 overflow-hidden`;
         
@@ -321,8 +383,9 @@
       lucide.createIcons();
     }
 
-    // Costruzione Scheda
+    // HTML della Scheda
     function createCardHTML(card) {
+      if (!card) return '';
       const badgeStyle = getJobTypeClass(card.jobType);
       const thumbnailHTML = card.photos && card.photos.length > 0 
         ? `<div class="mt-2 flex gap-1 overflow-hidden h-10">
@@ -334,24 +397,26 @@
            </div>` 
         : '';
 
+      const cardIdShort = card.id ? card.id.slice(-4).toUpperCase() : '0000';
+
       return `
         <div draggable="true" ondragstart="handleDragStart(event)" id="card-${card.id}" data-id="${card.id}" onclick="openDetail('${card.id}')"
-             class="bg-slate-950 border border-slate-800 hover:border-indigo-500/50 p-3 rounded-lg shadow-md cursor-pointer transition-all active:scale-95 space-y-2 group">
+             class="bg-slate-955 border border-slate-800 hover:border-indigo-500/50 p-3 rounded-lg shadow-md cursor-pointer transition-all active:scale-95 space-y-2 group">
           <div class="flex justify-between items-start gap-1">
-            <span class="text-[10px] px-1.5 py-0.5 rounded font-medium ${badgeStyle}">${card.jobType}</span>
-            <span class="text-[9px] text-slate-500">${new Date(card.createdAt).toLocaleDateString('it-IT', {day: 'numeric', month: 'short'})}</span>
+            <span class="text-[10px] px-1.5 py-0.5 rounded font-medium ${badgeStyle}">${card.jobType || 'Generico'}</span>
+            <span class="text-[9px] text-slate-500">${card.createdAt ? new Date(card.createdAt).toLocaleDateString('it-IT', {day: 'numeric', month: 'short'}) : ''}</span>
           </div>
-          <h4 class="font-bold text-sm text-slate-100 leading-snug truncate group-hover:text-indigo-300 transition-colors">${card.title}</h4>
+          <h4 class="font-bold text-sm text-slate-100 leading-snug truncate group-hover:text-indigo-300 transition-colors">${card.title || 'Senza Titolo'}</h4>
           ${card.client ? `<p class="text-[11px] text-slate-400 truncate flex items-center gap-1"><i data-lucide="user" class="w-3 h-3 text-slate-500"></i> ${card.client}</p>` : ''}
           ${thumbnailHTML}
           
           <div class="pt-2 border-t border-slate-800/80 flex justify-between items-center" onclick="event.stopPropagation()">
-            <span class="text-[9px] text-slate-600 font-mono">#${card.id.slice(-4).toUpperCase()}</span>
+            <span class="text-[9px] text-slate-600 font-mono">#${cardIdShort}</span>
             <div class="flex gap-1.5">
-              <button onclick="moveCardStep('${card.id}', -1)" class="p-1 rounded bg-slate-900 hover:bg-slate-700 text-slate-400 hover:text-slate-200 transition-colors">
+              <button onclick="moveCardStep('${card.id}', -1)" class="p-1 rounded bg-slate-900 hover:bg-slate-700 text-slate-400 hover:text-slate-200 transition-colors" title="Indietro">
                 <i data-lucide="chevron-left" class="w-3.5 h-3.5"></i>
               </button>
-              <button onclick="moveCardStep('${card.id}', 1)" class="p-1 rounded bg-slate-900 hover:bg-slate-700 text-slate-400 hover:text-slate-200 transition-colors">
+              <button onclick="moveCardStep('${card.id}', 1)" class="p-1 rounded bg-slate-900 hover:bg-slate-700 text-slate-400 hover:text-slate-200 transition-colors" title="Avanti">
                 <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
               </button>
             </div>
@@ -396,26 +461,53 @@
       if (card && card.stage !== targetStageId) {
         card.stage = targetStageId;
         const stageLabel = COLUMNS_CONFIG.find(col => col.id === targetStageId)?.label || targetStageId;
+        if (!Array.isArray(card.history)) card.history = [];
         card.history.push({ stage: targetStageId, label: stageLabel, timestamp: new Date().toISOString() });
         saveState();
       }
     }
 
+    // CREAZIONE NUOVA COMMESSA (CORRETTA E RESISTENTE AGLI ERRORI)
     function createNewCard(event) {
       event.preventDefault();
-      const title = document.getElementById('formTitle').value.trim();
-      const client = document.getElementById('formClient').value.trim();
-      const jobType = document.getElementById('formJobType').value;
-      const notes = document.getElementById('formNotes').value.trim();
+      
+      const titleInput = document.getElementById('formTitle');
+      const clientInput = document.getElementById('formClient');
+      const jobTypeInput = document.getElementById('formJobType');
+      const notesInput = document.getElementById('formNotes');
+
+      if (!titleInput || !jobTypeInput) return;
+
+      const title = titleInput.value.trim();
+      const client = clientInput ? clientInput.value.trim() : '';
+      const jobType = jobTypeInput.value;
+      const notes = notesInput ? notesInput.value.trim() : '';
+
+      if (!title) {
+        alert("Inserisci un titolo o cliente per la commessa.");
+        return;
+      }
+
+      if (!Array.isArray(state.cards)) {
+        state.cards = [];
+      }
 
       const newCard = {
-        id: 'c' + Date.now().toString(36), title, client, jobType, notes,
-        stage: 'prev-da-fare', createdAt: new Date().toISOString(), photos: [],
+        id: 'c' + Date.now().toString(36) + Math.random().toString(36).substring(2, 5),
+        title,
+        client,
+        jobType,
+        notes,
+        stage: 'prev-da-fare', // Parte sempre da "Prev. da fare"
+        createdAt: new Date().toISOString(),
+        photos: [],
         history: [{ stage: 'prev-da-fare', label: 'Inserito in "Prev. da fare"', timestamp: new Date().toISOString() }]
       };
 
       state.cards.unshift(newCard);
       saveState();
+      
+      // Resetta form e chiudi modal
       document.getElementById('newCardForm').reset();
       closeModal('addCardModal');
     }
@@ -439,26 +531,28 @@
 
       const timeline = document.getElementById('storyboardTimeline');
       timeline.innerHTML = '';
-      card.history.forEach((h, idx) => {
-        const hStageObj = COLUMNS_CONFIG.find(col => col.id === h.stage);
-        const circleBg = hStageObj ? hStageObj.color.split(' ')[0] : 'bg-slate-700';
-        const dateStr = new Date(h.timestamp).toLocaleString('it-IT', { day: '2-digit', month: '2-digit', hour: '2-digit', minute:'2-digit' });
+      if (Array.isArray(card.history)) {
+        card.history.forEach((h, idx) => {
+          const hStageObj = COLUMNS_CONFIG.find(col => col.id === h.stage);
+          const circleBg = hStageObj ? hStageObj.color.split(' ')[0] : 'bg-slate-700';
+          const dateStr = new Date(h.timestamp).toLocaleString('it-IT', { day: '2-digit', month: '2-digit', hour: '2-digit', minute:'2-digit' });
 
-        const item = document.createElement('div');
-        item.className = "flex items-start gap-3 relative";
-        item.innerHTML = `
-          <div class="absolute -left-[23px] mt-1.5 w-4.5 h-4.5 rounded-full border border-slate-900 ${circleBg} flex items-center justify-center text-[8px] font-bold text-slate-100 shadow-sm">
-            ${idx+1}
-          </div>
-          <div class="flex-1 bg-slate-950/40 p-2.5 rounded border border-slate-800/80 hover:border-slate-700 transition-colors">
-            <div class="flex justify-between items-center mb-0.5">
-              <span class="font-bold text-xs text-slate-200 uppercase">${h.label}</span>
-              <span class="text-[10px] text-slate-500">${dateStr}</span>
+          const item = document.createElement('div');
+          item.className = "flex items-start gap-3 relative";
+          item.innerHTML = `
+            <div class="absolute -left-[23px] mt-1.5 w-4.5 h-4.5 rounded-full border border-slate-900 ${circleBg} flex items-center justify-center text-[8px] font-bold text-slate-100 shadow-sm">
+              ${idx+1}
             </div>
-          </div>
-        `;
-        timeline.appendChild(item);
-      });
+            <div class="flex-1 bg-slate-950/40 p-2.5 rounded border border-slate-800/80 hover:border-slate-700 transition-colors">
+              <div class="flex justify-between items-center mb-0.5">
+                <span class="font-bold text-xs text-slate-200 uppercase">${h.label}</span>
+                <span class="text-[10px] text-slate-500">${dateStr}</span>
+              </div>
+            </div>
+          `;
+          timeline.appendChild(item);
+        });
+      }
       openModal('detailModal');
     }
 
@@ -468,7 +562,6 @@
       if (card.photos && card.photos.length > 0) {
         card.photos.forEach((photoObj, index) => {
           const thumb = document.createElement('div');
-          // Div contenitore con overflow hidden per far sì che la rotazione resti all'interno del riquadro
           thumb.className = "relative group w-full h-24 bg-slate-900 rounded border border-slate-700 overflow-hidden flex items-center justify-center cursor-pointer";
           thumb.innerHTML = `
             <img src="${photoObj.image}" onclick="openGallery(${index})" style="transform: rotate(${photoObj.rotation || 0}deg);" class="min-w-full min-h-full object-cover transition-transform duration-300">
@@ -487,25 +580,31 @@
       }
     }
 
+    // CARICAMENTO E COMPRESSIONE FOTO MULTIPLE
     function handlePhotoUpload(event) {
-      const file = event.target.files[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = function(e) {
-        const card = state.cards.find(c => c.id === activeCardId);
-        if (card) {
-          if (!card.photos) card.photos = [];
-          card.photos.push({ image: e.target.result, rotation: 0 }); // Salvataggio come oggetto
-          saveState();
-          renderAttachments(card);
-        }
-      };
-      reader.readAsDataURL(file);
+      const files = Array.from(event.target.files);
+      if (!files || files.length === 0) return;
+
+      const card = state.cards.find(c => c.id === activeCardId);
+      if (!card) return;
+      if (!card.photos) card.photos = [];
+
+      Promise.all(files.map(file => compressImage(file))).then(compressedImages => {
+        compressedImages.forEach(imgData => {
+          card.photos.push({ image: imgData, rotation: 0 });
+        });
+        saveState();
+        renderAttachments(card);
+      }).catch(err => {
+        console.error("Errore caricamento foto:", err);
+        alert("Si è verificato un errore durante l'elaborazione dell'immagine.");
+      });
+
       event.target.value = '';
     }
 
     function removePhoto(event, index) {
-      event.stopPropagation(); // Evita di aprire la galleria quando si clicca elimina
+      event.stopPropagation();
       const card = state.cards.find(c => c.id === activeCardId);
       if (card && card.photos) {
         if(confirm("Eliminare definitivamente questo allegato?")) {
@@ -516,7 +615,7 @@
       }
     }
 
-    // ----- LOGICA GALLERIA E ROTAZIONE -----
+    // GALLERIA E ROTAZIONE
     function openGallery(index) {
       currentGalleryIndex = index;
       updateGalleryView();
@@ -538,7 +637,6 @@
 
       document.getElementById('galleryCounter').innerText = `${currentGalleryIndex + 1} / ${card.photos.length}`;
 
-      // Nascondi frecce se siamo al limite
       document.getElementById('btnPrevGallery').style.display = currentGalleryIndex === 0 ? 'none' : 'block';
       document.getElementById('btnNextGallery').style.display = currentGalleryIndex === card.photos.length - 1 ? 'none' : 'block';
     }
@@ -565,15 +663,12 @@
       const photo = card.photos[currentGalleryIndex];
       photo.rotation = ((photo.rotation || 0) + 90) % 360;
       
-      // Salva lo stato in modo che la rotazione diventi definitiva
       saveState(); 
       updateGalleryView(); 
-      
-      // Aggiorna in background anche le miniature del dettaglio commessa
       renderAttachments(card);
     }
 
-    // ----- ELIMINAZIONE E STAMPA -----
+    // ELIMINAZIONE E STAMPA
     function deleteCurrentCard() {
       if (confirm("Sei sicuro di voler eliminare definitivamente questa commessa di SGA?")) {
         state.cards = state.cards.filter(c => c.id !== activeCardId);
@@ -588,7 +683,7 @@
 
       const printWindow = window.open('', '_blank');
       
-      const historyHtml = card.history.map((h, i) => {
+      const historyHtml = (card.history || []).map((h, i) => {
         return `
           <div style="margin-bottom: 12px; padding-left: 20px; border-left: 2px solid #cbd5e1; position: relative;">
             <div style="position: absolute; left: -6px; top: 2px; width: 10px; height: 10px; border-radius: 50%; background: #475569;"></div>
@@ -598,7 +693,6 @@
         `;
       }).join('');
 
-      // Per la stampa creiamo dei div quadrati (così la rotazione CSS rimane nei bordi)
       const imagesHtml = card.photos && card.photos.length > 0 
         ? `<div style="display: flex; gap: 15px; flex-wrap: wrap; margin-top: 15px;">
              ${card.photos.map(p => `
