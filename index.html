@@ -294,11 +294,9 @@
     // ==========================================
     // CONFIGURAZIONE PASSWORD CONDIVISA
     // ==========================================
-    // QUI DEVI METTERE LA TUA PASSWORD. Attualmente è tornata sga2026.
     const SHARED_PASSWORD = "sga2026";
 
     function checkAuth() {
-      // Modifica per usare anche la sessione temporanea se "Ricordami" non è spuntato
       const isAuth = localStorage.getItem('workflow_sga_auth') || sessionStorage.getItem('workflow_sga_auth');
       const loginScreen = document.getElementById('loginScreen');
       if (isAuth === 'true') {
@@ -311,7 +309,7 @@
     }
 
     function handleLogin(event) {
-      event.preventDefault(); // Previene il ricaricamento della pagina!
+      event.preventDefault(); 
       const pwInput = document.getElementById('loginPassword').value.trim();
       const remember = document.getElementById('rememberMe').checked;
       const errorMsg = document.getElementById('loginError');
@@ -321,12 +319,11 @@
         if (remember) {
           localStorage.setItem('workflow_sga_auth', 'true');
         } else {
-          sessionStorage.setItem('workflow_sga_auth', 'true'); // Salva nella scheda attuale
+          sessionStorage.setItem('workflow_sga_auth', 'true'); 
         }
         document.getElementById('loginScreen').classList.add('hidden');
         init();
       } else {
-        // Mostra messaggio visibile di errore invece dell'alert bloccabile
         errorMsg.classList.remove('hidden');
         document.getElementById('loginPassword').value = '';
       }
@@ -462,7 +459,8 @@
       db.collection('workflow_sga_cards').doc(cardId).delete().catch(e => console.error(e));
     }
 
-    function compressImage(file, maxWidth = 1200, maxHeight = 1200, quality = 0.6) {
+    // Aumentata risoluzione foto standard
+    function compressImage(file, maxWidth = 2400, maxHeight = 2400, quality = 0.85) {
       return new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = (e) => {
@@ -488,7 +486,7 @@
       });
     }
 
-    // Conversione PDF in Immagine AD ALTA RISOLUZIONE con SFONDO BIANCO SOLIDO
+    // Conversione PDF in Immagine AD ALTISSIMA RISOLUZIONE (Scale 4.0, Quality 1.0)
     function convertPdfToImage(file) {
       return new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -498,7 +496,8 @@
             const pdf = await pdfjsLib.getDocument({ data: typedarray }).promise;
             const page = await pdf.getPage(1);
             
-            const viewport = page.getViewport({ scale: 3.0 }); 
+            // Scalato a 4.0 per qualità eccellente e ultra definita su A4
+            const viewport = page.getViewport({ scale: 4.0 }); 
             const canvas = document.createElement('canvas');
             const context = canvas.getContext('2d');
             canvas.height = viewport.height;
@@ -508,7 +507,9 @@
             context.fillRect(0, 0, canvas.width, canvas.height);
 
             await page.render({ canvasContext: context, viewport: viewport }).promise;
-            resolve(canvas.toDataURL('image/jpeg', 0.95));
+            
+            // Qualità massima 1.0
+            resolve(canvas.toDataURL('image/jpeg', 1.0));
           } catch (err) {
             console.error("Errore conversione PDF:", err);
             reject(err);
@@ -948,7 +949,7 @@
       }
     }
 
-    // STAMPA CON SCHEDA COMMESSA A COLORI "CARINA" E ALLEGATI IN ALTA RISOLUZIONE
+    // STAMPA OTTIMIZZATA: NIENTE PAGINE BIANCHE EXTRA, ALLEGATI A TUTTO SCHERMO
     function printCard() {
       const card = state.cards.find(c => c.id === activeCardId);
       if (!card) return;
@@ -975,7 +976,11 @@
 
       printWindow.document.write(`
         <html><head><title>Commessa SGA #${card.id.slice(-4).toUpperCase()}</title><style>
-          body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; padding: 30px; color: #0f172a; max-width: 800px; margin: 0 auto; background: white; }
+          @page { size: A4; margin: 0; }
+          body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; margin: 0; padding: 0; color: #0f172a; background: white; }
+          
+          /* PRIMA PAGINA (SCHEDA) */
+          .sheet { width: 100vw; height: 100vh; padding: 15mm 20mm; box-sizing: border-box; display: flex; flex-direction: column; }
           .header { border-bottom: 3px solid #4f46e5; padding-bottom: 15px; margin-bottom: 25px; }
           .logo-text { font-size: 13px; color: #64748b; font-weight: bold; letter-spacing: 1px; margin-bottom: 4px; }
           .title { font-size: 24px; font-weight: 800; margin: 0 0 6px; color: #1e293b; text-transform: uppercase; }
@@ -987,43 +992,40 @@
           .details strong { font-size: 13px; color: #0f172a; }
           .notes-box { background: #f8fafc; border: 1px solid #e2e8f0; padding: 12px; border-radius: 6px; font-size: 12px; line-height: 1.5; min-height: 50px; white-space: pre-wrap; color: #334155; }
           
-          /* Pagine per foto/PDF stampate a piena pagina */
-          .print-page { page-break-before: always; break-before: page; height: 100vh; width: 100vw; position: absolute; top: 0; left: 0; background: white; display: flex; align-items: center; justify-content: center; overflow: hidden; margin: 0; padding: 0; box-sizing: border-box; }
+          /* PAGINE SUCCESSIVE ALLEGATI A TUTTO SCHERMO SENZA PAGINE BIANCHE EXTRA */
+          .print-page { page-break-before: always; width: 100vw; height: 100vh; margin: 0; padding: 0; box-sizing: border-box; display: flex; align-items: center; justify-content: center; overflow: hidden; background: white; }
           .image-fullscreen { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
-          .image-fullscreen img { max-width: 100%; max-height: 100%; object-fit: contain; }
-
-          @media print {
-            body { padding: 20px; max-width: none; background: white; }
-            .print-page { position: relative; height: 100vh; width: 100%; page-break-after: always; }
-          }
+          .image-fullscreen img { width: 100%; height: 100%; object-fit: contain; }
         </style></head><body>
-          <div>
-            <div class="header">
-              <div style="display: flex; justify-content: space-between; align-items: start;">
-                <div>
-                  <div class="logo-text">SGA STUDIO GRAFICO ASSOCIATO</div>
-                  <h1 class="title">SCHEDA COMMESSA</h1>
-                  <span class="badge">STATO: ${COLUMNS_CONFIG.find(col => col.id === card.stage)?.label.toUpperCase() || card.stage}</span>
-                </div>
-                <div style="text-align: right; font-size: 11px; color: #64748b; line-height: 1.4;">
-                  Rif. Ordine: <strong style="color: #0f172a;">#${card.id.slice(-4).toUpperCase()}</strong><br>
-                  Data Creazione: <strong style="color: #0f172a;">${new Date(card.createdAt).toLocaleDateString('it-IT')}</strong>
+          <div class="sheet">
+            <div>
+              <div class="header">
+                <div style="display: flex; justify-content: space-between; align-items: start;">
+                  <div>
+                    <div class="logo-text">SGA STUDIO GRAFICO ASSOCIATO</div>
+                    <h1 class="title">SCHEDA COMMESSA</h1>
+                    <span class="badge">STATO: ${COLUMNS_CONFIG.find(col => col.id === card.stage)?.label.toUpperCase() || card.stage}</span>
+                  </div>
+                  <div style="text-align: right; font-size: 11px; color: #64748b; line-height: 1.4;">
+                    Rif. Ordine: <strong style="color: #0f172a;">#${card.id.slice(-4).toUpperCase()}</strong><br>
+                    Data Creazione: <strong style="color: #0f172a;">${new Date(card.createdAt).toLocaleDateString('it-IT')}</strong>
+                  </div>
                 </div>
               </div>
-            </div>
-            
-            <div class="details">
-              <div><label>Cliente / Titolo</label><strong>${card.title}</strong></div>
-              <div><label>Tipo Lavorazione</label><strong>${card.jobType}</strong></div>
-              <div style="grid-column: span 2;"><label>Referente / Contatto</label><strong>${card.client || 'Nessun referente'}</strong></div>
-            </div>
-            
-            <div class="section-title">Note & Specifiche di Lavoro</div>
-            <div class="notes-box">${card.notes || '-'}</div>
-            
-            <div class="section-title" style="margin-top: 30px;">Storyboard Lavorazione</div>
-            <div style="margin-top: 10px; background: #f8fafc; padding: 12px; border-radius: 6px; border: 1px solid #e2e8f0;">
-              ${historyHtml}
+              
+              <div class="details">
+                <div><label>Cliente / Titolo</label><strong>${card.title}</strong></div>
+                <div><label>Tipo Lavorazione</label><strong>${card.jobType}</strong></div>
+                <div style="grid-column: span 2;"><label>Referente / Contatto</label><strong>${card.client || 'Nessun referente'}</strong></div>
+              </div>
+              
+              <div class="section-title">Note & Specifiche di Lavoro</div>
+              <div class="notes-box">${card.notes || '-'}</div>
+              
+              <div class="section-title" style="margin-top: 30px;">Storyboard Lavorazione</div>
+              <div style="margin-top: 10px; background: #f8fafc; padding: 12px; border-radius: 6px; border: 1px solid #e2e8f0;">
+                ${historyHtml}
+              </div>
             </div>
           </div>
           
