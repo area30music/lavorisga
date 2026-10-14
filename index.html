@@ -26,7 +26,7 @@
 </head>
 <body class="bg-slate-950 text-slate-100 font-sans h-screen flex flex-col overflow-hidden">
 
-  <!-- SCHERMATA DI LOGIN (PROTETTA DA PASSWORD CONDIVISA) -->
+  <!-- SCHERMATA DI LOGIN -->
   <div id="loginScreen" class="fixed inset-0 bg-slate-950 z-[100] flex items-center justify-center p-4">
     <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-sm p-6 shadow-2xl space-y-6">
       <div class="text-center space-y-2">
@@ -105,7 +105,7 @@
       </div>
       
       <div class="p-5 overflow-y-auto space-y-5 flex-1 text-sm">
-        <!-- Modifica Anagrafica (Titolo, Cliente e Tipo Lavoro Modificabile) -->
+        <!-- Modifica Anagrafica -->
         <div class="space-y-3 bg-slate-950 p-3.5 rounded-lg border border-slate-800">
           <div>
             <label class="text-[10px] text-indigo-400 font-semibold uppercase tracking-wider block mb-1">Cliente / Titolo Progetto</label>
@@ -117,7 +117,7 @@
               <input type="text" id="editClient" class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-1.5 text-slate-200 text-sm focus:outline-none focus:border-indigo-500">
             </div>
             <div>
-              <label class="text-[10px] text-indigo-400 font-semibold uppercase tracking-wider block mb-1">Tipo Lavorazione (Modificabile)</label>
+              <label class="text-[10px] text-indigo-400 font-semibold uppercase tracking-wider block mb-1">Tipo Lavorazione</label>
               <select id="editJobType" onchange="checkEditCustomJobType(this.value)" class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-1.5 text-slate-200 text-sm focus:outline-none focus:border-indigo-500">
                 <option value="Stampa Digitale / Banner">Stampa Digitale / Banner</option>
                 <option value="Abbigliamento / Ricamo">Abbigliamento / Ricamo</option>
@@ -135,9 +135,9 @@
           </button>
         </div>
 
-        <!-- Modifica Note & Specifiche -->
+        <!-- Modifica Note -->
         <div class="space-y-2 bg-slate-950 p-3.5 rounded-lg border border-slate-800">
-          <label class="text-[10px] text-indigo-400 font-semibold uppercase tracking-wider block">Dettagli & Note (Modificabili in ogni momento)</label>
+          <label class="text-[10px] text-indigo-400 font-semibold uppercase tracking-wider block">Dettagli & Note</label>
           <textarea id="editNotes" rows="3" class="w-full bg-slate-900 border border-slate-700 rounded p-2.5 text-slate-200 text-sm focus:outline-none focus:border-indigo-500 resize-none"></textarea>
           <button onclick="saveNotesEdits()" class="bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-300 border border-indigo-500/30 text-xs px-3 py-1.5 rounded font-semibold flex items-center gap-1.5 transition-colors">
             <i data-lucide="save" class="w-3.5 h-3.5"></i> Aggiorna Note e Specifiche
@@ -147,7 +147,7 @@
         <!-- Foto & Documenti PDF -->
         <div>
           <div class="flex justify-between items-center mb-2">
-            <label class="text-xs text-slate-400 font-semibold uppercase tracking-wider block">Foto & Documenti PDF (Tocca per visualizzare)</label>
+            <label class="text-xs text-slate-400 font-semibold uppercase tracking-wider block">Foto & Documenti PDF</label>
             <label class="bg-slate-800 hover:bg-slate-700 text-xs px-3 py-1.5 rounded-lg cursor-pointer flex items-center gap-1.5 text-slate-200">
               <i data-lucide="paperclip" class="w-3.5 h-3.5"></i> Allega Foto / PDF
               <input type="file" id="photoInput" accept="image/*,.pdf" multiple class="hidden" onchange="handleDocumentUpload(event)">
@@ -160,7 +160,7 @@
 
         <!-- STORYBOARD -->
         <div>
-          <label class="text-xs text-slate-400 font-semibold uppercase tracking-wider block mb-3">Storyboard Lavorazione (Cronologia Passaggi)</label>
+          <label class="text-xs text-slate-400 font-semibold uppercase tracking-wider block mb-3">Storyboard Lavorazione</label>
           <div id="storyboardTimeline" class="relative pl-6 space-y-3 before:absolute before:left-2 before:top-1.5 before:bottom-1.5 before:w-0.5 before:bg-slate-800">
             <!-- Step -->
           </div>
@@ -277,7 +277,8 @@
       </div>
     </div>
     <div class="relative w-full h-full flex items-center justify-center p-4">
-      <img id="galleryImage" src="" class="max-w-full max-h-[90vh] object-contain transition-transform duration-300">
+      <!-- Immagine centrata, ora con sfondo nativamente bianco per i PDF -->
+      <img id="galleryImage" src="" class="max-w-full max-h-[90vh] object-contain transition-transform duration-300 bg-white">
       
       <button onclick="prevGalleryImage()" class="absolute left-4 top-1/2 -translate-y-1/2 text-white p-3 bg-slate-800/80 hover:bg-slate-700 rounded-full transition-colors" id="btnPrevGallery">
         <i data-lucide="chevron-left" class="w-6 h-6"></i>
@@ -479,7 +480,7 @@
       });
     }
 
-    // Conversione PDF in Immagine (Foto) tramite PDF.js
+    // Conversione PDF in Immagine AD ALTA RISOLUZIONE con SFONDO BIANCO SOLIDO
     function convertPdfToImage(file) {
       return new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -489,548 +490,13 @@
             const pdf = await pdfjsLib.getDocument({ data: typedarray }).promise;
             const page = await pdf.getPage(1);
             
-            const viewport = page.getViewport({ scale: 2.0 }); // Alta risoluzione per la stampa
+            // Incrementata la scala a 3.0 per avere un PDF nitidissimo!
+            const viewport = page.getViewport({ scale: 3.0 }); 
             const canvas = document.createElement('canvas');
             const context = canvas.getContext('2d');
             canvas.height = viewport.height;
             canvas.width = viewport.width;
 
-            await page.render({ canvasContext: context, viewport: viewport }).promise;
-            resolve(canvas.toDataURL('image/jpeg', 0.85));
-          } catch (err) {
-            console.error("Errore conversione PDF:", err);
-            reject(err);
-          }
-        };
-        reader.readAsArrayBuffer(file);
-      });
-    }
-
-    function sanitizeCard(card) {
-      if (!card) return null;
-      if (!Array.isArray(card.photos)) card.photos = [];
-      card.photos = card.photos.map(p => {
-        if (typeof p === 'string') return { image: p, rotation: 0 };
-        if (!p.rotation) p.rotation = 0;
-        return p;
-      });
-      if (!Array.isArray(card.history)) card.history = [];
-      return card;
-    }
-
-    function loadState() {
-      const saved = localStorage.getItem('workflow_sga_state');
-      if (saved) {
-        try { 
-          const parsed = JSON.parse(saved); 
-          if (parsed && Array.isArray(parsed.cards)) {
-            state.cards = parsed.cards.map(c => sanitizeCard(c)).filter(c => c !== null);
-          } else {
-            state = { cards: [] };
-          }
-        } catch(e) { state = { cards: [] }; }
-      } else { state = { cards: [] }; }
-    }
-
-    function saveLocal() {
-      renderBoard();
-      try { localStorage.setItem('workflow_sga_state', JSON.stringify(state)); } catch(e){}
-    }
-
-    function exportBackup() {
-      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state));
-      const downloadAnchorNode = document.createElement('a');
-      downloadAnchorNode.setAttribute("href", dataStr);
-      downloadAnchorNode.setAttribute("download", "workflow_sga_backup.json");
-      document.body.appendChild(downloadAnchorNode);
-      downloadAnchorNode.click();
-      downloadAnchorNode.remove();
-    }
-
-    function importBackup(event) {
-      const file = event.target.files[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = function(e) {
-        try {
-          const importedState = JSON.parse(e.target.result);
-          if (importedState && Array.isArray(importedState.cards)) {
-            let count = 0;
-            importedState.cards.forEach(card => {
-               const safeCard = sanitizeCard(card);
-               if (safeCard) {
-                 safeCard.id = 'c' + Date.now().toString(36) + Math.random().toString(36).substring(2, 7);
-                 state.cards.push(safeCard);
-                 syncCardToCloud(safeCard);
-                 count++;
-               }
-            });
-            state.cards.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
-            saveLocal(); 
-            alert(`Backup ripristinato con successo! Sono state importate ${count} commesse.`);
-          } else {
-            alert("File non valido.");
-          }
-        } catch(err) {
-          alert("Errore durante la lettura del file.");
-        }
-      };
-      reader.readAsText(file);
-      event.target.value = ''; 
-    }
-
-    function init() {
-      loadState();
-      renderBoard();
-      initFirebase();
-      lucide.createIcons();
-      const cfgStr = localStorage.getItem('workflow_sga_firebase_config');
-      if (cfgStr) {
-        try {
-          const cfg = JSON.parse(cfgStr);
-          if (cfg.apiKey) document.getElementById('cfgApiKey').value = cfg.apiKey;
-          if (cfg.projectId) document.getElementById('cfgProjectId').value = cfg.projectId;
-        } catch(e){}
-      }
-    }
-
-    function renderBoard() {
-      const board = document.getElementById('board');
-      if (!board) return;
-      board.innerHTML = '';
-      if (!state || !Array.isArray(state.cards)) state = { cards: [] };
-
-      COLUMNS_CONFIG.forEach(col => {
-        const colCards = state.cards.filter(c => c && c.stage === col.id);
-        const colEl = document.createElement('div');
-        colEl.className = `board-column flex flex-col h-full bg-slate-900/60 rounded-xl border border-slate-800 shrink-0 overflow-hidden`;
-        colEl.innerHTML = `
-          <div class="p-3 border-b border-slate-800 ${col.color} ${col.border} flex justify-between items-center bg-opacity-30">
-            <h3 class="font-bold text-xs uppercase tracking-wide truncate max-w-[80%]">${col.label}</h3>
-            <span class="text-xs font-semibold bg-slate-950/60 px-2 py-0.5 rounded-full shadow-inner">${colCards.length}</span>
-          </div>
-          <div class="flex-1 overflow-y-auto p-2 space-y-2 card-dropzone" data-col="${col.id}" ondragover="allowDrop(event)" ondrop="handleDrop(event)">
-            ${colCards.map(card => createCardHTML(card)).join('')}
-          </div>
-        `;
-        board.appendChild(colEl);
-      });
-      lucide.createIcons();
-    }
-
-    function createCardHTML(card) {
-      if (!card) return '';
-      const badgeStyle = getJobTypeClass(card.jobType);
-      const thumbnailHTML = card.photos && card.photos.length > 0 
-        ? `<div class="mt-2 flex gap-1 overflow-hidden h-10">
-             ${card.photos.map(p => `
-               <div class="w-10 h-10 shrink-0 overflow-hidden rounded border border-slate-700 bg-slate-900 flex items-center justify-center">
-                 <img src="${p.image}" style="transform: rotate(${p.rotation || 0}deg);" class="min-w-full min-h-full object-cover">
-               </div>
-             `).join('')}
-           </div>` 
-        : '';
-      const cardIdShort = card.id ? card.id.slice(-4).toUpperCase() : '0000';
-
-      return `
-        <div draggable="true" ondragstart="handleDragStart(event)" id="card-${card.id}" data-id="${card.id}" onclick="openDetail('${card.id}')"
-             class="bg-slate-955 border border-slate-800 hover:border-indigo-500/50 p-3 rounded-lg shadow-md cursor-pointer transition-all active:scale-95 space-y-2 group">
-          <div class="flex justify-between items-start gap-1">
-            <span class="text-[10px] px-1.5 py-0.5 rounded font-medium ${badgeStyle}">${card.jobType || 'Generico'}</span>
-            <span class="text-[9px] text-slate-500">${card.createdAt ? new Date(card.createdAt).toLocaleDateString('it-IT', {day: 'numeric', month: 'short'}) : ''}</span>
-          </div>
-          <h4 class="font-bold text-sm text-slate-100 leading-snug truncate group-hover:text-indigo-300 transition-colors">${card.title || 'Senza Titolo'}</h4>
-          ${card.client ? `<p class="text-[11px] text-slate-400 truncate flex items-center gap-1"><i data-lucide="user" class="w-3 h-3 text-slate-500"></i> ${card.client}</p>` : ''}
-          ${thumbnailHTML}
-          <div class="pt-2 border-t border-slate-800/80 flex justify-between items-center" onclick="event.stopPropagation()">
-            <span class="text-[9px] text-slate-600 font-mono">#${cardIdShort}</span>
-            <div class="flex gap-1.5">
-              <button onclick="moveCardStep('${card.id}', -1)" class="p-1 rounded bg-slate-900 hover:bg-slate-700 text-slate-400 hover:text-slate-200 transition-colors"><i data-lucide="chevron-left" class="w-3.5 h-3.5"></i></button>
-              <button onclick="moveCardStep('${card.id}', 1)" class="p-1 rounded bg-slate-900 hover:bg-slate-700 text-slate-400 hover:text-slate-200 transition-colors"><i data-lucide="chevron-right" class="w-3.5 h-3.5"></i></button>
-            </div>
-          </div>
-        </div>
-      `;
-    }
-
-    function getJobTypeClass(type) {
-      switch (type) {
-        case 'Stampa Digitale / Banner': return 'bg-blue-900/40 text-blue-300 border border-blue-800';
-        case 'Abbigliamento / Ricamo': return 'bg-purple-900/40 text-purple-300 border border-purple-800';
-        case 'Insegne & Vetrofanie': return 'bg-amber-900/40 text-amber-300 border border-amber-800';
-        case 'Etichette & Adesivi': return 'bg-teal-900/40 text-teal-300 border border-teal-800';
-        case 'Grafica / Progettazione': return 'bg-rose-900/40 text-rose-300 border border-rose-800';
-        default: return 'bg-slate-800 text-slate-300 border border-slate-700';
-      }
-    }
-
-    function allowDrop(ev) { ev.preventDefault(); }
-    function handleDragStart(ev) { ev.dataTransfer.setData("text/plain", ev.target.dataset.id); }
-    function handleDrop(ev) {
-      ev.preventDefault();
-      const cardId = ev.dataTransfer.getData("text");
-      const targetColId = ev.currentTarget.dataset.col;
-      if (cardId && targetColId) changeCardStage(cardId, targetColId);
-    }
-
-    function moveCardStep(cardId, direction) {
-      const card = state.cards.find(c => c.id === cardId);
-      if (!card) return;
-      const currentIndex = COLUMNS_CONFIG.findIndex(col => col.id === card.stage);
-      let targetIndex = currentIndex + direction;
-      if (targetIndex >= 0 && targetIndex < COLUMNS_CONFIG.length) changeCardStage(cardId, COLUMNS_CONFIG[targetIndex].id);
-    }
-
-    function changeCardStage(cardId, targetStageId) {
-      const card = state.cards.find(c => c.id === cardId);
-      if (card && card.stage !== targetStageId) {
-        card.stage = targetStageId;
-        const stageLabel = COLUMNS_CONFIG.find(col => col.id === targetStageId)?.label || targetStageId;
-        if (!Array.isArray(card.history)) card.history = [];
-        card.history.push({ stage: targetStageId, label: stageLabel, timestamp: new Date().toISOString() });
-        saveLocal();
-        syncCardToCloud(card);
-      }
-    }
-
-    function checkNewCustomJobType(val) {
-      const customInput = document.getElementById('formCustomJobType');
-      if (val === 'custom') {
-        customInput.classList.remove('hidden');
-        customInput.required = true;
-      } else {
-        customInput.classList.add('hidden');
-        customInput.required = false;
-        customInput.value = '';
-      }
-    }
-
-    function checkEditCustomJobType(val) {
-      const customInput = document.getElementById('editCustomJobType');
-      if (val === 'custom') {
-        customInput.classList.remove('hidden');
-      } else {
-        customInput.classList.add('hidden');
-        customInput.value = '';
-      }
-    }
-
-    function createNewCard(event) {
-      event.preventDefault();
-      const title = document.getElementById('formTitle').value.trim();
-      const client = document.getElementById('formClient') ? document.getElementById('formClient').value.trim() : '';
-      let jobType = document.getElementById('formJobType').value;
-      if (jobType === 'custom') {
-        jobType = document.getElementById('formCustomJobType').value.trim() || 'Altro';
-      }
-      const notes = document.getElementById('formNotes') ? document.getElementById('formNotes').value.trim() : '';
-      if (!title) return;
-
-      const newCard = {
-        id: 'c' + Date.now().toString(36) + Math.random().toString(36).substring(2, 7),
-        title, client, jobType, notes,
-        stage: 'prev-da-fare',
-        createdAt: new Date().toISOString(),
-        photos: [],
-        history: [{ stage: 'prev-da-fare', label: 'Inserito in "Prev. da fare"', timestamp: new Date().toISOString() }]
-      };
-
-      state.cards.unshift(newCard);
-      saveLocal();
-      syncCardToCloud(newCard);
-      document.getElementById('newCardForm').reset();
-      document.getElementById('formCustomJobType').classList.add('hidden');
-      closeModal('addCardModal');
-    }
-
-    function saveCardEdits() {
-      const card = state.cards.find(c => c.id === activeCardId);
-      if (!card) return;
-      const newTitle = document.getElementById('editTitle').value.trim();
-      const newClient = document.getElementById('editClient').value.trim();
-      let newJobType = document.getElementById('editJobType').value;
-      if (newJobType === 'custom') {
-        newJobType = document.getElementById('editCustomJobType').value.trim() || card.jobType;
-      }
-      if (!newTitle) return alert("Il titolo / cliente non può essere vuoto.");
-
-      card.title = newTitle;
-      card.client = newClient;
-      card.jobType = newJobType;
-      saveLocal();
-      syncCardToCloud(card);
-      alert("Anagrafica e tipo lavorazione aggiornati con successo!");
-    }
-
-    function saveNotesEdits() {
-      const card = state.cards.find(c => c.id === activeCardId);
-      if (!card) return;
-      const newNotes = document.getElementById('editNotes').value.trim();
-      card.notes = newNotes;
-      saveLocal();
-      syncCardToCloud(card);
-      alert("Note e specifiche aggiornate con successo!");
-    }
-
-    function openDetail(id) {
-      const card = state.cards.find(c => c.id === id);
-      if (!card) return;
-      activeCardId = id;
-      const currentStageObj = COLUMNS_CONFIG.find(col => col.id === card.stage);
-      const badge = document.getElementById('detailBadge');
-      badge.textContent = currentStageObj ? currentStageObj.label : 'N/A';
-      badge.className = `px-2 py-0.5 rounded text-[11px] font-bold text-white uppercase ${currentStageObj ? currentStageObj.color.split(' ')[0] : 'bg-slate-700'}`;
-      
-      document.getElementById('editTitle').value = card.title || '';
-      document.getElementById('editClient').value = card.client || '';
-      document.getElementById('editNotes').value = card.notes || '';
-      
-      const jobSelect = document.getElementById('editJobType');
-      const customJobInput = document.getElementById('editCustomJobType');
-      let found = false;
-      for (let i = 0; i < jobSelect.options.length; i++) {
-        if (jobSelect.options[i].value === card.jobType) {
-          jobSelect.value = card.jobType;
-          found = true;
-          break;
-        }
-      }
-      if (!found && card.jobType) {
-        jobSelect.value = 'custom';
-        customJobInput.value = card.jobType;
-        customJobInput.classList.remove('hidden');
-      } else {
-        customJobInput.value = '';
-        customJobInput.classList.add('hidden');
-      }
-
-      renderAttachments(card);
-
-      const timeline = document.getElementById('storyboardTimeline');
-      timeline.innerHTML = '';
-      if (Array.isArray(card.history)) {
-        card.history.forEach((h, idx) => {
-          const hStageObj = COLUMNS_CONFIG.find(col => col.id === h.stage);
-          const circleBg = hStageObj ? hStageObj.color.split(' ')[0] : 'bg-slate-700';
-          const dateStr = new Date(h.timestamp).toLocaleString('it-IT', { day: '2-digit', month: '2-digit', hour: '2-digit', minute:'2-digit' });
-          const item = document.createElement('div');
-          item.className = "flex items-start gap-3 relative";
-          item.innerHTML = `
-            <div class="absolute -left-[23px] mt-1.5 w-4.5 h-4.5 rounded-full border border-slate-900 ${circleBg} flex items-center justify-center text-[8px] font-bold text-slate-100 shadow-sm">${idx+1}</div>
-            <div class="flex-1 bg-slate-950/40 p-2.5 rounded border border-slate-800/80 hover:border-slate-700 transition-colors">
-              <div class="flex justify-between items-center mb-0.5"><span class="font-bold text-xs text-slate-200 uppercase">${h.label}</span><span class="text-[10px] text-slate-500">${dateStr}</span></div>
-            </div>`;
-          timeline.appendChild(item);
-        });
-      }
-      openModal('detailModal');
-    }
-
-    function renderAttachments(card) {
-      const container = document.getElementById('attachmentsContainer');
-      container.innerHTML = '';
-      if (card.photos && card.photos.length > 0) {
-        card.photos.forEach((photoObj, index) => {
-          const thumb = document.createElement('div');
-          thumb.className = "relative group w-full h-24 bg-slate-900 rounded border border-slate-700 overflow-hidden flex items-center justify-center cursor-pointer";
-          thumb.innerHTML = `
-            <img src="${photoObj.image}" onclick="openGallery(${index})" style="transform: rotate(${photoObj.rotation || 0}deg);" class="min-w-full min-h-full object-cover transition-transform duration-300">
-            <button onclick="removePhoto(event, ${index})" class="absolute top-1 right-1 bg-red-600/95 hover:bg-red-500 text-white p-1.5 rounded-md shadow-lg active:scale-90 opacity-0 group-hover:opacity-100 transition-opacity"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
-          `;
-          container.appendChild(thumb);
-        });
-        lucide.createIcons();
-      } else {
-        container.innerHTML = `<div class="col-span-4 flex flex-col items-center justify-center py-6 text-slate-500 border border-dashed border-slate-800 rounded-lg bg-slate-950/50"><i data-lucide="file-question" class="w-6 h-6 mb-2 opacity-50"></i><span class="text-xs italic">Nessun file o foto allegata</span></div>`;
-      }
-    }
-
-    async function handleDocumentUpload(event) {
-      const files = Array.from(event.target.files);
-      if (!files || files.length === 0) return;
-      const card = state.cards.find(c => c.id === activeCardId);
-      if (!card) return;
-      if (!card.photos) card.photos = [];
-
-      for (const file of files) {
-        try {
-          let imgData = "";
-          if (file.type === 'application/pdf') {
-            imgData = await convertPdfToImage(file);
-          } else {
-            imgData = await compressImage(file);
-          }
-          if (imgData) {
-            card.photos.push({ image: imgData, rotation: 0 });
-          }
-        } catch (e) {
-          console.error("Errore caricamento file:", e);
-        }
-      }
-
-      saveLocal();
-      renderAttachments(card);
-      syncCardToCloud(card);
-      event.target.value = '';
-    }
-
-    function removePhoto(event, index) {
-      event.stopPropagation();
-      const card = state.cards.find(c => c.id === activeCardId);
-      if (card && card.photos) {
-        if(confirm("Eliminare definitivamente questo allegato?")) {
-          card.photos.splice(index, 1);
-          saveLocal();
-          renderAttachments(card);
-          syncCardToCloud(card);
-        }
-      }
-    }
-
-    function openGallery(index) {
-      currentGalleryIndex = index;
-      updateGalleryView();
-      openModal('galleryModal');
-    }
-
-    function closeGallery() { closeModal('galleryModal'); }
-
-    function updateGalleryView() {
-      const card = state.cards.find(c => c.id === activeCardId);
-      if (!card || !card.photos || card.photos.length === 0) return closeGallery();
-      const item = card.photos[currentGalleryIndex];
-      
-      const imgEl = document.getElementById('galleryImage');
-      imgEl.src = item.image;
-      imgEl.style.transform = `rotate(${item.rotation || 0}deg)`;
-
-      document.getElementById('galleryCounter').innerText = `${currentGalleryIndex + 1} / ${card.photos.length}`;
-      document.getElementById('btnPrevGallery').style.display = currentGalleryIndex === 0 ? 'none' : 'block';
-      document.getElementById('btnNextGallery').style.display = currentGalleryIndex === card.photos.length - 1 ? 'none' : 'block';
-      lucide.createIcons();
-    }
-
-    function prevGalleryImage() { if (currentGalleryIndex > 0) { currentGalleryIndex--; updateGalleryView(); } }
-    function nextGalleryImage() {
-      const card = state.cards.find(c => c.id === activeCardId);
-      if (currentGalleryIndex < card.photos.length - 1) { currentGalleryIndex++; updateGalleryView(); }
-    }
-
-    function rotateGalleryImage() {
-      const card = state.cards.find(c => c.id === activeCardId);
-      if (!card || !card.photos) return;
-      const item = card.photos[currentGalleryIndex];
-      item.rotation = ((item.rotation || 0) + 90) % 360;
-      saveLocal(); 
-      updateGalleryView(); 
-      renderAttachments(card);
-      syncCardToCloud(card);
-    }
-
-    function deleteCurrentCard() {
-      if (confirm("Eliminare definitivamente questa commessa di SGA?")) {
-        state.cards = state.cards.filter(c => c.id !== activeCardId);
-        saveLocal();
-        syncDeleteToCloud(activeCardId);
-        closeModal('detailModal');
-      }
-    }
-
-    // STAMPA CON SCHEDA COMMESSA ORIGINALE SULLA PRIMA PAGINA E ALLEGATI COME FOTO PULITE SULLE SUCCESSIVE
-    function printCard() {
-      const card = state.cards.find(c => c.id === activeCardId);
-      if (!card) return;
-      const printWindow = window.open('', '_blank');
-
-      let attachmentsPrintHtml = '';
-      if (card.photos && card.photos.length > 0) {
-        attachmentsPrintHtml = card.photos.map((p, idx) => {
-          return `<div class="print-page">
-                    <div class="image-fullscreen">
-                      <img src="${p.image}" style="transform: rotate(${p.rotation || 0}deg);">
-                    </div>
-                  </div>`;
-        }).join('');
-      }
-
-      printWindow.document.write(`
-        <html><head><title>Commessa SGA #${card.id.slice(-4).toUpperCase()}</title><style>
-          body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; margin: 0; padding: 20px; color: #000; background: #fff; }
-          
-          /* STILE SCHEDA COMMESSA ORIGINALE (PRIMA PAGINA) */
-          .sheet { width: 100%; max-width: 800px; margin: 0 auto; box-sizing: border-box; }
-          .header { border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: flex-end; }
-          .logo-title { font-size: 20px; font-weight: bold; text-transform: uppercase; }
-          .meta-info { text-align: right; font-size: 12px; }
-          .section-title { font-size: 12px; font-weight: bold; text-transform: uppercase; background: #eee; padding: 4px 8px; margin-top: 15px; margin-bottom: 8px; border: 1px solid #ccc; }
-          .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
-          .box { border: 1px solid #ccc; padding: 8px; min-height: 40px; }
-          .box label { font-size: 10px; font-weight: bold; display: block; color: #555; text-transform: uppercase; margin-bottom: 2px; }
-          .box span { font-size: 14px; font-weight: bold; }
-          .notes-box { border: 1px solid #ccc; padding: 10px; min-height: 80px; font-size: 13px; white-space: pre-wrap; }
-          
-          .history-list { font-size: 11px; border: 1px solid #ccc; padding: 8px; }
-          .history-item { margin-bottom: 4px; border-bottom: 1px dashed #eee; padding-bottom: 4px; }
-
-          /* PAGINE SUCCESSIVE PER ALLEGATI (FOTO / PDF CONVERTITI) */
-          .print-page { page-break-before: always; break-before: page; height: 100vh; width: 100vw; position: absolute; top: 0; left: 0; background: white; display: flex; align-items: center; justify-content: center; overflow: hidden; box-sizing: border-box; }
-          .image-fullscreen { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; padding: 10px; box-sizing: border-box; }
-          .image-fullscreen img { max-width: 100%; max-height: 100%; object-fit: contain; }
-
-          @media print {
-            body { padding: 0; background: white; }
-            .sheet { padding: 20px; page-break-after: always; height: 100vh; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between; }
-            .print-page { position: relative; height: 100vh; width: 100%; page-break-after: always; }
-          }
-        </style></head><body>
-          <div class="sheet">
-            <div>
-              <div class="header">
-                <div>
-                  <div style="font-size: 10px; font-weight: bold; letter-spacing: 1px; color: #555;">SGA STUDIO GRAFICO ASSOCIATO</div>
-                  <div class="logo-title">SCHEDA COMMESSA</div>
-                </div>
-                <div class="meta-info">
-                  <div>Rif: <strong>#${card.id.slice(-4).toUpperCase()}</strong></div>
-                  <div>Data: <strong>${new Date(card.createdAt).toLocaleDateString('it-IT')}</strong></div>
-                  <div>Stato: <strong>${COLUMNS_CONFIG.find(col => col.id === card.stage)?.label.toUpperCase() || card.stage}</strong></div>
-                </div>
-              </div>
-
-              <div class="grid-2">
-                <div class="box"><label>Cliente / Titolo Progetto</label><span>${card.title}</span></div>
-                <div class="box"><label>Tipo Lavorazione</label><span>${card.jobType}</span></div>
-              </div>
-              <div class="box" style="margin-bottom: 10px;"><label>Referente / Contatto</label><span>${card.client || '-'}</span></div>
-
-              <div class="section-title">Note & Specifiche di Lavoro</div>
-              <div class="notes-box">${card.notes || 'Nessuna specifica inserita.'}</div>
-
-              <div class="section-title">Storyboard / Cronologia Passaggi</div>
-              <div class="history-list">
-                ${(card.history || []).map((h, i) => `
-                  <div class="history-item"><strong>#${i+1} -${h.label}</strong> <span style="float: right; color: #666;">${new Date(h.timestamp).toLocaleString('it-IT')}</span></div>
-                `).join('')}
-              </div>
-            </div>
-            
-            <div style="text-align: center; font-size: 10px; color: #777; border-top: 1px solid #ccc; padding-top: 5px;">
-              SGA Studio Grafico Associato - Documento Interno di Lavorazione
-            </div>
-          </div>
-
-          ${attachmentsPrintHtml}
-
-          <script>window.onload = function(){ setTimeout(function(){ window.print(); }, 800); };<\/script>
-        </body></html>
-      `);
-      printWindow.document.close();
-    }
-
-    function openModal(modalId) { document.getElementById(modalId).classList.remove('hidden'); }
-    function closeModal(modalId) { document.getElementById(modalId).classList.add('hidden'); }
-    
-    window.onload = checkAuth;
-  </script>
-</body>
-</html>
+            // Forza il background a essere sempre bianco
+            context.fillStyle = '#ffffff';
+            context.fillRect(0, 0, canvas.width, canvas.
