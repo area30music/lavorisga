@@ -580,7 +580,7 @@
       });
     }
 
-    // MOTORE DI PARSING UNIVERSALE E ROBUSTO PER I PDF DI ARUBA
+    // MOTORE DI PARSING STRICT: ESTRAZIONE SOLO TABELLA "PRODOTTI E SERVIZI"
     async function extractArticlesFromArubaPdf(file) {
       try {
         const arrayBuffer = await file.arrayBuffer();
@@ -597,6 +597,7 @@
             y: Math.round(item.transform[5])
           })).filter(item => item.text.length > 0);
 
+          // Raggruppa per riga Y (tolleranza 5px)
           let rowsMap = {};
           textItems.forEach(item => {
             let foundY = Object.keys(rowsMap).find(yKey => Math.abs(parseFloat(yKey) - item.y) <= 5);
@@ -607,46 +608,91 @@
 
           let sortedYKeys = Object.keys(rowsMap).sort((a, b) => parseFloat(b) - parseFloat(a));
 
+          let inProductsSection = false;
+
           for (let yKey of sortedYKeys) {
             let rowItems = rowsMap[yKey];
             rowItems.sort((a, b) => a.x - b.x);
             let rowTextFull = rowItems.map(r => r.text).join(' ');
-
             let lower = rowTextFull.toLowerCase();
-            if (lower.includes('pagina ') || lower.includes('partita iva') || lower.includes('codice fiscale') || lower.includes('totale imponibile') || lower.includes('totale documento') || lower.includes('riepilogo iva') || lower.includes('coordinate bancarie') || lower.includes('condizioni di pagamento')) {
+
+            // Interrompi rigorosamente appena incontra sezioni successive alla tabella prodotti
+            if (inProductsSection && (
+                lower.includes('nr rata') ||
+                lower.includes('metodo di pagamento') || 
+                lower.includes('coordinate bancarie') || 
+                lower.includes('totale imponibile') || 
+                lower.includes('totale documento') || 
+                lower.includes('riepilogo iva') || 
+                lower.includes('netto a pagare') || 
+                lower.includes('iva natura') || 
+                lower.includes('regime fiscale') ||
+                lower.includes('bonifico') ||
+                lower.includes('iban') ||
+                lower.includes('causale documento') ||
+                lower.includes('dati aggiuntivi')
+            )) {
+              inProductsSection = false;
+              break;
+            }
+
+            // Attiva la lettura all'inizio della tabella Prodotti e Servizi
+            if (lower.includes('prodotti e servizi')) {
+              inProductsSection = true;
               continue;
             }
 
-            let priceMatch = rowTextFull.match(/(\d{1,3}(\.\d{3})*|\d+)[,\.]\d{2}/g);
-            if (priceMatch && priceMatch.length > 0) {
-              let priceStr = priceMatch[priceMatch.length - 1];
-              let cleanPrice = priceStr.replace(/\./g, '').replace(',', '.');
-              let priceNum = parseFloat(cleanPrice);
-
-              let qtyVal = 1;
-              let descParts = [];
-
+            if (inProductsSection) {
+              // Estrai tutti i valori numerici con formato prezzo presenti nella riga (es. 35,00 € o 525,00 €)
+              let priceMatches = [];
               rowItems.forEach(r => {
-                let txt = r.text;
-                if (txt.includes(priceStr) || txt.replace(/\./g, '').replace(',', '.') === cleanPrice) {
-                  return;
+                let cleanTxt = r.text.replace('€', '').trim();
+                if (cleanTxt.match(/^(\d{1,3}(\.\d{3})*|\d+)[,\.]\d{2}$/)) {
+                  priceMatches.push({
+                    text: r.text,
+                    val: parseFloat(cleanTxt.replace(/\./g, '').replace(',', '.')),
+                    x: r.x
+                  });
                 }
-                if (txt.match(/^\d+$/) && parseInt(txt) < 100 && r.x < 350 && qtyVal === 1) {
-                  qtyVal = parseInt(txt);
-                  return;
-                }
-                descParts.push(txt);
               });
 
-              let description = descParts.join(' ').trim();
-              if (description.length > 2 && priceNum > 0) {
-                items.push({
-                  code: '',
-                  desc: description,
-                  qty: qtyVal,
-                  price: priceNum,
-                  tax: 22
+              if (priceMatches.length >= 1) {
+                // Nel preventivo Aruba la prima cifra monetaria è il PREZZO UNITARIO, la seconda è l'IMPORTO TOTALE DI RIGA.
+                let unitPriceObj = priceMatches[0];
+                let priceNum = unitPriceObj.val;
+
+                let qtyVal = 1;
+                let descParts = [];
+
+                rowItems.forEach(r => {
+                  let txt = r.text;
+                  // Rileva la quantità (numero intero che si trova a sinistra del prezzo)
+                  if (txt.match(/^\d+$/) && parseInt(txt) < 100 && r.x < unitPriceObj.x && qtyVal === 1) {
+                    qtyVal = parseInt(txt);
+                    return;
+                  }
+                  // Escludi i prezzi e simboli monetari dalla descrizione
+                  if (txt.includes('€') || txt.match(/^(\d{1,3}(\.\d{3})*|\d+)[,\.]\d{2}$/)) {
+                    return;
+                  }
+                  if (!txt.toLowerCase().includes('aruba') && !txt.toLowerCase().includes('pagina')) {
+                    descParts.push(txt);
+                  }
                 });
+
+                let description = descParts.join(' ').trim();
+                // Pulisci eventuali numeri di indice iniziale (es. "1", "2") rimasti
+                description = description.replace(/^\d+\s+/, '');
+
+                if (description.length > 2 && priceNum > 0) {
+                  items.push({
+                    code: '',
+                    desc: description,
+                    qty: qtyVal,
+                    price: priceNum,
+                    tax: 22
+                  });
+                }
               }
             }
           }
