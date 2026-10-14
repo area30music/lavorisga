@@ -149,8 +149,9 @@
         <div>
           <div class="flex justify-between items-center mb-2">
             <label class="text-xs text-slate-400 font-semibold uppercase tracking-wider block">Foto & Documenti PDF</label>
-            <label class="bg-slate-800 hover:bg-slate-700 text-xs px-3 py-1.5 rounded-lg cursor-pointer flex items-center gap-1.5 text-slate-200">
-              <i data-lucide="paperclip" class="w-3.5 h-3.5"></i> Allega Foto / PDF
+            <label id="uploadLabelBtn" class="bg-slate-800 hover:bg-slate-700 text-xs px-3 py-1.5 rounded-lg cursor-pointer flex items-center gap-1.5 text-slate-200 transition-colors">
+              <span id="uploadLabelIcon"><i data-lucide="paperclip" class="w-3.5 h-3.5"></i></span>
+              <span id="uploadLabelText">Allega Foto / PDF</span>
               <input type="file" id="photoInput" accept="image/*,.pdf" multiple class="hidden" onchange="handleDocumentUpload(event)">
             </label>
           </div>
@@ -229,29 +230,33 @@
     </div>
   </div>
 
-  <!-- MODAL: CONFIGURAZIONE CLOUD FIREBASE -->
+  <!-- MODAL: CONFIGURAZIONE CLOUD E IMGBB -->
   <div id="cloudModal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
     <div class="bg-slate-900 border border-slate-800 rounded-xl w-full max-w-md p-5 shadow-2xl">
       <div class="flex justify-between items-center mb-4">
         <h3 class="font-bold text-lg text-slate-100 flex items-center gap-2">
-          <i data-lucide="cloud" class="w-5 h-5 text-indigo-400"></i> Configura Cloud
+          <i data-lucide="settings" class="w-5 h-5 text-indigo-400"></i> Impostazioni Cloud
         </h3>
         <button onclick="closeModal('cloudModal')" class="text-slate-400 hover:text-slate-200 bg-slate-800 rounded-full p-1">
           <i data-lucide="x" class="w-4 h-4"></i>
         </button>
       </div>
-      <p class="text-xs text-slate-400 mb-4">
-        Inserisci qui i dati del tuo progetto Firebase per sincronizzare in tempo reale i dispositivi.
-      </p>
+      
       <div class="space-y-4 text-sm">
-        <div>
-          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">API Key</label>
-          <input type="text" id="cfgApiKey" placeholder="Es. AIzaSy..." class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-indigo-500 font-mono text-xs">
+        <div class="bg-slate-950 p-3 rounded-lg border border-slate-800">
+          <h4 class="text-xs font-bold text-indigo-400 mb-2 uppercase tracking-wider">1. Firebase (Sincronizzazione Testi)</h4>
+          <div class="space-y-2">
+            <input type="text" id="cfgApiKey" placeholder="API Key Firebase (Es. AIzaSy...)" class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-slate-200 focus:outline-none focus:border-indigo-500 font-mono text-xs">
+            <input type="text" id="cfgProjectId" placeholder="Project ID (Es. workflow-sga-123)" class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-slate-200 focus:outline-none focus:border-indigo-500 font-mono text-xs">
+          </div>
         </div>
-        <div>
-          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Project ID</label>
-          <input type="text" id="cfgProjectId" placeholder="Es. workflow-sga-123" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-indigo-500 font-mono text-xs">
+
+        <div class="bg-slate-950 p-3 rounded-lg border border-slate-800">
+          <h4 class="text-xs font-bold text-emerald-400 mb-1 uppercase tracking-wider">2. ImgBB (Immagini 4K Gratuite)</h4>
+          <p class="text-[10px] text-slate-400 mb-2 leading-tight">Crea un account gratuito su <b>api.imgbb.com</b> e inserisci qui la tua API Key. Eviterai i blocchi di memoria e i PDF verranno stampati in qualità altissima.</p>
+          <input type="text" id="cfgImgbbKey" placeholder="ImgBB API Key (Opzionale)" class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-slate-200 focus:outline-none focus:border-emerald-500 font-mono text-xs">
         </div>
+
         <div class="flex gap-2 pt-2">
           <button onclick="saveFirebaseConfig()" class="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2 px-4 rounded-lg active:scale-[0.98] transition-transform flex items-center justify-center gap-2 shadow-lg shadow-indigo-900/20">
             <i data-lucide="check" class="w-4 h-4"></i> Salva e Connetti
@@ -386,8 +391,13 @@
 
     function updateCloudStatus(isOnline) {
       const statusEl = document.getElementById('cloudStatus');
+      const cfgStr = localStorage.getItem('workflow_sga_firebase_config');
+      let hasImgbb = false;
+      if(cfgStr) { try { hasImgbb = !!JSON.parse(cfgStr).imgbbKey; } catch(e){} }
+
       if (isOnline) {
-        statusEl.innerHTML = `<i data-lucide="wifi" class="w-3 h-3 text-emerald-500"></i> <span class="text-emerald-400 font-semibold hover:text-emerald-300 transition-colors">Cloud Attivo (Sincronizzato)</span>`;
+        const hqIcon = hasImgbb ? `<span class="ml-1 px-1 bg-emerald-900 text-emerald-200 rounded text-[9px] font-bold border border-emerald-700">4K ON</span>` : '';
+        statusEl.innerHTML = `<i data-lucide="wifi" class="w-3 h-3 text-emerald-500"></i> <span class="text-emerald-400 font-semibold hover:text-emerald-300 transition-colors">Cloud Attivo${hqIcon}</span>`;
       } else {
         statusEl.innerHTML = `<i data-lucide="hard-drive" class="w-3 h-3 text-slate-400"></i> <span class="text-slate-400 hover:text-slate-200 transition-colors">Modalità Locale (Clicca per configurare)</span>`;
       }
@@ -397,14 +407,16 @@
     function saveFirebaseConfig() {
       const apiKey = document.getElementById('cfgApiKey').value.trim();
       const projectId = document.getElementById('cfgProjectId').value.trim();
-      if (!apiKey || !projectId) return alert("Inserisci sia l'API Key che il Project ID.");
-      localStorage.setItem('workflow_sga_firebase_config', JSON.stringify({ apiKey, projectId }));
+      const imgbbKey = document.getElementById('cfgImgbbKey').value.trim();
+      
+      if (!apiKey || !projectId) return alert("Inserisci sia l'API Key che il Project ID di Firebase.");
+      localStorage.setItem('workflow_sga_firebase_config', JSON.stringify({ apiKey, projectId, imgbbKey }));
       closeModal('cloudModal');
       location.reload(); 
     }
 
     function resetFirebaseConfig() {
-      if (confirm("Vuoi disconnettere il Cloud?")) {
+      if (confirm("Vuoi disconnettere il Cloud e ImgBB?")) {
         localStorage.removeItem('workflow_sga_firebase_config');
         closeModal('cloudModal');
         location.reload();
@@ -459,8 +471,8 @@
       db.collection('workflow_sga_cards').doc(cardId).delete().catch(e => console.error(e));
     }
 
-    // Risoluzione max 1600px per le foto classiche, ottimizza le dimensioni del database (previene rottura immagini)
-    function compressImage(file, maxWidth = 1600, maxHeight = 1600, quality = 0.8) {
+    // Compressione immagini base
+    function compressImage(file, maxWidth, maxHeight, quality) {
       return new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = (e) => {
@@ -486,9 +498,8 @@
       });
     }
 
-    // Conversione PDF ottimizzata (Scale 2.0).
-    // È la risoluzione perfetta per un A4 netto, senza sforare i limiti di memoria di Firestore (che "rompevano" l'immagine).
-    function convertPdfToImage(file) {
+    // Conversione PDF con fattore di scala variabile
+    function convertPdfToImage(file, scaleFactor, quality) {
       return new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = async function(e) {
@@ -497,7 +508,7 @@
             const pdf = await pdfjsLib.getDocument({ data: typedarray }).promise;
             const page = await pdf.getPage(1);
             
-            const viewport = page.getViewport({ scale: 2.0 }); 
+            const viewport = page.getViewport({ scale: scaleFactor }); 
             const canvas = document.createElement('canvas');
             const context = canvas.getContext('2d');
             canvas.height = viewport.height;
@@ -507,9 +518,7 @@
             context.fillRect(0, 0, canvas.width, canvas.height);
 
             await page.render({ canvasContext: context, viewport: viewport }).promise;
-            
-            // Qualità 0.80 garantisce un file compatto per Firebase ma perfetto in stampa.
-            resolve(canvas.toDataURL('image/jpeg', 0.80));
+            resolve(canvas.toDataURL('image/jpeg', quality));
           } catch (err) {
             console.error("Errore conversione PDF:", err);
             reject(err);
@@ -603,6 +612,7 @@
           const cfg = JSON.parse(cfgStr);
           if (cfg.apiKey) document.getElementById('cfgApiKey').value = cfg.apiKey;
           if (cfg.projectId) document.getElementById('cfgProjectId').value = cfg.projectId;
+          if (cfg.imgbbKey) document.getElementById('cfgImgbbKey').value = cfg.imgbbKey;
         } catch(e){}
       }
     }
@@ -865,21 +875,72 @@
       if (!card) return;
       if (!card.photos) card.photos = [];
 
+      // Leggo chiave ImgBB se presente
+      const cfgStr = localStorage.getItem('workflow_sga_firebase_config');
+      let imgbbKey = null;
+      if (cfgStr) {
+        try { imgbbKey = JSON.parse(cfgStr).imgbbKey; } catch(e){}
+      }
+
+      // Feedback visivo caricamento
+      const uploadLabelIcon = document.getElementById('uploadLabelIcon');
+      const uploadLabelText = document.getElementById('uploadLabelText');
+      if (uploadLabelIcon) uploadLabelIcon.innerHTML = '<i data-lucide="loader" class="w-3.5 h-3.5 animate-spin"></i>';
+      if (uploadLabelText) uploadLabelText.innerText = 'Caricamento in corso...';
+      lucide.createIcons();
+
       for (const file of files) {
         try {
           let imgData = "";
           if (file.type === 'application/pdf') {
-            imgData = await convertPdfToImage(file);
+            // Se abbiamo ImgBB forziamo la massima qualità (Scale 4.0), altrimenti qualità base (Scale 1.5)
+            const scale = imgbbKey ? 4.0 : 1.5;
+            const quality = imgbbKey ? 1.0 : 0.8;
+            imgData = await convertPdfToImage(file, scale, quality);
           } else {
-            imgData = await compressImage(file);
+            const maxDim = imgbbKey ? 3000 : 1200;
+            const quality = imgbbKey ? 0.95 : 0.7;
+            imgData = await compressImage(file, maxDim, maxDim, quality);
           }
+
           if (imgData) {
-            card.photos.push({ image: imgData, rotation: 0 });
+            if (imgbbKey) {
+              // Carica su ImgBB (Nessun limite di Database Firebase)
+              try {
+                const base64Str = imgData.split(',')[1];
+                const formData = new FormData();
+                formData.append("image", base64Str);
+                
+                const response = await fetch(`https://api.imgbb.com/1/upload?key=${imgbbKey}`, {
+                  method: 'POST',
+                  body: formData
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                  card.photos.push({ image: data.data.url, rotation: 0 }); // Salviamo solo un link leggerissimo!
+                } else {
+                  console.warn("Impossibile caricare su ImgBB. Salvataggio in locale.");
+                  card.photos.push({ image: imgData, rotation: 0 });
+                }
+              } catch(e) {
+                console.error("Errore ImgBB:", e);
+                card.photos.push({ image: imgData, rotation: 0 });
+              }
+            } else {
+              // Salvataggio standard su Firebase (Senza ImgBB)
+              card.photos.push({ image: imgData, rotation: 0 });
+            }
           }
         } catch (e) {
           console.error("Errore caricamento file:", e);
         }
       }
+
+      // Ripristino bottone
+      if (uploadLabelIcon) uploadLabelIcon.innerHTML = '<i data-lucide="paperclip" class="w-3.5 h-3.5"></i>';
+      if (uploadLabelText) uploadLabelText.innerText = 'Allega Foto / PDF';
+      lucide.createIcons();
 
       saveLocal();
       renderAttachments(card);
@@ -949,7 +1010,7 @@
       }
     }
 
-    // STAMPA OTTIMIZZATA: NIENTE PAGINE BIANCHE, ALLEGATI A TUTTO SCHERMO A4
+    // STAMPA OTTIMIZZATA
     function printCard() {
       const card = state.cards.find(c => c.id === activeCardId);
       if (!card) return;
@@ -995,7 +1056,7 @@
             page-break-before: always; 
             break-before: page;
             width: 100%; 
-            height: 98vh; /* 98vh evita i bug di overflow di Safari su iPad */
+            height: 98vh;
             display: block; 
             text-align: center;
             padding: 0;
@@ -1003,8 +1064,8 @@
             box-sizing: border-box;
           }
           .print-page img { 
-            width: 100%; 
-            height: 100%; 
+            max-width: 100%; 
+            max-height: 100%; 
             object-fit: contain; 
             display: block; 
             margin: 0 auto; 
