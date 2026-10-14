@@ -21,6 +21,32 @@
 </head>
 <body class="bg-slate-950 text-slate-100 font-sans h-screen flex flex-col overflow-hidden">
 
+  <!-- SCHERMATA DI LOGIN (PROTETTA DA PASSWORD CONDIVISA) -->
+  <div id="loginScreen" class="fixed inset-0 bg-slate-950 z-[100] flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-sm p-6 shadow-2xl space-y-6">
+      <div class="text-center space-y-2">
+        <div class="bg-indigo-600 w-12 h-12 rounded-xl mx-auto flex items-center justify-center text-white shadow-lg shadow-indigo-900/40">
+          <i data-lucide="lock" class="w-6 h-6"></i>
+        </div>
+        <h2 class="text-xl font-bold text-white">Workflow SGA</h2>
+        <p class="text-xs text-slate-400">Inserisci la password di accesso per entrare nell'area di lavoro.</p>
+      </div>
+      <form onsubmit="handleLogin(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Password</label>
+          <input type="password" id="loginPassword" required placeholder="Password di accesso..." class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2.5 text-slate-200 focus:outline-none focus:border-indigo-500 text-sm">
+        </div>
+        <div class="flex items-center gap-2">
+          <input type="checkbox" id="rememberMe" class="rounded bg-slate-950 border-slate-800 text-indigo-600 focus:ring-indigo-500 w-4 h-4 cursor-pointer">
+          <label for="rememberMe" class="text-xs text-slate-300 cursor-pointer select-none">Ricordami su questo dispositivo</label>
+        </div>
+        <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2.5 px-4 rounded-lg active:scale-[0.98] transition-transform flex items-center justify-center gap-2 shadow-lg shadow-indigo-900/20 text-sm">
+          <i data-lucide="arrow-right" class="w-4 h-4"></i> Accedi al Programma
+        </button>
+      </form>
+    </div>
+  </div>
+
   <!-- TOP BAR -->
   <header class="bg-slate-900 border-b border-slate-800 px-4 py-3 flex justify-between items-center shrink-0 flex-wrap gap-3">
     <div class="flex items-center space-x-3">
@@ -36,6 +62,9 @@
     </div>
     
     <div class="flex space-x-2 items-center">
+      <button onclick="logoutApp()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 active:scale-95 transition-transform" title="Esci dall'account">
+        <i data-lucide="log-out" class="w-4 h-4"></i> Esci
+      </button>
       <button onclick="exportBackup()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 active:scale-95 transition-transform" title="Scarica un file di sicurezza">
         <i data-lucide="download-cloud" class="w-4 h-4"></i> Backup
       </button>
@@ -262,6 +291,47 @@
 
   <!-- SCRIPT -->
   <script>
+    // ==========================================
+    // CONFIGURAZIONE PASSWORD CONDIVISA
+    // ==========================================
+    const SHARED_PASSWORD = "sga2026"; // <-- Puoi cambiarla qui quando vuoi
+
+    function checkAuth() {
+      const isAuth = localStorage.getItem('workflow_sga_auth');
+      const loginScreen = document.getElementById('loginScreen');
+      if (isAuth === 'true') {
+        loginScreen.classList.add('hidden');
+        init();
+      } else {
+        loginScreen.classList.remove('hidden');
+        lucide.createIcons();
+      }
+    }
+
+    function handleLogin(event) {
+      event.preventDefault();
+      const pwInput = document.getElementById('loginPassword').value.trim();
+      const remember = document.getElementById('rememberMe').checked;
+
+      if (pwInput === SHARED_PASSWORD) {
+        if (remember) {
+          localStorage.setItem('workflow_sga_auth', 'true');
+        }
+        document.getElementById('loginScreen').classList.add('hidden');
+        init();
+      } else {
+        alert("Password errata. Riprova.");
+        document.getElementById('loginPassword').value = '';
+      }
+    }
+
+    function logoutApp() {
+      if (confirm("Vuoi uscire dall'area di lavoro?")) {
+        localStorage.removeItem('workflow_sga_auth');
+        location.reload();
+      }
+    }
+
     const COLUMNS_CONFIG = [
       { id: "prev-da-fare", label: "Prev. da fare", color: "bg-orange-600/20 border-orange-500/50 text-orange-400", border: "border-l-4 border-l-orange-500" },
       { id: "prev-inviato", label: "Prev. inviato", color: "bg-amber-600/20 border-amber-500/50 text-amber-400", border: "border-l-4 border-l-amber-500" },
@@ -650,7 +720,6 @@
       closeModal('addCardModal');
     }
 
-    // SALVATAGGIO ANAGRAFICA E TIPO LAVORO
     function saveCardEdits() {
       const card = state.cards.find(c => c.id === activeCardId);
       if (!card) return;
@@ -670,7 +739,6 @@
       alert("Anagrafica e tipo lavorazione aggiornati con successo!");
     }
 
-    // SALVATAGGIO NOTE (Modificabili in qualsiasi momento)
     function saveNotesEdits() {
       const card = state.cards.find(c => c.id === activeCardId);
       if (!card) return;
@@ -879,7 +947,7 @@
       }
     }
 
-    // STAMPA PROFESSIONALE CON ALLEGATI A PIENA PAGINA (SENZA CORNICI DI ANTEPRIMA)
+    // STAMPA CON SCHEDA COMMESSA ORIGINALE SULLA PRIMA PAGINA E ALLEGATI PULITI SULLE SUCCESSIVE
     function printCard() {
       const card = state.cards.find(c => c.id === activeCardId);
       if (!card) return;
@@ -924,7 +992,7 @@
           .details strong { font-size: 14px; color: #0f172a; }
           .notes-box { background: #f8fafc; border: 1px solid #e2e8f0; padding: 15px; border-radius: 6px; font-size: 13px; line-height: 1.6; min-height: 60px; white-space: pre-wrap; color: #334155; }
           
-          /* Pagine dedicate agli allegati senza bordi o anteprime di stampa */
+          /* Pagine dedicate agli allegati a piena pagina */
           .print-page { page-break-before: always; break-before: page; height: 100vh; width: 100vw; position: absolute; top: 0; left: 0; background: white; display: flex; align-items: center; justify-content: center; overflow: hidden; }
           .print-page iframe { width: 100%; height: 100%; border: none; }
           .image-fullscreen { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
@@ -932,11 +1000,10 @@
 
           @media print {
             body { padding: 0; max-width: none; }
-            .no-print { display: none; }
             .print-page { position: relative; height: 100vh; width: 100%; page-break-after: always; }
           }
         </style></head><body>
-          <div class="no-print">
+          <div>
             <div class="header"><div style="display: flex; justify-content: space-between; align-items: start;">
               <div><div class="logo-text">SGA STUDIO GRAFICO ASSOCIATO</div><h1 class="title">SCHEDA COMMESSA</h1><span class="badge">STATO: ${COLUMNS_CONFIG.find(col => col.id === card.stage)?.label.toUpperCase() || card.stage}</span></div>
               <div style="text-align: right; font-size: 12px; color: #64748b; line-height: 1.5;">Rif. Ordine: <strong style="color: #0f172a;">#${card.id.slice(-4).toUpperCase()}</strong><br>Data Creazione: <strong style="color: #0f172a;">${new Date(card.createdAt).toLocaleDateString('it-IT')}</strong></div>
@@ -959,7 +1026,8 @@
 
     function openModal(modalId) { document.getElementById(modalId).classList.remove('hidden'); }
     function closeModal(modalId) { document.getElementById(modalId).classList.add('hidden'); }
-    window.onload = init;
+    
+    window.onload = checkAuth;
   </script>
 </body>
 </html>
