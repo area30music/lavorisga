@@ -94,7 +94,7 @@
 
   <!-- MODAL: DETTAGLIO SCHEDA -->
   <div id="detailModal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-    <div class="bg-slate-900 border border-slate-800 rounded-xl w-full max-w-4xl max-h-[92vh] flex flex-col overflow-hidden shadow-2xl">
+    <div class="bg-slate-900 border border-slate-800 rounded-xl w-full max-w-5xl max-h-[92vh] flex flex-col overflow-hidden shadow-2xl">
       <div class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-850">
         <div class="flex items-center gap-2">
           <span id="detailBadge" class="px-2 py-0.5 rounded text-xs font-bold text-white uppercase"></span>
@@ -136,7 +136,7 @@
           </button>
         </div>
 
-        <!-- TABELLA ARTICOLI (NOTE E SPECIFICHE A ELENCO) -->
+        <!-- TABELLA ARTICOLI & PREVENTIVO (CON PREZZO E TOTALE IVATO) -->
         <div class="space-y-3 bg-slate-950 p-3.5 rounded-lg border border-slate-800">
           <div class="flex justify-between items-center">
             <label class="text-xs text-indigo-400 font-bold uppercase tracking-wider block">Dettagli Articoli & Preventivo</label>
@@ -149,11 +149,13 @@
             <table class="w-full text-left text-xs">
               <thead>
                 <tr class="border-b border-slate-800 text-slate-400 uppercase text-[10px]">
-                  <th class="py-2 px-2 w-28">Codice Art.</th>
+                  <th class="py-2 px-2 w-24">Codice</th>
                   <th class="py-2 px-2">Descrizione</th>
-                  <th class="py-2 px-2 w-20 text-center">Quantità</th>
-                  <th class="py-2 px-2 w-24 text-right">Prezzo Unit.</th>
-                  <th class="py-2 px-2 w-24 text-right">Totale Riga</th>
+                  <th class="py-2 px-2 w-16 text-center">Q.tà</th>
+                  <th class="py-2 px-2 w-20 text-right">Prezzo Un.</th>
+                  <th class="py-2 px-2 w-16 text-center">IVA %</th>
+                  <th class="py-2 px-2 w-20 text-right">Prezzo Ivato</th>
+                  <th class="py-2 px-2 w-24 text-right">Tot. Ivato</th>
                   <th class="py-2 px-2 w-10"></th>
                 </tr>
               </thead>
@@ -163,13 +165,23 @@
             </table>
           </div>
 
-          <div class="flex justify-between items-center pt-3 border-t border-slate-800">
+          <div class="flex justify-between items-center pt-3 border-t border-slate-800 flex-wrap gap-3">
             <button onclick="saveArticlesEdits()" class="bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-300 border border-indigo-500/30 text-xs px-3 py-1.5 rounded font-semibold flex items-center gap-1.5 transition-colors">
               <i data-lucide="save" class="w-3.5 h-3.5"></i> Salva Articoli
             </button>
-            <div class="text-right">
-              <span class="text-xs text-slate-400 mr-2 uppercase font-bold">Totale Ordine:</span>
-              <span id="grandTotalDisplay" class="text-base font-extrabold text-emerald-400">€ 0,00</span>
+            <div class="flex gap-4 text-right">
+              <div>
+                <span class="text-[10px] text-slate-400 uppercase block font-bold">Imponibile:</span>
+                <span id="grandSubtotalDisplay" class="text-xs font-semibold text-slate-300">€ 0,00</span>
+              </div>
+              <div>
+                <span class="text-[10px] text-slate-400 uppercase block font-bold">Totale IVA:</span>
+                <span id="grandTaxDisplay" class="text-xs font-semibold text-slate-300">€ 0,00</span>
+              </div>
+              <div>
+                <span class="text-[10px] text-slate-400 uppercase block font-bold">Totale Ordine Ivato:</span>
+                <span id="grandTotalDisplay" class="text-base font-extrabold text-emerald-400">€ 0,00</span>
+              </div>
             </div>
           </div>
         </div>
@@ -567,8 +579,13 @@
       if (!Array.isArray(card.articles)) {
         card.articles = [];
         if (card.notes && card.notes.trim()) {
-          card.articles.push({ code: '', desc: card.notes, qty: 1, price: 0 });
+          card.articles.push({ code: '', desc: card.notes, qty: 1, price: 0, tax: 22 });
         }
+      } else {
+        card.articles = card.articles.map(art => {
+          if (art.tax === undefined) art.tax = 22;
+          return art;
+        });
       }
       return card;
     }
@@ -785,7 +802,7 @@
       const newCard = {
         id: 'c' + Date.now().toString(36) + Math.random().toString(36).substring(2, 7),
         title, client, jobType,
-        articles: initialNote ? [{ code: '', desc: initialNote, qty: 1, price: 0 }] : [],
+        articles: initialNote ? [{ code: '', desc: initialNote, qty: 1, price: 0, tax: 22 }] : [],
         stage: 'prev-da-fare',
         createdAt: new Date().toISOString(),
         photos: [],
@@ -823,13 +840,18 @@
       const tbody = document.getElementById('articlesTableBody');
       tbody.innerHTML = '';
       if (!card.articles || card.articles.length === 0) {
-        card.articles = [{ code: '', desc: '', qty: '', price: '' }];
+        card.articles = [{ code: '', desc: '', qty: '', price: '', tax: 22 }];
       }
 
       card.articles.forEach((art, idx) => {
         const qty = parseFloat(art.qty) || 0;
         const price = parseFloat(art.price) || 0;
-        const rowTotal = qty * price;
+        const taxRate = parseFloat(art.tax) !== undefined ? parseFloat(art.tax) : 22;
+        
+        const unitTaxPrice = price * (1 + taxRate / 100);
+        const rowTotalTaxable = qty * price;
+        const rowTotalTax = rowTotalTaxable * (taxRate / 100);
+        const rowTotalTaxed = rowTotalTaxable + rowTotalTax;
 
         const tr = document.createElement('tr');
         tr.className = "hover:bg-slate-900/50 transition-colors";
@@ -838,12 +860,14 @@
           <td class="py-1.5 px-1"><input type="text" value="${art.desc || ''}" data-field="desc" data-index="${idx}" oninput="updateArticleField(this)" placeholder="Descrizione articolo o lavorazione..." class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-xs focus:outline-none focus:border-indigo-500"></td>
           <td class="py-1.5 px-1"><input type="number" step="any" value="${art.qty !== undefined ? art.qty : ''}" data-field="qty" data-index="${idx}" oninput="updateArticleField(this)" placeholder="0" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-xs text-center focus:outline-none focus:border-indigo-500"></td>
           <td class="py-1.5 px-1"><input type="number" step="any" value="${art.price !== undefined ? art.price : ''}" data-field="price" data-index="${idx}" oninput="updateArticleField(this)" placeholder="0.00" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-xs text-right focus:outline-none focus:border-indigo-500"></td>
-          <td class="py-1.5 px-2 text-right font-mono font-bold text-slate-300 align-middle"><span id="row-total-${idx}">€ ${rowTotal.toFixed(2)}</span></td>
+          <td class="py-1.5 px-1"><input type="number" step="any" value="${art.tax !== undefined ? art.tax : 22}" data-field="tax" data-index="${idx}" oninput="updateArticleField(this)" placeholder="22" class="w-full bg-slate-900 border border-slate-700 rounded px-1 py-1 text-slate-200 text-xs text-center focus:outline-none focus:border-indigo-500"></td>
+          <td class="py-1.5 px-1 text-right font-mono text-slate-300 align-middle"><span id="row-unit-taxed-${idx}">€ ${unitTaxPrice.toFixed(2)}</span></td>
+          <td class="py-1.5 px-2 text-right font-mono font-bold text-slate-300 align-middle"><span id="row-total-${idx}">€ ${rowTotalTaxed.toFixed(2)}</span></td>
           <td class="py-1.5 px-1 text-center align-middle"><button onclick="removeArticleRow(${idx})" class="text-red-400 hover:text-red-300 p-1"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button></td>
         `;
         tbody.appendChild(tr);
       });
-      calculateGrandTotal();
+      calculateGrandTotals();
       lucide.createIcons();
     }
 
@@ -855,33 +879,60 @@
 
       card.articles[idx][field] = input.value;
 
-      if (field === 'qty' || field === 'price') {
+      if (['qty', 'price', 'tax'].includes(field)) {
         const qty = parseFloat(card.articles[idx].qty) || 0;
         const price = parseFloat(card.articles[idx].price) || 0;
+        const taxRate = parseFloat(card.articles[idx].tax) !== undefined ? parseFloat(card.articles[idx].tax) : 22;
+
+        const unitTaxPrice = price * (1 + taxRate / 100);
+        const rowTotalTaxed = (qty * price) * (1 + taxRate / 100);
+
+        const unitTaxedSpan = document.getElementById(`row-unit-taxed-${idx}`);
+        if (unitTaxedSpan) unitTaxedSpan.innerText = `€ ${unitTaxPrice.toFixed(2)}`;
+
         const rowTotalSpan = document.getElementById(`row-total-${idx}`);
-        if (rowTotalSpan) rowTotalSpan.innerText = `€ ${(qty * price).toFixed(2)}`;
-        calculateGrandTotal();
+        if (rowTotalSpan) rowTotalSpan.innerText = `€ ${rowTotalTaxed.toFixed(2)}`;
+        
+        calculateGrandTotals();
       }
     }
 
-    function calculateGrandTotal() {
+    function calculateGrandTotals() {
       const card = state.cards.find(c => c.id === activeCardId);
       if (!card || !card.articles) return;
-      let grandTotal = 0;
+      let grandSubtotal = 0;
+      let grandTax = 0;
+      let grandTotalTaxed = 0;
+
       card.articles.forEach(art => {
         const qty = parseFloat(art.qty) || 0;
         const price = parseFloat(art.price) || 0;
-        grandTotal += (qty * price);
+        const taxRate = parseFloat(art.tax) !== undefined ? parseFloat(art.tax) : 22;
+
+        const sub = qty * price;
+        const taxAmt = sub * (taxRate / 100);
+        const tot = sub + taxAmt;
+
+        grandSubtotal += sub;
+        grandTax += taxAmt;
+        grandTotalTaxed += tot;
       });
-      const display = document.getElementById('grandTotalDisplay');
-      if (display) display.innerText = `€ ${grandTotal.toFixed(2)}`;
+
+      const subDisplay = document.getElementById('grandSubtotalDisplay');
+      if (subDisplay) subDisplay.innerText = `€ ${grandSubtotal.toFixed(2)}`;
+
+      const taxDisplay = document.getElementById('grandTaxDisplay');
+      if (taxDisplay) taxDisplay.innerText = `€ ${grandTax.toFixed(2)}`;
+
+      const totalDisplay = document.getElementById('grandTotalDisplay');
+      if (totalDisplay) totalDisplay.innerText = `€ ${grandTotalTaxed.toFixed(2)}`;
     }
 
     function addArticleRow() {
       const card = state.cards.find(c => c.id === activeCardId);
       if (!card) return;
       if (!Array.isArray(card.articles)) card.articles = [];
-      card.articles.push({ code: '', desc: '', qty: 1, price: 0 });
+      card.articles.push({ code: '', desc: '', qty: 1, price: 0, tax: 22 });
       renderArticlesTable(card);
     }
 
@@ -1107,6 +1158,7 @@
       }
     }
 
+    // STAMPA OTTIMIZZATA CON TABELLA ARTICOLI E TOTALI IVATI
     function printCard() {
       const card = state.cards.find(c => c.id === activeCardId);
       if (!card) return;
@@ -1121,13 +1173,24 @@
       }).join('');
 
       let articlesRowsHtml = '';
-      let grandTotal = 0;
+      let grandSubtotal = 0;
+      let grandTax = 0;
+      let grandTotalTaxed = 0;
+
       if (card.articles && card.articles.length > 0) {
         card.articles.forEach(art => {
           const qty = parseFloat(art.qty) || 0;
           const price = parseFloat(art.price) || 0;
-          const rowTotal = qty * price;
-          grandTotal += rowTotal;
+          const taxRate = parseFloat(art.tax) !== undefined ? parseFloat(art.tax) : 22;
+
+          const sub = qty * price;
+          const taxAmt = sub * (taxRate / 100);
+          const rowTotalTaxed = sub + taxAmt;
+          const unitTaxed = price * (1 + taxRate / 100);
+
+          grandSubtotal += sub;
+          grandTax += taxAmt;
+          grandTotalTaxed += rowTotalTaxed;
 
           articlesRowsHtml += `
             <tr style="border-bottom: 1px solid #e2e8f0;">
@@ -1135,12 +1198,14 @@
               <td style="padding: 8px; font-size: 11px; color: #0f172a;">${art.desc || '-'}</td>
               <td style="padding: 8px; text-align: center; font-size: 11px; color: #334155;">${art.qty !== undefined && art.qty !== '' ? art.qty : '-'}</td>
               <td style="padding: 8px; text-align: right; font-size: 11px; color: #334155;">${art.price !== undefined && art.price !== '' ? '€ ' + parseFloat(art.price).toFixed(2) : '-'}</td>
-              <td style="padding: 8px; text-align: right; font-size: 11px; font-weight: bold; color: #0f172a;">${(art.qty !== undefined && art.price !== undefined && art.qty !== '' && art.price !== '') ? '€ ' + rowTotal.toFixed(2) : '-'}</td>
+              <td style="padding: 8px; text-align: center; font-size: 11px; color: #334155;">${taxRate}%</td>
+              <td style="padding: 8px; text-align: right; font-size: 11px; color: #334155;">${(art.qty !== undefined && art.price !== undefined && art.qty !== '' && art.price !== '') ? '€ ' + unitTaxed.toFixed(2) : '-'}</td>
+              <td style="padding: 8px; text-align: right; font-size: 11px; font-weight: bold; color: #0f172a;">${(art.qty !== undefined && art.price !== undefined && art.qty !== '' && art.price !== '') ? '€ ' + rowTotalTaxed.toFixed(2) : '-'}</td>
             </tr>
           `;
         });
       } else {
-        articlesRowsHtml = `<tr><td colspan="5" style="padding: 10px; text-align: center; color: #64748b; font-size: 11px;">Nessun articolo inserito</td></tr>`;
+        articlesRowsHtml = `<tr><td colspan="7" style="padding: 10px; text-align: center; color: #64748b; font-size: 11px;">Nessun articolo inserito</td></tr>`;
       }
 
       let attachmentsPrintHtml = '';
@@ -1216,19 +1281,24 @@
               <table class="articles">
                 <thead>
                   <tr>
-                    <th style="width: 25%;">Codice</th>
+                    <th style="width: 20%;">Codice</th>
                     <th>Descrizione</th>
-                    <th style="width: 12%; text-align: center;">Q.tà</th>
-                    <th style="width: 15%; text-align: right;">Prezzo Un.</th>
-                    <th style="width: 18%; text-align: right;">Totale</th>
+                    <th style="width: 10%; text-align: center;">Q.tà</th>
+                    <th style="width: 13%; text-align: right;">Prezzo Un.</th>
+                    <th style="width: 8%; text-align: center;">IVA</th>
+                    <th style="width: 13%; text-align: right;">Pr. Ivato</th>
+                    <th style="width: 15%; text-align: right;">Tot. Ivato</th>
                   </tr>
                 </thead>
                 <tbody>
                   ${articlesRowsHtml}
                 </tbody>
               </table>
-              <div style="text-align: right; margin-top: 8px; font-size: 13px;">
-                <strong>Totale Ordine: <span style="color: #059669;">€ ${grandTotal.toFixed(2)}</span></strong>
+              <div style="text-align: right; margin-top: 10px; font-size: 12px; color: #475569;">
+                Imponibile: € ${grandSubtotal.toFixed(2)} &nbsp;|&nbsp; Totale IVA: € ${grandTax.toFixed(2)}
+              </div>
+              <div style="text-align: right; margin-top: 4px; font-size: 14px;">
+                <strong>Totale Ordine Ivato: <span style="color: #059669;">€ ${grandTotalTaxed.toFixed(2)}</span></strong>
               </div>
             </div>
 
