@@ -12,22 +12,10 @@
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
   <style>
-    /* Reset e personalizzazione scrollbar */
-    ::-webkit-scrollbar {
-      height: 6px;
-      width: 6px;
-    }
-    ::-webkit-scrollbar-track {
-      background: #1e293b;
-    }
-    ::-webkit-scrollbar-thumb {
-      background: #475569;
-      border-radius: 3px;
-    }
-    .board-column {
-      min-width: 280px;
-      max-width: 280px;
-    }
+    ::-webkit-scrollbar { height: 6px; width: 6px; }
+    ::-webkit-scrollbar-track { background: #1e293b; }
+    ::-webkit-scrollbar-thumb { background: #475569; border-radius: 3px; }
+    .board-column { min-width: 280px; max-width: 280px; }
     /* Impedisce lo zoom al doppio tap su iOS */
     touch-action: manipulation;
   </style>
@@ -42,18 +30,14 @@
       </div>
       <div>
         <h1 class="font-bold text-lg leading-tight text-white">Workflow SGA</h1>
-        <p id="cloudStatus" class="text-xs text-slate-400 flex items-center gap-1">
-          <i data-lucide="hard-drive" class="w-3 h-3 text-slate-400"></i> Modalità Locale (Browser)
+        <!-- Testo di stato cliccabile per aprire le impostazioni Cloud -->
+        <p id="cloudStatus" onclick="openModal('cloudModal')" class="text-xs flex items-center gap-1 cursor-pointer transition-colors mt-0.5" title="Clicca per impostazioni Cloud">
+          <i data-lucide="hard-drive" class="w-3 h-3 text-slate-400"></i> <span class="text-slate-400 hover:text-slate-200">Modalità Locale (Clicca per configurare)</span>
         </p>
       </div>
     </div>
     
     <div class="flex space-x-2 items-center">
-      <!-- Configura Cloud Firebase -->
-      <button onclick="openModal('cloudModal')" class="bg-slate-800 hover:bg-slate-700 text-indigo-400 border border-indigo-900/50 px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 active:scale-95 transition-transform" title="Collega a Firebase Cloud per sincronizzare iPad e PC">
-        <i data-lucide="cloud" class="w-4 h-4"></i> Configura Cloud
-      </button>
-
       <!-- Sistema di Backup -->
       <button onclick="exportBackup()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 active:scale-95 transition-transform" title="Scarica un file di sicurezza">
         <i data-lucide="download-cloud" class="w-4 h-4"></i> Backup
@@ -196,14 +180,14 @@
     <div class="bg-slate-900 border border-slate-800 rounded-xl w-full max-w-md p-5 shadow-2xl">
       <div class="flex justify-between items-center mb-4">
         <h3 class="font-bold text-lg text-slate-100 flex items-center gap-2">
-          <i data-lucide="cloud" class="w-5 h-5 text-indigo-400"></i> Configura Sincronizzazione Cloud
+          <i data-lucide="cloud" class="w-5 h-5 text-indigo-400"></i> Configura Cloud
         </h3>
         <button onclick="closeModal('cloudModal')" class="text-slate-400 hover:text-slate-200 bg-slate-800 rounded-full p-1">
           <i data-lucide="x" class="w-4 h-4"></i>
         </button>
       </div>
       <p class="text-xs text-slate-400 mb-4">
-        Inserisci qui i dati del tuo progetto gratuito Firebase per consentire la sincronizzazione istantanea in tempo reale tra iPad e PC.
+        Inserisci qui i dati del tuo progetto gratuito Firebase per consentire la sincronizzazione in tempo reale tra dispositivi.
       </p>
       <div class="space-y-4 text-sm">
         <div>
@@ -228,7 +212,6 @@
 
   <!-- MODAL: GALLERIA FOTO (VIEWER & ROTAZIONE) -->
   <div id="galleryModal" class="hidden fixed inset-0 bg-black/95 z-[60] flex flex-col items-center justify-center select-none">
-    <!-- Header Galleria -->
     <div class="absolute top-0 w-full p-4 flex justify-between items-center z-10 bg-gradient-to-b from-black/80 to-transparent">
       <div id="galleryCounter" class="text-white font-mono text-sm font-bold bg-black/50 px-3 py-1 rounded-full"></div>
       <div class="flex gap-4">
@@ -241,11 +224,9 @@
       </div>
     </div>
     
-    <!-- Immagine Centrale -->
     <div class="relative w-full h-full flex items-center justify-center p-4">
       <img id="galleryImage" src="" class="max-w-full max-h-[85vh] object-contain transition-transform duration-300">
       
-      <!-- Frecce navigazione -->
       <button onclick="prevGalleryImage()" class="absolute left-4 top-1/2 -translate-y-1/2 text-white p-3 bg-slate-800/80 hover:bg-slate-700 rounded-full transition-colors" id="btnPrevGallery">
         <i data-lucide="chevron-left" class="w-6 h-6"></i>
       </button>
@@ -275,7 +256,7 @@
     let state = { cards: [] };
     let activeCardId = null;
     let currentGalleryIndex = 0;
-    let db = null; // Istanza Firebase Firestore
+    let db = null; 
 
     // ----- GESTIONE CLOUD FIREBASE -----
     function initFirebase() {
@@ -311,9 +292,9 @@
     function updateCloudStatus(isOnline) {
       const statusEl = document.getElementById('cloudStatus');
       if (isOnline) {
-        statusEl.innerHTML = `<i data-lucide="wifi" class="w-3 h-3 text-emerald-500"></i> <span class="text-emerald-400 font-semibold">Cloud Attivo (Sincronizzato)</span>`;
+        statusEl.innerHTML = `<i data-lucide="wifi" class="w-3 h-3 text-emerald-500"></i> <span class="text-emerald-400 font-semibold hover:text-emerald-300 transition-colors">Cloud Attivo (Sincronizzato)</span>`;
       } else {
-        statusEl.innerHTML = `<i data-lucide="hard-drive" class="w-3 h-3 text-slate-400"></i> Modalità Locale (Browser)`;
+        statusEl.innerHTML = `<i data-lucide="hard-drive" class="w-3 h-3 text-slate-400"></i> <span class="text-slate-400 hover:text-slate-200 transition-colors">Modalità Locale (Clicca per configurare)</span>`;
       }
       lucide.createIcons();
     }
@@ -321,16 +302,13 @@
     function saveFirebaseConfig() {
       const apiKey = document.getElementById('cfgApiKey').value.trim();
       const projectId = document.getElementById('cfgProjectId').value.trim();
-
       if (!apiKey || !projectId) {
         alert("Inserisci sia l'API Key che il Project ID.");
         return;
       }
-
-      const config = { apiKey, projectId };
-      localStorage.setItem('workflow_sga_firebase_config', JSON.stringify(config));
+      localStorage.setItem('workflow_sga_firebase_config', JSON.stringify({ apiKey, projectId }));
       closeModal('cloudModal');
-      location.reload(); // Ricarica per attivare Firebase con i nuovi parametri
+      location.reload(); 
     }
 
     function resetFirebaseConfig() {
@@ -341,27 +319,53 @@
       }
     }
 
+    // Ascolto passivo del Cloud: aggiorna lo schermo ma NON reinvia i dati al cloud.
     function listenToCloudUpdates() {
       if (!db) return;
-      // Ascolto in tempo reale sub-secondo da Firestore
-      db.collection('workflow').doc('sga_main').onSnapshot((doc) => {
-        if (doc.exists) {
-          const data = doc.data();
-          if (data && Array.isArray(data.cards)) {
-            state.cards = sanitizeCards(data.cards);
-            renderBoard();
+      db.collection('workflow_sga_cards').onSnapshot((snapshot) => {
+        const cloudCards = [];
+        snapshot.forEach(doc => {
+          cloudCards.push(doc.data());
+        });
+        
+        if (snapshot.empty) {
+          if (state.cards.length > 0) {
+            state.cards.forEach(card => syncCardToCloud(card));
           }
         } else {
-          // Se il documento cloud è ancora vuoto, caricalo con lo stato locale corrente
-          saveState();
+          // Quando il cloud manda un aggiornamento, il dispositivo aggiorna solo il proprio schermo
+          state.cards = sanitizeCards(cloudCards).sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
+          saveLocal(); // Modifica solo la RAM del browser e l'HTML, senza triggerare un nuovo push
+          
+          if (activeCardId) {
+            const activeCard = state.cards.find(c => c.id === activeCardId);
+            if (activeCard) renderAttachments(activeCard);
+            else closeModal('detailModal');
+          }
         }
       }, (err) => {
         console.error("Errore sincro cloud:", err);
       });
     }
 
-    // ----- COMPRESSIONE IMMAGINI OTTIMIZZATA PER IPAD -----
-    function compressImage(file, maxWidth = 1000, maxHeight = 1000, quality = 0.6) {
+    // Carica attivamente sul Cloud solo la scheda che ha subito una modifica manuale
+    function syncCardToCloud(card) {
+      if (!db || !card) return;
+      db.collection('workflow_sga_cards').doc(card.id).set(card).catch(err => {
+         console.error("Errore salvataggio Cloud:", err);
+         if (err.message && (err.message.includes('exceeds the maximum') || err.message.includes('exceeded'))) {
+             alert("ATTENZIONE: Troppe foto in questa commessa! Hai superato il limite di peso di 1MB per scheda sul Cloud. Rimuovi qualche foto.");
+         }
+      });
+    }
+
+    function syncDeleteToCloud(cardId) {
+      if (!db || !cardId) return;
+      db.collection('workflow_sga_cards').doc(cardId).delete().catch(e => console.error(e));
+    }
+
+    // ----- COMPRESSIONE IMMAGINI OTTIMIZZATA PER IPAD (0.5 quality, 800px max) -----
+    function compressImage(file, maxWidth = 800, maxHeight = 800, quality = 0.5) {
       return new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = (e) => {
@@ -379,15 +383,13 @@
                 height = maxHeight;
               }
             }
-
             const canvas = document.createElement('canvas');
             canvas.width = width;
             canvas.height = height;
             const ctx = canvas.getContext('2d');
             ctx.drawImage(img, 0, 0, width, height);
 
-            const dataUrl = canvas.toDataURL('image/jpeg', quality);
-            resolve(dataUrl);
+            resolve(canvas.toDataURL('image/jpeg', quality));
           };
           img.onerror = reject;
           img.src = e.target.result;
@@ -397,7 +399,7 @@
       });
     }
 
-    // SANITIZZAZIONE DEI DATI E COMPATIBILITÀ VECCHI FORMATI FOTO
+    // ----- SANITIZZAZIONE E GESTIONE LOCALE -----
     function sanitizeCards(cardsArray) {
       if (!Array.isArray(cardsArray)) return [];
       return cardsArray.map(card => {
@@ -412,7 +414,6 @@
       }).filter(c => c !== null);
     }
 
-    // ----- SISTEMA DI SALVATAGGIO ROBUSTO (LOCALE & CLOUD) -----
     function loadState() {
       const saved = localStorage.getItem('workflow_sga_state');
       if (saved) {
@@ -424,7 +425,7 @@
             state = { cards: [] };
           }
         } catch(e) { 
-          console.error("Errore lettura dati salvati:", e); 
+          console.error("Errore lettura locale:", e); 
           state = { cards: [] };
         }
       } else {
@@ -432,25 +433,13 @@
       }
     }
 
-    function saveState() {
-      // 1. Renderizza sempre visivamente
+    // Salva SOLO sul browser (non spinge sul cloud)
+    function saveLocal() {
       renderBoard();
-
-      // 2. Salva in LocalStorage
       try {
         localStorage.setItem('workflow_sga_state', JSON.stringify(state));
       } catch(e) {
         console.error("Errore salvataggio localStorage:", e);
-      }
-
-      // 3. Se il Cloud Firebase è attivo, invia i dati aggiornati a Firestore
-      if (db) {
-        db.collection('workflow').doc('sga_main').set({
-          cards: state.cards,
-          updatedAt: new Date().toISOString()
-        }).catch(err => {
-          console.error("Errore salvataggio cloud:", err);
-        });
       }
     }
 
@@ -473,10 +462,13 @@
         try {
           const importedState = JSON.parse(e.target.result);
           if (importedState && Array.isArray(importedState.cards)) {
-            // Conversione e sanificazione automatica delle foto e dei dati
             state.cards = sanitizeCards(importedState.cards);
-            saveState(); 
-            alert("Backup ripristinato con successo!");
+            saveLocal(); 
+            // Invio massivo manuale sul nuovo formato Cloud
+            if (db) {
+               state.cards.forEach(card => syncCardToCloud(card));
+            }
+            alert("Backup ripristinato con successo e caricato sul Cloud!");
           } else {
             alert("Il file caricato non sembra un backup valido.");
           }
@@ -495,7 +487,6 @@
       initFirebase();
       lucide.createIcons();
 
-      // Precompila campi modal cloud se presenti
       const cfgStr = localStorage.getItem('workflow_sga_firebase_config');
       if (cfgStr) {
         try {
@@ -506,7 +497,7 @@
       }
     }
 
-    // Costruzione delle colonne
+    // Costruzione Grafica
     function renderBoard() {
       const board = document.getElementById('board');
       if (!board) return;
@@ -535,7 +526,6 @@
       lucide.createIcons();
     }
 
-    // HTML della Scheda
     function createCardHTML(card) {
       if (!card) return '';
       const badgeStyle = getJobTypeClass(card.jobType);
@@ -565,10 +555,10 @@
           <div class="pt-2 border-t border-slate-800/80 flex justify-between items-center" onclick="event.stopPropagation()">
             <span class="text-[9px] text-slate-600 font-mono">#${cardIdShort}</span>
             <div class="flex gap-1.5">
-              <button onclick="moveCardStep('${card.id}', -1)" class="p-1 rounded bg-slate-900 hover:bg-slate-700 text-slate-400 hover:text-slate-200 transition-colors" title="Indietro">
+              <button onclick="moveCardStep('${card.id}', -1)" class="p-1 rounded bg-slate-900 hover:bg-slate-700 text-slate-400 hover:text-slate-200 transition-colors">
                 <i data-lucide="chevron-left" class="w-3.5 h-3.5"></i>
               </button>
-              <button onclick="moveCardStep('${card.id}', 1)" class="p-1 rounded bg-slate-900 hover:bg-slate-700 text-slate-400 hover:text-slate-200 transition-colors" title="Avanti">
+              <button onclick="moveCardStep('${card.id}', 1)" class="p-1 rounded bg-slate-900 hover:bg-slate-700 text-slate-400 hover:text-slate-200 transition-colors">
                 <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
               </button>
             </div>
@@ -588,7 +578,6 @@
       }
     }
 
-    // Drag & Drop
     function allowDrop(ev) { ev.preventDefault(); }
     function handleDragStart(ev) { ev.dataTransfer.setData("text/plain", ev.target.dataset.id); }
     function handleDrop(ev) {
@@ -615,41 +604,24 @@
         const stageLabel = COLUMNS_CONFIG.find(col => col.id === targetStageId)?.label || targetStageId;
         if (!Array.isArray(card.history)) card.history = [];
         card.history.push({ stage: targetStageId, label: stageLabel, timestamp: new Date().toISOString() });
-        saveState();
+        
+        saveLocal();
+        syncCardToCloud(card);
       }
     }
 
-    // CREAZIONE NUOVA COMMESSA
     function createNewCard(event) {
       event.preventDefault();
-      
-      const titleInput = document.getElementById('formTitle');
-      const clientInput = document.getElementById('formClient');
-      const jobTypeInput = document.getElementById('formJobType');
-      const notesInput = document.getElementById('formNotes');
+      const title = document.getElementById('formTitle').value.trim();
+      const client = document.getElementById('formClient') ? document.getElementById('formClient').value.trim() : '';
+      const jobType = document.getElementById('formJobType').value;
+      const notes = document.getElementById('formNotes') ? document.getElementById('formNotes').value.trim() : '';
 
-      if (!titleInput || !jobTypeInput) return;
-
-      const title = titleInput.value.trim();
-      const client = clientInput ? clientInput.value.trim() : '';
-      const jobType = jobTypeInput.value;
-      const notes = notesInput ? notesInput.value.trim() : '';
-
-      if (!title) {
-        alert("Inserisci un titolo o cliente per la commessa.");
-        return;
-      }
-
-      if (!Array.isArray(state.cards)) {
-        state.cards = [];
-      }
+      if (!title) return;
 
       const newCard = {
         id: 'c' + Date.now().toString(36) + Math.random().toString(36).substring(2, 5),
-        title,
-        client,
-        jobType,
-        notes,
+        title, client, jobType, notes,
         stage: 'prev-da-fare',
         createdAt: new Date().toISOString(),
         photos: [],
@@ -657,7 +629,8 @@
       };
 
       state.cards.unshift(newCard);
-      saveState();
+      saveLocal();
+      syncCardToCloud(newCard);
       
       document.getElementById('newCardForm').reset();
       closeModal('addCardModal');
@@ -731,7 +704,6 @@
       }
     }
 
-    // CARICAMENTO E COMPRESSIONE FOTO MULTIPLE
     function handlePhotoUpload(event) {
       const files = Array.from(event.target.files);
       if (!files || files.length === 0) return;
@@ -744,8 +716,9 @@
         compressedImages.forEach(imgData => {
           card.photos.push({ image: imgData, rotation: 0 });
         });
-        saveState();
+        saveLocal();
         renderAttachments(card);
+        syncCardToCloud(card);
       }).catch(err => {
         console.error("Errore caricamento foto:", err);
         alert("Si è verificato un errore durante l'elaborazione dell'immagine.");
@@ -760,8 +733,9 @@
       if (card && card.photos) {
         if(confirm("Eliminare definitivamente questo allegato?")) {
           card.photos.splice(index, 1);
-          saveState();
+          saveLocal();
           renderAttachments(card);
+          syncCardToCloud(card);
         }
       }
     }
@@ -773,9 +747,7 @@
       openModal('galleryModal');
     }
 
-    function closeGallery() {
-      closeModal('galleryModal');
-    }
+    function closeGallery() { closeModal('galleryModal'); }
 
     function updateGalleryView() {
       const card = state.cards.find(c => c.id === activeCardId);
@@ -793,18 +765,12 @@
     }
 
     function prevGalleryImage() {
-      if (currentGalleryIndex > 0) {
-        currentGalleryIndex--;
-        updateGalleryView();
-      }
+      if (currentGalleryIndex > 0) { currentGalleryIndex--; updateGalleryView(); }
     }
 
     function nextGalleryImage() {
       const card = state.cards.find(c => c.id === activeCardId);
-      if (currentGalleryIndex < card.photos.length - 1) {
-        currentGalleryIndex++;
-        updateGalleryView();
-      }
+      if (currentGalleryIndex < card.photos.length - 1) { currentGalleryIndex++; updateGalleryView(); }
     }
 
     function rotateGalleryImage() {
@@ -814,16 +780,18 @@
       const photo = card.photos[currentGalleryIndex];
       photo.rotation = ((photo.rotation || 0) + 90) % 360;
       
-      saveState(); 
+      saveLocal(); 
       updateGalleryView(); 
       renderAttachments(card);
+      syncCardToCloud(card);
     }
 
     // ELIMINAZIONE E STAMPA
     function deleteCurrentCard() {
       if (confirm("Sei sicuro di voler eliminare definitivamente questa commessa di SGA?")) {
         state.cards = state.cards.filter(c => c.id !== activeCardId);
-        saveState();
+        saveLocal();
+        syncDeleteToCloud(activeCardId);
         closeModal('detailModal');
       }
     }
@@ -833,15 +801,12 @@
       if (!card) return;
 
       const printWindow = window.open('', '_blank');
-      
       const historyHtml = (card.history || []).map((h, i) => {
-        return `
-          <div style="margin-bottom: 12px; padding-left: 20px; border-left: 2px solid #cbd5e1; position: relative;">
-            <div style="position: absolute; left: -6px; top: 2px; width: 10px; height: 10px; border-radius: 50%; background: #475569;"></div>
-            <div style="font-weight: bold; font-size: 13px; color: #1e293b;">Passaggio #${i+1}: ${h.label}</div>
-            <div style="font-size: 11px; color: #64748b;">Data: ${new Date(h.timestamp).toLocaleString('it-IT')}</div>
-          </div>
-        `;
+        return `<div style="margin-bottom: 12px; padding-left: 20px; border-left: 2px solid #cbd5e1; position: relative;">
+                  <div style="position: absolute; left: -6px; top: 2px; width: 10px; height: 10px; border-radius: 50%; background: #475569;"></div>
+                  <div style="font-weight: bold; font-size: 13px; color: #1e293b;">Passaggio #${i+1}: ${h.label}</div>
+                  <div style="font-size: 11px; color: #64748b;">Data: ${new Date(h.timestamp).toLocaleString('it-IT')}</div>
+                </div>`;
       }).join('');
 
       const imagesHtml = card.photos && card.photos.length > 0 
@@ -878,9 +843,7 @@
                 <div>
                   <div class="logo-text">SGA STUDIO GRAFICO ASSOCIATO</div>
                   <h1 class="title">SCHEDA COMMESSA</h1>
-                  <span class="badge">
-                    STATO ATTUALE: ${COLUMNS_CONFIG.find(col => col.id === card.stage)?.label.toUpperCase() || card.stage}
-                  </span>
+                  <span class="badge">STATO ATTUALE: ${COLUMNS_CONFIG.find(col => col.id === card.stage)?.label.toUpperCase() || card.stage}</span>
                 </div>
                 <div style="text-align: right; font-size: 12px; color: #64748b; line-height: 1.5;">
                   Rif. Ordine: <strong style="color: #0f172a;">#${card.id.slice(-4).toUpperCase()}</strong><br>
@@ -888,48 +851,28 @@
                 </div>
               </div>
             </div>
-
             <div class="details">
-              <div>
-                <label>Cliente / Titolo Progetto</label>
-                <strong>${card.title}</strong>
-              </div>
-              <div>
-                <label>Tipologia di Lavorazione</label>
-                <strong>${card.jobType}</strong>
-              </div>
-              <div style="grid-column: span 2;">
-                <label>Referente / Contatto</label>
-                <strong>${card.client || 'Nessun referente specificato'}</strong>
-              </div>
+              <div><label>Cliente / Titolo Progetto</label><strong>${card.title}</strong></div>
+              <div><label>Tipologia di Lavorazione</label><strong>${card.jobType}</strong></div>
+              <div style="grid-column: span 2;"><label>Referente / Contatto</label><strong>${card.client || 'Nessun referente specificato'}</strong></div>
             </div>
-
             <div class="section-title">Specifiche & Note di Lavoro</div>
-            <div class="notes-box">${card.notes || 'Nessuna specifica aggiuntiva inserita in fase di creazione.'}</div>
-
+            <div class="notes-box">${card.notes || 'Nessuna specifica aggiuntiva inserita.'}</div>
             <div class="section-title">Documenti e Immagini</div>
             ${imagesHtml}
-
             <div class="section-title" style="margin-top: 40px;">Storyboard Lavorazione (Flusso dei Passaggi)</div>
             <div style="margin-top: 15px; background: #f8fafc; padding: 15px; border-radius: 6px; border: 1px solid #e2e8f0;">
               ${historyHtml}
             </div>
-
-            <script>
-              window.onload = function() { 
-                setTimeout(function() { window.print(); }, 500);
-              };
-            <\/script>
+            <script>window.onload = function(){ setTimeout(function(){ window.print(); }, 500); };<\/script>
           </body>
         </html>
       `);
       printWindow.document.close();
     }
 
-    // Modal Helpers
     function openModal(modalId) { document.getElementById(modalId).classList.remove('hidden'); }
     function closeModal(modalId) { document.getElementById(modalId).classList.add('hidden'); }
-
     window.onload = init;
   </script>
 </body>
