@@ -8,6 +8,9 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Icone Lucide per i pulsanti -->
   <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Firebase App & Firestore SDK (Compat version for single-file web app) -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
   <style>
     /* Reset e personalizzazione scrollbar */
     ::-webkit-scrollbar {
@@ -25,7 +28,6 @@
       min-width: 280px;
       max-width: 280px;
     }
-    /* Impedisce lo zoom al doppio tap su iOS */
     touch-action: manipulation;
   </style>
 </head>
@@ -39,18 +41,23 @@
       </div>
       <div>
         <h1 class="font-bold text-lg leading-tight text-white">Workflow SGA</h1>
-        <p class="text-xs text-slate-400 flex items-center gap-1">
-          <i data-lucide="check-circle-2" class="w-3 h-3 text-emerald-500"></i> Gestione Commesse Attiva
+        <p id="cloudStatusBadge" class="text-xs text-amber-400 flex items-center gap-1 cursor-pointer" onclick="openModal('cloudConfigModal')">
+          <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span> Modalità Locale (Tocca per attivare Cloud Sync)
         </p>
       </div>
     </div>
     
     <div class="flex space-x-2 items-center">
-      <!-- Sistema di Backup -->
-      <button onclick="exportBackup()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 active:scale-95 transition-transform" title="Scarica un file di sicurezza">
+      <!-- Pulsante Connessione Cloud -->
+      <button onclick="openModal('cloudConfigModal')" class="bg-slate-800 hover:bg-slate-700 text-indigo-300 border border-indigo-900/50 px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 active:scale-95 transition-transform" title="Configura Firebase per Sincronizzazione iPad/PC">
+        <i data-lucide="cloud-cog" class="w-4 h-4"></i> Configura Cloud
+      </button>
+
+      <!-- Backup Manuale -->
+      <button onclick="exportBackup()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 active:scale-95 transition-transform" title="Scarica Backup locale">
         <i data-lucide="download-cloud" class="w-4 h-4"></i> Backup
       </button>
-      <label class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 cursor-pointer active:scale-95 transition-transform" title="Carica un file di backup">
+      <label class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 cursor-pointer active:scale-95 transition-transform" title="Carica Backup">
         <i data-lucide="upload-cloud" class="w-4 h-4"></i> Ripristina
         <input type="file" accept=".json" class="hidden" onchange="importBackup(event)">
       </label>
@@ -83,7 +90,6 @@
       </div>
       
       <div class="p-5 overflow-y-auto space-y-6 flex-1 text-sm">
-        <!-- Info Generali -->
         <div class="grid grid-cols-2 gap-4">
           <div>
             <label class="text-xs text-slate-400 font-semibold uppercase tracking-wider block mb-1">Cliente</label>
@@ -95,13 +101,11 @@
           </div>
         </div>
 
-        <!-- Note / Dettagli -->
         <div>
           <label class="text-xs text-slate-400 font-semibold uppercase tracking-wider block mb-1">Dettagli & Note</label>
           <div id="detailNotes" class="bg-slate-955 p-3 rounded-lg border border-slate-800 text-slate-300 min-h-[60px] whitespace-pre-wrap"></div>
         </div>
 
-        <!-- Foto & Allegati -->
         <div>
           <div class="flex justify-between items-center mb-2">
             <label class="text-xs text-slate-400 font-semibold uppercase tracking-wider block">Foto & Documenti (Tocca per ingrandire)</label>
@@ -110,21 +114,15 @@
               <input type="file" id="photoInput" accept="image/*" multiple class="hidden" onchange="handlePhotoUpload(event)">
             </label>
           </div>
-          <div id="attachmentsContainer" class="grid grid-cols-4 gap-2 bg-slate-950 p-2 rounded-lg border border-slate-800 max-h-40 overflow-y-auto">
-            <!-- Miniature foto generate qui -->
-          </div>
+          <div id="attachmentsContainer" class="grid grid-cols-4 gap-2 bg-slate-950 p-2 rounded-lg border border-slate-800 max-h-40 overflow-y-auto"></div>
         </div>
 
-        <!-- STORYBOARD (Cronologia dei passaggi) -->
         <div>
           <label class="text-xs text-slate-400 font-semibold uppercase tracking-wider block mb-3">Storyboard Lavorazione (Cronologia Passaggi)</label>
-          <div id="storyboardTimeline" class="relative pl-6 space-y-3 before:absolute before:left-2 before:top-1.5 before:bottom-1.5 before:w-0.5 before:bg-slate-800">
-            <!-- Step dello storyboard generati qui -->
-          </div>
+          <div id="storyboardTimeline" class="relative pl-6 space-y-3 before:absolute before:left-2 before:top-1.5 before:bottom-1.5 before:w-0.5 before:bg-slate-800"></div>
         </div>
       </div>
 
-      <!-- Footer con pulsanti azione -->
       <div class="p-4 border-t border-slate-800 bg-slate-950 flex justify-between gap-3">
         <button onclick="deleteCurrentCard()" class="bg-red-950/40 hover:bg-red-900/60 text-red-400 border border-red-900/50 px-4 py-2 rounded-lg font-semibold flex items-center gap-2 active:scale-95 transition-all text-xs">
           <i data-lucide="trash-2" class="w-4 h-4"></i> Elimina
@@ -185,7 +183,6 @@
 
   <!-- MODAL: GALLERIA FOTO (VIEWER & ROTAZIONE) -->
   <div id="galleryModal" class="hidden fixed inset-0 bg-black/95 z-[60] flex flex-col items-center justify-center select-none">
-    <!-- Header Galleria -->
     <div class="absolute top-0 w-full p-4 flex justify-between items-center z-10 bg-gradient-to-b from-black/80 to-transparent">
       <div id="galleryCounter" class="text-white font-mono text-sm font-bold bg-black/50 px-3 py-1 rounded-full"></div>
       <div class="flex gap-4">
@@ -198,11 +195,8 @@
       </div>
     </div>
     
-    <!-- Immagine Centrale -->
     <div class="relative w-full h-full flex items-center justify-center p-4">
       <img id="galleryImage" src="" class="max-w-full max-h-[85vh] object-contain transition-transform duration-300">
-      
-      <!-- Frecce navigazione -->
       <button onclick="prevGalleryImage()" class="absolute left-4 top-1/2 -translate-y-1/2 text-white p-3 bg-slate-800/80 hover:bg-slate-700 rounded-full transition-colors" id="btnPrevGallery">
         <i data-lucide="chevron-left" class="w-6 h-6"></i>
       </button>
@@ -212,9 +206,54 @@
     </div>
   </div>
 
-  <!-- SCRIPT DI LOGICA E GESTIONE -->
+  <!-- MODAL: CONFIGURAZIONE CLOUD FIREBASE -->
+  <div id="cloudConfigModal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-xl w-full max-w-lg p-5 shadow-2xl space-y-4">
+      <div class="flex justify-between items-center">
+        <h3 class="font-bold text-lg text-slate-100 flex items-center gap-2">
+          <i data-lucide="cloud" class="w-5 h-5 text-indigo-400"></i> Sincronizzazione Cloud iPad & PC
+        </h3>
+        <button onclick="closeModal('cloudConfigModal')" class="text-slate-400 hover:text-slate-200 bg-slate-800 rounded-full p-1">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+      
+      <p class="text-xs text-slate-300 leading-relaxed">
+        Per sincronizzare in tempo reale la dashboard tra iPad e PC senza premere nulla, incolla qui la tua configurazione del database gratuito <strong>Google Firebase Firestore</strong>:
+      </p>
+
+      <div class="space-y-3 text-xs">
+        <div>
+          <label class="block font-semibold text-slate-400 mb-1">API Key</label>
+          <input type="text" id="cfgApiKey" placeholder="AIzaSy..." class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-slate-200 font-mono">
+        </div>
+        <div>
+          <label class="block font-semibold text-slate-400 mb-1">Project ID</label>
+          <input type="text" id="cfgProjectId" placeholder="workflow-sga-12345" class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-slate-200 font-mono">
+        </div>
+      </div>
+
+      <div class="bg-slate-950 p-3 rounded border border-slate-800 text-[11px] text-slate-400 space-y-1">
+        <p class="font-semibold text-indigo-300">Come attivarlo gratis in 2 minuti:</p>
+        <p>1. Vai su <a href="https://console.firebase.google.com" target="_blank" class="text-indigo-400 underline">console.firebase.google.com</a> e crea un progetto gratuito.</p>
+        <p>2. Attiva "Firestore Database" in modalità test.</p>
+        <p>3. Copia l'API Key e il Project ID dalle Impostazioni Progetto e incollali qui sopra.</p>
+      </div>
+
+      <div class="flex justify-between gap-2 pt-2">
+        <button type="button" onclick="resetCloudConfig()" class="text-red-400 hover:text-red-300 text-xs font-semibold">
+          Disattiva Cloud
+        </button>
+        <div class="flex gap-2">
+          <button type="button" onclick="closeModal('cloudConfigModal')" class="bg-slate-800 text-slate-300 px-4 py-2 rounded text-xs font-semibold">Annulla</button>
+          <button type="button" onclick="saveCloudConfig()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded text-xs font-semibold shadow-lg shadow-indigo-900/20">Connetti Cloud</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCRIPT LOGICA APPLICAZIONE E CLOUD SYNC -->
   <script>
-    // 12 Fasi del workflow
     const COLUMNS_CONFIG = [
       { id: "prev-da-fare", label: "Prev. da fare", color: "bg-orange-600/20 border-orange-500/50 text-orange-400", border: "border-l-4 border-l-orange-500" },
       { id: "prev-inviato", label: "Prev. inviato", color: "bg-amber-600/20 border-amber-500/50 text-amber-400", border: "border-l-4 border-l-amber-500" },
@@ -232,8 +271,12 @@
     let state = { cards: [] };
     let activeCardId = null;
     let currentGalleryIndex = 0;
+    
+    // Oggetti Firebase per sincronizzazione remota
+    let db = null;
+    let unsubscribeFirestore = null;
 
-    // ----- COMPRESSIONE IMMAGINI OTTIMIZZATA PER IPAD -----
+    // COMPRESSIONE FOTO PER RIDURRE IMPRONTA DI MEMORIA
     function compressImage(file, maxWidth = 1000, maxHeight = 1000, quality = 0.6) {
       return new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -242,7 +285,6 @@
           img.onload = () => {
             let width = img.width;
             let height = img.height;
-
             if (width > maxWidth || height > maxHeight) {
               if (width / height > maxWidth / maxHeight) {
                 height = Math.round((height * maxWidth) / width);
@@ -252,15 +294,12 @@
                 height = maxHeight;
               }
             }
-
             const canvas = document.createElement('canvas');
             canvas.width = width;
             canvas.height = height;
             const ctx = canvas.getContext('2d');
             ctx.drawImage(img, 0, 0, width, height);
-
-            const dataUrl = canvas.toDataURL('image/jpeg', quality);
-            resolve(dataUrl);
+            resolve(canvas.toDataURL('image/jpeg', quality));
           };
           img.onerror = reject;
           img.src = e.target.result;
@@ -270,99 +309,133 @@
       });
     }
 
-    // ----- SISTEMA DI SALVATAGGIO ROBUSTO -----
-    function loadState() {
-      const saved = localStorage.getItem('workflow_sga_state');
-      if (saved) {
-        try { 
-          const parsed = JSON.parse(saved); 
-          if (parsed && Array.isArray(parsed.cards)) {
-            state = parsed;
-          } else {
-            state = { cards: [] };
-          }
-          // Migrazione e sanificazione dati
-          state.cards.forEach(card => {
-            if (!Array.isArray(card.photos)) card.photos = [];
-            card.photos = card.photos.map(p => {
-              if (typeof p === 'string') return { image: p, rotation: 0 };
-              return p;
-            });
-            if (!Array.isArray(card.history)) card.history = [];
-          });
-        } catch(e) { 
-          console.error("Errore lettura dati salvati:", e); 
-          state = { cards: [] };
-        }
-      } else {
-        state = { cards: [] };
-      }
-    }
-
-    function saveState() {
-      // 1. Renderizza sempre a schermo per garantire che la nuova commessa sia subito visibile
-      renderBoard();
-
-      // 2. Tenta il salvataggio in memoria locale
-      try {
-        localStorage.setItem('workflow_sga_state', JSON.stringify(state));
-      } catch(e) {
-        console.error("Errore salvataggio localStorage:", e);
-        if (e.name === 'QuotaExceededError' || e.code === 22) {
-          alert("Nota: La commessa è stata aggiunta a schermo, ma la memoria per le foto sul tablet è quasi piena. Ti consigliamo di fare un Backup dal tasto in alto per non rischiare di perdere dati!");
-        }
-      }
-    }
-
-    // ----- BACKUP E RIPRISTINO -----
-    function exportBackup() {
-      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state));
-      const downloadAnchorNode = document.createElement('a');
-      downloadAnchorNode.setAttribute("href", dataStr);
-      downloadAnchorNode.setAttribute("download", "workflow_sga_backup.json");
-      document.body.appendChild(downloadAnchorNode);
-      downloadAnchorNode.click();
-      downloadAnchorNode.remove();
-    }
-
-    function importBackup(event) {
-      const file = event.target.files[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = function(e) {
-        try {
-          const importedState = JSON.parse(e.target.result);
-          if (importedState && Array.isArray(importedState.cards)) {
-            state = importedState;
-            saveState(); 
-            alert("Backup ripristinato con successo!");
-          } else {
-            alert("Il file caricato non sembra un backup valido.");
-          }
-        } catch(err) {
-          alert("Errore durante la lettura del file di backup.");
-        }
-      };
-      reader.readAsText(file);
-      event.target.value = ''; 
-    }
-
-    // ----- INIZIALIZZAZIONE -----
+    // INIZIALIZZAZIONE CLOUD & LOCAL STORAGE
     function init() {
-      loadState();
+      loadLocalState();
+      initFirebaseCloud();
       renderBoard();
       lucide.createIcons();
     }
 
-    // Costruzione delle colonne
+    function initFirebaseCloud() {
+      const savedCfg = localStorage.getItem('sga_firebase_config');
+      if (savedCfg) {
+        try {
+          const config = JSON.parse(savedCfg);
+          if (config.apiKey && config.projectId) {
+            if (!firebase.apps.length) {
+              firebase.initializeApp({
+                apiKey: config.apiKey,
+                authDomain: `${config.projectId}.firebaseapp.com`,
+                projectId: config.projectId,
+                storageBucket: `${config.projectId}.appspot.com`
+              });
+            }
+            db = firebase.firestore();
+            
+            // Aggiorna Badge di stato
+            const badge = document.getElementById('cloudStatusBadge');
+            badge.className = "text-xs text-emerald-400 flex items-center gap-1 cursor-pointer font-semibold";
+            badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> Cloud Sincronizzato in Tempo Reale`;
+
+            // Riempi campi form
+            document.getElementById('cfgApiKey').value = config.apiKey;
+            document.getElementById('cfgProjectId').value = config.projectId;
+
+            // ASCOLTO IN TEMPO REALE SUL DATABASE (Sincronizza iPad e PC sub-secondo)
+            if (unsubscribeFirestore) unsubscribeFirestore();
+            unsubscribeFirestore = db.collection("commesse_sga").onSnapshot((snapshot) => {
+              const cloudCards = [];
+              snapshot.forEach((doc) => {
+                cloudCards.push(doc.data());
+              });
+              // Ordina per data di creazione decrescente
+              cloudCards.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
+              state.cards = cloudCards;
+              saveLocalStateOnly();
+              renderBoard();
+            }, (error) => {
+              console.error("Errore Sync Cloud:", error);
+            });
+            return;
+          }
+        } catch(e) {
+          console.error("Configurazione Cloud non valida:", e);
+        }
+      }
+      
+      // Se non configurato o disattivato
+      const badge = document.getElementById('cloudStatusBadge');
+      badge.className = "text-xs text-amber-400 flex items-center gap-1 cursor-pointer";
+      badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span> Modalità Locale (Tocca per attivare Cloud Sync)`;
+    }
+
+    function saveCloudConfig() {
+      const apiKey = document.getElementById('cfgApiKey').value.trim();
+      const projectId = document.getElementById('cfgProjectId').value.trim();
+
+      if(!apiKey || !projectId) {
+        alert("Inserisci sia l'API Key che il Project ID.");
+        return;
+      }
+
+      localStorage.setItem('sga_firebase_config', JSON.stringify({ apiKey, projectId }));
+      closeModal('cloudConfigModal');
+      initFirebaseCloud();
+      alert("Connessione Cloud configurata! Ora tutte le modifiche su iPad o PC saranno sincronizzate istantaneamente.");
+    }
+
+    function resetCloudConfig() {
+      if(confirm("Disattivare la sincronizzazione Cloud e tornare alla sola modalità locale?")) {
+        localStorage.removeItem('sga_firebase_config');
+        if (unsubscribeFirestore) unsubscribeFirestore();
+        db = null;
+        closeModal('cloudConfigModal');
+        initFirebaseCloud();
+      }
+    }
+
+    function loadLocalState() {
+      const saved = localStorage.getItem('workflow_sga_state');
+      if (saved) {
+        try { 
+          const parsed = JSON.parse(saved); 
+          if (parsed && Array.isArray(parsed.cards)) state = parsed;
+        } catch(e) { state = { cards: [] }; }
+      }
+    }
+
+    function saveLocalStateOnly() {
+      try {
+        localStorage.setItem('workflow_sga_state', JSON.stringify(state));
+      } catch(e) { console.error(e); }
+    }
+
+    function saveState(cardToUpdate = null) {
+      renderBoard();
+      saveLocalStateOnly();
+
+      // Se il Cloud è attivo, invia gli aggiornamenti al database remoto
+      if (db && cardToUpdate) {
+        db.collection("commesse_sga").doc(cardToUpdate.id).set(cardToUpdate)
+          .catch(err => console.error("Errore salvataggio Cloud:", err));
+      }
+    }
+
+    function deleteCardFromCloud(cardId) {
+      if (db && cardId) {
+        db.collection("commesse_sga").doc(cardId).delete()
+          .catch(err => console.error("Errore eliminazione Cloud:", err));
+      }
+    }
+
+    // RENDERING DASHBOARD
     function renderBoard() {
       const board = document.getElementById('board');
       if (!board) return;
       board.innerHTML = '';
 
-      if (!state || !Array.isArray(state.cards)) {
-        state = { cards: [] };
-      }
+      if (!state || !Array.isArray(state.cards)) state = { cards: [] };
 
       COLUMNS_CONFIG.forEach(col => {
         const colCards = state.cards.filter(c => c && c.stage === col.id);
@@ -383,7 +456,6 @@
       lucide.createIcons();
     }
 
-    // HTML della Scheda
     function createCardHTML(card) {
       if (!card) return '';
       const badgeStyle = getJobTypeClass(card.jobType);
@@ -436,7 +508,7 @@
       }
     }
 
-    // Drag & Drop
+    // DRAG & DROP & SPOSTAMENTI
     function allowDrop(ev) { ev.preventDefault(); }
     function handleDragStart(ev) { ev.dataTransfer.setData("text/plain", ev.target.dataset.id); }
     function handleDrop(ev) {
@@ -463,51 +535,31 @@
         const stageLabel = COLUMNS_CONFIG.find(col => col.id === targetStageId)?.label || targetStageId;
         if (!Array.isArray(card.history)) card.history = [];
         card.history.push({ stage: targetStageId, label: stageLabel, timestamp: new Date().toISOString() });
-        saveState();
+        saveState(card);
       }
     }
 
-    // CREAZIONE NUOVA COMMESSA (CORRETTA E RESISTENTE AGLI ERRORI)
     function createNewCard(event) {
       event.preventDefault();
-      
-      const titleInput = document.getElementById('formTitle');
-      const clientInput = document.getElementById('formClient');
-      const jobTypeInput = document.getElementById('formJobType');
-      const notesInput = document.getElementById('formNotes');
+      const title = document.getElementById('formTitle').value.trim();
+      const client = document.getElementById('formClient').value.trim();
+      const jobType = document.getElementById('formJobType').value;
+      const notes = document.getElementById('formNotes').value.trim();
 
-      if (!titleInput || !jobTypeInput) return;
-
-      const title = titleInput.value.trim();
-      const client = clientInput ? clientInput.value.trim() : '';
-      const jobType = jobTypeInput.value;
-      const notes = notesInput ? notesInput.value.trim() : '';
-
-      if (!title) {
-        alert("Inserisci un titolo o cliente per la commessa.");
-        return;
-      }
-
-      if (!Array.isArray(state.cards)) {
-        state.cards = [];
-      }
+      if (!title) return;
 
       const newCard = {
         id: 'c' + Date.now().toString(36) + Math.random().toString(36).substring(2, 5),
-        title,
-        client,
-        jobType,
-        notes,
-        stage: 'prev-da-fare', // Parte sempre da "Prev. da fare"
+        title, client, jobType, notes,
+        stage: 'prev-da-fare',
         createdAt: new Date().toISOString(),
         photos: [],
         history: [{ stage: 'prev-da-fare', label: 'Inserito in "Prev. da fare"', timestamp: new Date().toISOString() }]
       };
 
       state.cards.unshift(newCard);
-      saveState();
+      saveState(newCard);
       
-      // Resetta form e chiudi modal
       document.getElementById('newCardForm').reset();
       closeModal('addCardModal');
     }
@@ -580,7 +632,6 @@
       }
     }
 
-    // CARICAMENTO E COMPRESSIONE FOTO MULTIPLE
     function handlePhotoUpload(event) {
       const files = Array.from(event.target.files);
       if (!files || files.length === 0) return;
@@ -593,11 +644,10 @@
         compressedImages.forEach(imgData => {
           card.photos.push({ image: imgData, rotation: 0 });
         });
-        saveState();
+        saveState(card);
         renderAttachments(card);
       }).catch(err => {
-        console.error("Errore caricamento foto:", err);
-        alert("Si è verificato un errore durante l'elaborazione dell'immagine.");
+        console.error("Errore foto:", err);
       });
 
       event.target.value = '';
@@ -609,22 +659,20 @@
       if (card && card.photos) {
         if(confirm("Eliminare definitivamente questo allegato?")) {
           card.photos.splice(index, 1);
-          saveState();
+          saveState(card);
           renderAttachments(card);
         }
       }
     }
 
-    // GALLERIA E ROTAZIONE
+    // GALLERIA FOTO
     function openGallery(index) {
       currentGalleryIndex = index;
       updateGalleryView();
       openModal('galleryModal');
     }
 
-    function closeGallery() {
-      closeModal('galleryModal');
-    }
+    function closeGallery() { closeModal('galleryModal'); }
 
     function updateGalleryView() {
       const card = state.cards.find(c => c.id === activeCardId);
@@ -636,24 +684,17 @@
       imgEl.style.transform = `rotate(${photo.rotation || 0}deg)`;
 
       document.getElementById('galleryCounter').innerText = `${currentGalleryIndex + 1} / ${card.photos.length}`;
-
       document.getElementById('btnPrevGallery').style.display = currentGalleryIndex === 0 ? 'none' : 'block';
       document.getElementById('btnNextGallery').style.display = currentGalleryIndex === card.photos.length - 1 ? 'none' : 'block';
     }
 
     function prevGalleryImage() {
-      if (currentGalleryIndex > 0) {
-        currentGalleryIndex--;
-        updateGalleryView();
-      }
+      if (currentGalleryIndex > 0) { currentGalleryIndex--; updateGalleryView(); }
     }
 
     function nextGalleryImage() {
       const card = state.cards.find(c => c.id === activeCardId);
-      if (currentGalleryIndex < card.photos.length - 1) {
-        currentGalleryIndex++;
-        updateGalleryView();
-      }
+      if (currentGalleryIndex < card.photos.length - 1) { currentGalleryIndex++; updateGalleryView(); }
     }
 
     function rotateGalleryImage() {
@@ -663,15 +704,16 @@
       const photo = card.photos[currentGalleryIndex];
       photo.rotation = ((photo.rotation || 0) + 90) % 360;
       
-      saveState(); 
+      saveState(card); 
       updateGalleryView(); 
       renderAttachments(card);
     }
 
-    // ELIMINAZIONE E STAMPA
     function deleteCurrentCard() {
       if (confirm("Sei sicuro di voler eliminare definitivamente questa commessa di SGA?")) {
-        state.cards = state.cards.filter(c => c.id !== activeCardId);
+        const idToDelete = activeCardId;
+        state.cards = state.cards.filter(c => c.id !== idToDelete);
+        deleteCardFromCloud(idToDelete);
         saveState();
         closeModal('detailModal');
       }
@@ -682,22 +724,19 @@
       if (!card) return;
 
       const printWindow = window.open('', '_blank');
-      
-      const historyHtml = (card.history || []).map((h, i) => {
-        return `
-          <div style="margin-bottom: 12px; padding-left: 20px; border-left: 2px solid #cbd5e1; position: relative;">
-            <div style="position: absolute; left: -6px; top: 2px; width: 10px; height: 10px; border-radius: 50%; background: #475569;"></div>
-            <div style="font-weight: bold; font-size: 13px; color: #1e293b;">Passaggio #${i+1}: ${h.label}</div>
-            <div style="font-size: 11px; color: #64748b;">Data: ${new Date(h.timestamp).toLocaleString('it-IT')}</div>
-          </div>
-        `;
-      }).join('');
+      const historyHtml = (card.history || []).map((h, i) => `
+        <div style="margin-bottom: 12px; padding-left: 20px; border-left: 2px solid #cbd5e1; position: relative;">
+          <div style="position: absolute; left: -6px; top: 2px; width: 10px; height: 10px; border-radius: 50%; background: #475569;"></div>
+          <div style="font-weight: bold; font-size: 13px; color: #1e293b;">Passaggio #${i+1}: ${h.label}</div>
+          <div style="font-size: 11px; color: #64748b;">Data: ${new Date(h.timestamp).toLocaleString('it-IT')}</div>
+        </div>
+      `).join('');
 
       const imagesHtml = card.photos && card.photos.length > 0 
         ? `<div style="display: flex; gap: 15px; flex-wrap: wrap; margin-top: 15px;">
              ${card.photos.map(p => `
                <div style="width: 200px; height: 200px; border: 1px solid #e2e8f0; border-radius: 6px; display: flex; align-items: center; justify-content: center; overflow: hidden; background: #f8fafc;">
-                 <img src="${p.image}" style="max-width: 100\%; max-height: 100\%; object-fit: contain; transform: rotate(${p.rotation || 0}deg);">
+                 <img src="${p.image}" style="max-width: 100%; max-height: 100%; object-fit: contain; transform: rotate(${p.rotation || 0}deg);">
                </div>
              `).join('')}
            </div>`
@@ -727,9 +766,7 @@
                 <div>
                   <div class="logo-text">SGA STUDIO GRAFICO ASSOCIATO</div>
                   <h1 class="title">SCHEDA COMMESSA</h1>
-                  <span class="badge">
-                    STATO ATTUALE: ${COLUMNS_CONFIG.find(col => col.id === card.stage)?.label.toUpperCase() || card.stage}
-                  </span>
+                  <span class="badge">STATO ATTUALE: ${COLUMNS_CONFIG.find(col => col.id === card.stage)?.label.toUpperCase() || card.stage}</span>
                 </div>
                 <div style="text-align: right; font-size: 12px; color: #64748b; line-height: 1.5;">
                   Rif. Ordine: <strong style="color: #0f172a;">#${card.id.slice(-4).toUpperCase()}</strong><br>
@@ -739,22 +776,13 @@
             </div>
 
             <div class="details">
-              <div>
-                <label>Cliente / Titolo Progetto</label>
-                <strong>${card.title}</strong>
-              </div>
-              <div>
-                <label>Tipologia di Lavorazione</label>
-                <strong>${card.jobType}</strong>
-              </div>
-              <div style="grid-column: span 2;">
-                <label>Referente / Contatto</label>
-                <strong>${card.client || 'Nessun referente specificato'}</strong>
-              </div>
+              <div><label>Cliente / Titolo Progetto</label><strong>${card.title}</strong></div>
+              <div><label>Tipologia di Lavorazione</label><strong>${card.jobType}</strong></div>
+              <div style="grid-column: span 2;"><label>Referente / Contatto</label><strong>${card.client || 'Nessun referente specificato'}</strong></div>
             </div>
 
             <div class="section-title">Specifiche & Note di Lavoro</div>
-            <div class="notes-box">${card.notes || 'Nessuna specifica aggiuntiva inserita in fase di creazione.'}</div>
+            <div class="notes-box">${card.notes || 'Nessuna specifica aggiuntiva inserita.'}</div>
 
             <div class="section-title">Documenti e Immagini</div>
             ${imagesHtml}
@@ -764,18 +792,44 @@
               ${historyHtml}
             </div>
 
-            <script>
-              window.onload = function() { 
-                setTimeout(function() { window.print(); }, 500);
-              };
-            <\/script>
+            <script>window.onload = function() { setTimeout(function() { window.print(); }, 500); };<\/script>
           </body>
         </html>
       `);
       printWindow.document.close();
     }
 
-    // Modal Helpers
+    // EXPORT & IMPORT BACKUP MANUALE
+    function exportBackup() {
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state));
+      const downloadAnchorNode = document.createElement('a');
+      downloadAnchorNode.setAttribute("href", dataStr);
+      downloadAnchorNode.setAttribute("download", "workflow_sga_backup.json");
+      document.body.appendChild(downloadAnchorNode);
+      downloadAnchorNode.click();
+      downloadAnchorNode.remove();
+    }
+
+    function importBackup(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const importedState = JSON.parse(e.target.result);
+          if (importedState && Array.isArray(importedState.cards)) {
+            state = importedState;
+            saveLocalStateOnly(); 
+            renderBoard();
+            alert("Backup ripristinato con successo!");
+          }
+        } catch(err) { alert("Errore durante la lettura del file."); }
+      };
+      reader.readAsText(file);
+      event.target.value = ''; 
+    }
+
+    // MODAL HELPERS
     function openModal(modalId) { document.getElementById(modalId).classList.remove('hidden'); }
     function closeModal(modalId) { document.getElementById(modalId).classList.add('hidden'); }
 
