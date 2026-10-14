@@ -47,10 +47,10 @@
     
     <div class="flex space-x-2 items-center">
       <!-- Sistema di Backup -->
-      <button onclick="exportBackup()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 active:scale-95 transition-transform" title="Scarica un file di sicurezza con tutti i tuoi dati">
+      <button onclick="exportBackup()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 active:scale-95 transition-transform" title="Scarica un file di sicurezza">
         <i data-lucide="download-cloud" class="w-4 h-4"></i> Backup
       </button>
-      <label class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 cursor-pointer active:scale-95 transition-transform" title="Carica un file di backup salvato in precedenza">
+      <label class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 cursor-pointer active:scale-95 transition-transform" title="Carica un file di backup">
         <i data-lucide="upload-cloud" class="w-4 h-4"></i> Ripristina
         <input type="file" accept=".json" class="hidden" onchange="importBackup(event)">
       </label>
@@ -69,7 +69,7 @@
     <!-- Le colonne verranno generate qui via JS -->
   </main>
 
-  <!-- MODAL: DETTAGLIO SCHEDA / STORIA (STORYBOARD) / ALLEGATI -->
+  <!-- MODAL: DETTAGLIO SCHEDA / STORIA / ALLEGATI -->
   <div id="detailModal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
     <div class="bg-slate-900 border border-slate-800 rounded-xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden shadow-2xl">
       <div class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-850">
@@ -104,13 +104,13 @@
         <!-- Foto & Allegati -->
         <div>
           <div class="flex justify-between items-center mb-2">
-            <label class="text-xs text-slate-400 font-semibold uppercase tracking-wider block">Foto & Documenti Allegati</label>
+            <label class="text-xs text-slate-400 font-semibold uppercase tracking-wider block">Foto & Documenti (Tocca per ingrandire)</label>
             <label class="bg-slate-800 hover:bg-slate-700 text-xs px-3 py-1.5 rounded-lg cursor-pointer flex items-center gap-1.5 text-slate-200">
-              <i data-lucide="camera" class="w-3.5 h-3.5"></i> Scatta / Aggiungi Foto
+              <i data-lucide="camera" class="w-3.5 h-3.5"></i> Scatta / Allega
               <input type="file" id="photoInput" accept="image/*" class="hidden" onchange="handlePhotoUpload(event)">
             </label>
           </div>
-          <div id="attachmentsContainer" class="grid grid-cols-3 gap-2 bg-slate-950 p-2 rounded-lg border border-slate-800 max-h-32 overflow-y-auto">
+          <div id="attachmentsContainer" class="grid grid-cols-4 gap-2 bg-slate-950 p-2 rounded-lg border border-slate-800 max-h-40 overflow-y-auto">
             <!-- Miniature foto generate qui -->
           </div>
         </div>
@@ -127,7 +127,7 @@
       <!-- Footer con pulsanti azione -->
       <div class="p-4 border-t border-slate-800 bg-slate-950 flex justify-between gap-3">
         <button onclick="deleteCurrentCard()" class="bg-red-950/40 hover:bg-red-900/60 text-red-400 border border-red-900/50 px-4 py-2 rounded-lg font-semibold flex items-center gap-2 active:scale-95 transition-all text-xs">
-          <i data-lucide="trash-2" class="w-4 h-4"></i> Elimina Commessa
+          <i data-lucide="trash-2" class="w-4 h-4"></i> Elimina
         </button>
         <div class="flex gap-2">
           <button onclick="printCard()" class="bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded-lg font-semibold flex items-center gap-2 active:scale-95 transition-all text-xs">
@@ -183,9 +183,38 @@
     </div>
   </div>
 
+  <!-- MODAL: GALLERIA FOTO (VIEWER & ROTAZIONE) -->
+  <div id="galleryModal" class="hidden fixed inset-0 bg-black/95 z-[60] flex flex-col items-center justify-center select-none">
+    <!-- Header Galleria -->
+    <div class="absolute top-0 w-full p-4 flex justify-between items-center z-10 bg-gradient-to-b from-black/80 to-transparent">
+      <div id="galleryCounter" class="text-white font-mono text-sm font-bold bg-black/50 px-3 py-1 rounded-full"></div>
+      <div class="flex gap-4">
+        <button onclick="rotateGalleryImage()" class="text-white p-2 bg-slate-800 hover:bg-slate-700 rounded-full transition-colors" title="Ruota immagine">
+          <i data-lucide="rotate-cw" class="w-5 h-5"></i>
+        </button>
+        <button onclick="closeGallery()" class="text-white p-2 bg-slate-800 hover:bg-slate-700 rounded-full transition-colors" title="Chiudi">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+    </div>
+    
+    <!-- Immagine Centrale -->
+    <div class="relative w-full h-full flex items-center justify-center p-4">
+      <img id="galleryImage" src="" class="max-w-full max-h-[85vh] object-contain transition-transform duration-300">
+      
+      <!-- Frecce navigazione -->
+      <button onclick="prevGalleryImage()" class="absolute left-4 top-1/2 -translate-y-1/2 text-white p-3 bg-slate-800/80 hover:bg-slate-700 rounded-full transition-colors" id="btnPrevGallery">
+        <i data-lucide="chevron-left" class="w-6 h-6"></i>
+      </button>
+      <button onclick="nextGalleryImage()" class="absolute right-4 top-1/2 -translate-y-1/2 text-white p-3 bg-slate-800/80 hover:bg-slate-700 rounded-full transition-colors" id="btnNextGallery">
+        <i data-lucide="chevron-right" class="w-6 h-6"></i>
+      </button>
+    </div>
+  </div>
+
   <!-- SCRIPT DI LOGICA E GESTIONE -->
   <script>
-    // 12 Fasi personalizzate del workflow con relativo set di colori coerente
+    // 12 Fasi del workflow
     const COLUMNS_CONFIG = [
       { id: "prev-da-fare", label: "Prev. da fare", color: "bg-orange-600/20 border-orange-500/50 text-orange-400", border: "border-l-4 border-l-orange-500" },
       { id: "prev-inviato", label: "Prev. inviato", color: "bg-amber-600/20 border-amber-500/50 text-amber-400", border: "border-l-4 border-l-amber-500" },
@@ -202,12 +231,24 @@
 
     let state = { cards: [] };
     let activeCardId = null;
+    let currentGalleryIndex = 0;
 
-    // ----- SISTEMA DI SALVATAGGIO AUTOMATICO (LOCALSTORAGE) -----
+    // ----- SISTEMA DI SALVATAGGIO AUTOMATICO -----
     function loadState() {
       const saved = localStorage.getItem('workflow_sga_state');
       if (saved) {
-        try { state = JSON.parse(saved); } catch(e) { console.error(e); }
+        try { 
+          state = JSON.parse(saved); 
+          // Migrazione vecchie foto (da formato stringa Base64 a oggetto {image, rotation})
+          state.cards.forEach(card => {
+            if (card.photos && card.photos.length > 0) {
+              card.photos = card.photos.map(p => {
+                if (typeof p === 'string') return { image: p, rotation: 0 };
+                return p;
+              });
+            }
+          });
+        } catch(e) { console.error(e); }
       }
     }
 
@@ -216,9 +257,8 @@
       renderBoard();
     }
 
-    // ----- SISTEMA DI BACKUP E RIPRISTINO (FILE ESTERNO) -----
+    // ----- SISTEMA DI BACKUP E RIPRISTINO -----
     function exportBackup() {
-      // Converte lo stato in un file JSON scaricabile
       const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state));
       const downloadAnchorNode = document.createElement('a');
       downloadAnchorNode.setAttribute("href", dataStr);
@@ -231,24 +271,22 @@
     function importBackup(event) {
       const file = event.target.files[0];
       if (!file) return;
-      
       const reader = new FileReader();
       reader.onload = function(e) {
         try {
           const importedState = JSON.parse(e.target.result);
           if (importedState && importedState.cards) {
             state = importedState;
-            saveState(); // Salva i nuovi dati importati nel browser e riavvia la grafica
-            alert("Backup ripristinato con successo! Tutti i dati sono stati caricati.");
+            saveState(); 
+            alert("Backup ripristinato con successo!");
           } else {
-            alert("Il file caricato non sembra un backup valido del Workflow SGA.");
+            alert("Il file caricato non sembra un backup valido.");
           }
         } catch(err) {
-          alert("Errore durante la lettura del file di backup.");
+          alert("Errore durante la lettura del file.");
         }
       };
       reader.readAsText(file);
-      // Reset input in modo da poter ricaricare lo stesso file se necessario
       event.target.value = ''; 
     }
 
@@ -259,14 +297,13 @@
       lucide.createIcons();
     }
 
-    // Costruisce visivamente il flusso delle 12 colonne con le relative schede
+    // Costruzione delle colonne
     function renderBoard() {
       const board = document.getElementById('board');
       board.innerHTML = '';
 
       COLUMNS_CONFIG.forEach(col => {
         const colCards = state.cards.filter(c => c.stage === col.id);
-        
         const colEl = document.createElement('div');
         colEl.className = `board-column flex flex-col h-full bg-slate-900/60 rounded-xl border border-slate-800 shrink-0 overflow-hidden`;
         
@@ -276,7 +313,7 @@
             <span class="text-xs font-semibold bg-slate-950/60 px-2 py-0.5 rounded-full shadow-inner">${colCards.length}</span>
           </div>
           <div class="flex-1 overflow-y-auto p-2 space-y-2 card-dropzone" data-col="${col.id}" ondragover="allowDrop(event)" ondrop="handleDrop(event)">
-            ${colCards.map(card => createCardHTML(card, col)).join('')}
+            ${colCards.map(card => createCardHTML(card)).join('')}
           </div>
         `;
         board.appendChild(colEl);
@@ -284,12 +321,16 @@
       lucide.createIcons();
     }
 
-    // HTML della singola scheda della commessa
-    function createCardHTML(card, col) {
+    // Costruzione Scheda
+    function createCardHTML(card) {
       const badgeStyle = getJobTypeClass(card.jobType);
       const thumbnailHTML = card.photos && card.photos.length > 0 
-        ? `<div class="mt-2 flex gap-1 overflow-hidden h-8">
-             ${card.photos.map(p => `<img src="${p}" class="w-8 h-8 object-cover rounded border border-slate-700">`).join('')}
+        ? `<div class="mt-2 flex gap-1 overflow-hidden h-10">
+             ${card.photos.map(p => `
+                <div class="w-10 h-10 shrink-0 overflow-hidden rounded border border-slate-700 bg-slate-900 flex items-center justify-center">
+                  <img src="${p.image}" style="transform: rotate(${p.rotation || 0}deg);" class="min-w-full min-h-full object-cover">
+                </div>
+             `).join('')}
            </div>` 
         : '';
 
@@ -304,14 +345,13 @@
           ${card.client ? `<p class="text-[11px] text-slate-400 truncate flex items-center gap-1"><i data-lucide="user" class="w-3 h-3 text-slate-500"></i> ${card.client}</p>` : ''}
           ${thumbnailHTML}
           
-          <!-- Bottoncini sposta rapidi per facilitare l'uso con iPad/Touch in mobilità -->
           <div class="pt-2 border-t border-slate-800/80 flex justify-between items-center" onclick="event.stopPropagation()">
             <span class="text-[9px] text-slate-600 font-mono">#${card.id.slice(-4).toUpperCase()}</span>
             <div class="flex gap-1.5">
-              <button onclick="moveCardStep('${card.id}', -1)" class="p-1 rounded bg-slate-900 hover:bg-slate-700 text-slate-400 hover:text-slate-200 transition-colors" title="Sposta Indietro">
+              <button onclick="moveCardStep('${card.id}', -1)" class="p-1 rounded bg-slate-900 hover:bg-slate-700 text-slate-400 hover:text-slate-200 transition-colors">
                 <i data-lucide="chevron-left" class="w-3.5 h-3.5"></i>
               </button>
-              <button onclick="moveCardStep('${card.id}', 1)" class="p-1 rounded bg-slate-900 hover:bg-slate-700 text-slate-400 hover:text-slate-200 transition-colors" title="Sposta Avanti">
+              <button onclick="moveCardStep('${card.id}', 1)" class="p-1 rounded bg-slate-900 hover:bg-slate-700 text-slate-400 hover:text-slate-200 transition-colors">
                 <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
               </button>
             </div>
@@ -320,7 +360,6 @@
       `;
     }
 
-    // Colori badge per categoria di prodotto/attività (adattati per SGA)
     function getJobTypeClass(type) {
       switch (type) {
         case 'Stampa Digitale / Banner': return 'bg-blue-900/40 text-blue-300 border border-blue-800';
@@ -332,7 +371,7 @@
       }
     }
 
-    // Gestione Drag & Drop
+    // Drag & Drop
     function allowDrop(ev) { ev.preventDefault(); }
     function handleDragStart(ev) { ev.dataTransfer.setData("text/plain", ev.target.dataset.id); }
     function handleDrop(ev) {
@@ -342,7 +381,6 @@
       if (cardId && targetColId) changeCardStage(cardId, targetColId);
     }
 
-    // Funzione sposta avanti-indietro rapida utile per iPad/Tablet
     function moveCardStep(cardId, direction) {
       const card = state.cards.find(c => c.id === cardId);
       if (!card) return;
@@ -353,26 +391,16 @@
       }
     }
 
-    // Aggiornamento dello stage di una commessa con storico
     function changeCardStage(cardId, targetStageId) {
       const card = state.cards.find(c => c.id === cardId);
       if (card && card.stage !== targetStageId) {
-        const oldStage = card.stage;
         card.stage = targetStageId;
-        
-        // Registrazione per lo Storyboard
         const stageLabel = COLUMNS_CONFIG.find(col => col.id === targetStageId)?.label || targetStageId;
-        card.history.push({
-          stage: targetStageId,
-          label: stageLabel,
-          timestamp: new Date().toISOString()
-        });
-        
+        card.history.push({ stage: targetStageId, label: stageLabel, timestamp: new Date().toISOString() });
         saveState();
       }
     }
 
-    // Gestione Inserimento Nuova Commessa
     function createNewCard(event) {
       event.preventDefault();
       const title = document.getElementById('formTitle').value.trim();
@@ -381,30 +409,17 @@
       const notes = document.getElementById('formNotes').value.trim();
 
       const newCard = {
-        id: 'c' + Date.now().toString(36),
-        title,
-        client,
-        jobType,
-        notes,
-        stage: 'prev-da-fare', // Parte sempre da "Prev. da fare"
-        createdAt: new Date().toISOString(),
-        photos: [],
-        history: [{
-          stage: 'prev-da-fare',
-          label: 'Inserito in "Prev. da fare"',
-          timestamp: new Date().toISOString()
-        }]
+        id: 'c' + Date.now().toString(36), title, client, jobType, notes,
+        stage: 'prev-da-fare', createdAt: new Date().toISOString(), photos: [],
+        history: [{ stage: 'prev-da-fare', label: 'Inserito in "Prev. da fare"', timestamp: new Date().toISOString() }]
       };
 
       state.cards.unshift(newCard);
       saveState();
-      
-      // Resetta form e chiudi modal
       document.getElementById('newCardForm').reset();
       closeModal('addCardModal');
     }
 
-    // Apertura Dettaglio / Edit con Gestione Storyboard & Foto
     function openDetail(id) {
       const card = state.cards.find(c => c.id === id);
       if (!card) return;
@@ -420,19 +435,14 @@
       document.getElementById('detailJobType').textContent = card.jobType;
       document.getElementById('detailNotes').textContent = card.notes || 'Nessuna specifica o nota presente.';
 
-      // Costruzione Miniature Foto
       renderAttachments(card);
 
-      // Costruzione Timeline dello Storyboard con i colori di ogni fase passata
       const timeline = document.getElementById('storyboardTimeline');
       timeline.innerHTML = '';
       card.history.forEach((h, idx) => {
         const hStageObj = COLUMNS_CONFIG.find(col => col.id === h.stage);
         const circleBg = hStageObj ? hStageObj.color.split(' ')[0] : 'bg-slate-700';
-        
-        const dateStr = new Date(h.timestamp).toLocaleString('it-IT', {
-          day: '2-digit', month: '2-digit', hour: '2-digit', minute:'2-digit'
-        });
+        const dateStr = new Date(h.timestamp).toLocaleString('it-IT', { day: '2-digit', month: '2-digit', hour: '2-digit', minute:'2-digit' });
 
         const item = document.createElement('div');
         item.className = "flex items-start gap-3 relative";
@@ -449,21 +459,20 @@
         `;
         timeline.appendChild(item);
       });
-
       openModal('detailModal');
     }
 
-    // Rendering Galleria Allegati
     function renderAttachments(card) {
       const container = document.getElementById('attachmentsContainer');
       container.innerHTML = '';
       if (card.photos && card.photos.length > 0) {
-        card.photos.forEach((base64, index) => {
+        card.photos.forEach((photoObj, index) => {
           const thumb = document.createElement('div');
-          thumb.className = "relative group w-full h-24 bg-slate-800 rounded border border-slate-700 overflow-hidden";
+          // Div contenitore con overflow hidden per far sì che la rotazione resti all'interno del riquadro
+          thumb.className = "relative group w-full h-24 bg-slate-900 rounded border border-slate-700 overflow-hidden flex items-center justify-center cursor-pointer";
           thumb.innerHTML = `
-            <img src="${base64}" class="w-full h-full object-cover">
-            <button onclick="removePhoto(${index})" class="absolute top-1 right-1 bg-red-600/90 hover:bg-red-500 text-white p-1.5 rounded-md shadow-lg active:scale-90 opacity-0 group-hover:opacity-100 transition-opacity" title="Rimuovi Foto">
+            <img src="${photoObj.image}" onclick="openGallery(${index})" style="transform: rotate(${photoObj.rotation || 0}deg);" class="min-w-full min-h-full object-cover transition-transform duration-300">
+            <button onclick="removePhoto(event, ${index})" class="absolute top-1 right-1 bg-red-600/90 hover:bg-red-500 text-white p-1.5 rounded-md shadow-lg active:scale-90 opacity-0 group-hover:opacity-100 transition-opacity" title="Rimuovi Foto">
               <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
             </button>
           `;
@@ -471,38 +480,35 @@
         });
         lucide.createIcons();
       } else {
-        container.innerHTML = `<div class="col-span-3 flex flex-col items-center justify-center py-6 text-slate-500 border border-dashed border-slate-800 rounded-lg bg-slate-950/50">
+        container.innerHTML = `<div class="col-span-4 flex flex-col items-center justify-center py-6 text-slate-500 border border-dashed border-slate-800 rounded-lg bg-slate-950/50">
           <i data-lucide="image-off" class="w-6 h-6 mb-2 opacity-50"></i>
-          <span class="text-xs italic">Nessuna foto allegata</span>
+          <span class="text-xs italic">Nessuna foto o documento</span>
         </div>`;
       }
     }
 
-    // Caricamento Foto / Allegati con conversione Base64 (salvataggio locale)
     function handlePhotoUpload(event) {
       const file = event.target.files[0];
       if (!file) return;
-
       const reader = new FileReader();
       reader.onload = function(e) {
         const card = state.cards.find(c => c.id === activeCardId);
         if (card) {
           if (!card.photos) card.photos = [];
-          card.photos.push(e.target.result); // Base64
+          card.photos.push({ image: e.target.result, rotation: 0 }); // Salvataggio come oggetto
           saveState();
           renderAttachments(card);
         }
       };
       reader.readAsDataURL(file);
-      // Reset file input
       event.target.value = '';
     }
 
-    // Rimozione Foto
-    function removePhoto(index) {
+    function removePhoto(event, index) {
+      event.stopPropagation(); // Evita di aprire la galleria quando si clicca elimina
       const card = state.cards.find(c => c.id === activeCardId);
       if (card && card.photos) {
-        if(confirm("Eliminare definitivamente questa foto?")) {
+        if(confirm("Eliminare definitivamente questo allegato?")) {
           card.photos.splice(index, 1);
           saveState();
           renderAttachments(card);
@@ -510,7 +516,64 @@
       }
     }
 
-    // Eliminazione Commessa
+    // ----- LOGICA GALLERIA E ROTAZIONE -----
+    function openGallery(index) {
+      currentGalleryIndex = index;
+      updateGalleryView();
+      openModal('galleryModal');
+    }
+
+    function closeGallery() {
+      closeModal('galleryModal');
+    }
+
+    function updateGalleryView() {
+      const card = state.cards.find(c => c.id === activeCardId);
+      if (!card || !card.photos || card.photos.length === 0) return closeGallery();
+
+      const photo = card.photos[currentGalleryIndex];
+      const imgEl = document.getElementById('galleryImage');
+      imgEl.src = photo.image;
+      imgEl.style.transform = `rotate(${photo.rotation || 0}deg)`;
+
+      document.getElementById('galleryCounter').innerText = `${currentGalleryIndex + 1} / ${card.photos.length}`;
+
+      // Nascondi frecce se siamo al limite
+      document.getElementById('btnPrevGallery').style.display = currentGalleryIndex === 0 ? 'none' : 'block';
+      document.getElementById('btnNextGallery').style.display = currentGalleryIndex === card.photos.length - 1 ? 'none' : 'block';
+    }
+
+    function prevGalleryImage() {
+      if (currentGalleryIndex > 0) {
+        currentGalleryIndex--;
+        updateGalleryView();
+      }
+    }
+
+    function nextGalleryImage() {
+      const card = state.cards.find(c => c.id === activeCardId);
+      if (currentGalleryIndex < card.photos.length - 1) {
+        currentGalleryIndex++;
+        updateGalleryView();
+      }
+    }
+
+    function rotateGalleryImage() {
+      const card = state.cards.find(c => c.id === activeCardId);
+      if (!card || !card.photos) return;
+      
+      const photo = card.photos[currentGalleryIndex];
+      photo.rotation = ((photo.rotation || 0) + 90) % 360;
+      
+      // Salva lo stato in modo che la rotazione diventi definitiva
+      saveState(); 
+      updateGalleryView(); 
+      
+      // Aggiorna in background anche le miniature del dettaglio commessa
+      renderAttachments(card);
+    }
+
+    // ----- ELIMINAZIONE E STAMPA -----
     function deleteCurrentCard() {
       if (confirm("Sei sicuro di voler eliminare definitivamente questa commessa di SGA?")) {
         state.cards = state.cards.filter(c => c.id !== activeCardId);
@@ -519,7 +582,6 @@
       }
     }
 
-    // GENERAZIONE PDF / STAMPA DELLA COMMESSA (STORYBOARD + DETTAGLI)
     function printCard() {
       const card = state.cards.find(c => c.id === activeCardId);
       if (!card) return;
@@ -536,11 +598,16 @@
         `;
       }).join('');
 
+      // Per la stampa creiamo dei div quadrati (così la rotazione CSS rimane nei bordi)
       const imagesHtml = card.photos && card.photos.length > 0 
-        ? `<div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 15px;">
-             ${card.photos.map(p => `<img src="${p}" style="width: 180px; height: 140px; object-fit: cover; border: 1px solid #e2e8f0; border-radius: 6px;">`).join('')}
+        ? `<div style="display: flex; gap: 15px; flex-wrap: wrap; margin-top: 15px;">
+             ${card.photos.map(p => `
+               <div style="width: 200px; height: 200px; border: 1px solid #e2e8f0; border-radius: 6px; display: flex; align-items: center; justify-content: center; overflow: hidden; background: #f8fafc;">
+                 <img src="${p.image}" style="max-width: 100\%; max-height: 100\%; object-fit: contain; transform: rotate(${p.rotation || 0}deg);">
+               </div>
+             `).join('')}
            </div>`
-        : '<div style="font-size: 12px; color: #94a3b8; font-style: italic;">Nessuna foto allegata</div>';
+        : '<div style="font-size: 12px; color: #94a3b8; font-style: italic;">Nessuna foto o documento allegato</div>';
 
       printWindow.document.write(`
         <html>
@@ -595,7 +662,7 @@
             <div class="section-title">Specifiche & Note di Lavoro</div>
             <div class="notes-box">${card.notes || 'Nessuna specifica aggiuntiva inserita in fase di creazione.'}</div>
 
-            <div class="section-title">Galleria Immagini / Allegati</div>
+            <div class="section-title">Documenti e Immagini</div>
             ${imagesHtml}
 
             <div class="section-title" style="margin-top: 40px;">Storyboard Lavorazione (Flusso dei Passaggi)</div>
@@ -614,16 +681,10 @@
       printWindow.document.close();
     }
 
-    // Funzioni Helpers per l'Apertura/Chiusura dei popup modal
-    function openModal(modalId) {
-      document.getElementById(modalId).classList.remove('hidden');
-    }
+    // Modal Helpers
+    function openModal(modalId) { document.getElementById(modalId).classList.remove('hidden'); }
+    function closeModal(modalId) { document.getElementById(modalId).classList.add('hidden'); }
 
-    function closeModal(modalId) {
-      document.getElementById(modalId).classList.add('hidden');
-    }
-
-    // Avvio applicazione
     window.onload = init;
   </script>
 </body>
