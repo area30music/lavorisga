@@ -245,10 +245,10 @@
         </button>
       </div>
     </div>
-    <div class="relative w-full h-full flex items-center justify-center p-4">
-      <img id="galleryImage" src="" class="max-w-full max-h-[85vh] object-contain transition-transform duration-300 hidden">
-      <div id="galleryPdfContainer" class="hidden w-full h-[85vh] bg-white rounded-lg overflow-hidden flex flex-col">
-        <iframe id="galleryPdfIframe" src="" class="w-full flex-1 border-none"></iframe>
+    <div class="relative w-full h-full flex items-center justify-center p-2">
+      <img id="galleryImage" src="" class="max-w-full max-h-[90vh] object-contain transition-transform duration-300 hidden">
+      <div id="galleryPdfContainer" class="hidden w-full h-[90vh] bg-transparent rounded-lg overflow-hidden flex flex-col items-center justify-center">
+        <iframe id="galleryPdfIframe" src="" class="w-full h-full border-none bg-white rounded-lg"></iframe>
       </div>
       
       <button onclick="prevGalleryImage()" class="absolute left-4 top-1/2 -translate-y-1/2 text-white p-3 bg-slate-800/80 hover:bg-slate-700 rounded-full transition-colors" id="btnPrevGallery">
@@ -879,7 +879,7 @@
       }
     }
 
-    // STAMPA PROFESSIONALE CON VISUALIZZAZIONE REALE E INTEGRATA DEI PDF
+    // STAMPA PROFESSIONALE CON ALLEGATI A PIENA PAGINA (SENZA CORNICI DI ANTEPRIMA)
     function printCard() {
       const card = state.cards.find(c => c.id === activeCardId);
       if (!card) return;
@@ -898,23 +898,11 @@
         attachmentsPrintHtml = card.photos.map((p, idx) => {
           if (p.type === 'pdf') {
             return `<div class="print-page">
-                      <div class="print-header">
-                        <div class="logo-text">SGA STUDIO GRAFICO ASSOCIATO</div>
-                        <h2 style="font-size: 20px; margin: 0; color: #1e293b; text-transform: uppercase;">ALLEGATO PDF #${idx + 1}</h2>
-                        <div style="font-size: 12px; color: #64748b;">Commessa #${card.id.slice(-4).toUpperCase()} - ${card.title}</div>
-                      </div>
-                      <div class="pdf-print-container">
-                        <iframe src="${p.image}"></iframe>
-                      </div>
+                      <iframe src="${p.image}"></iframe>
                     </div>`;
           } else {
             return `<div class="print-page">
-                      <div class="print-header">
-                        <div class="logo-text">SGA STUDIO GRAFICO ASSOCIATO</div>
-                        <h2 style="font-size: 20px; margin: 0; color: #1e293b; text-transform: uppercase;">ALLEGATO FOTOGRAFICO #${idx + 1}</h2>
-                        <div style="font-size: 12px; color: #64748b;">Commessa #${card.id.slice(-4).toUpperCase()} - ${card.title}</div>
-                      </div>
-                      <div class="image-container">
+                      <div class="image-fullscreen">
                         <img src="${p.image}" style="transform: rotate(${p.rotation || 0}deg);">
                       </div>
                     </div>`;
@@ -936,14 +924,19 @@
           .details strong { font-size: 14px; color: #0f172a; }
           .notes-box { background: #f8fafc; border: 1px solid #e2e8f0; padding: 15px; border-radius: 6px; font-size: 13px; line-height: 1.6; min-height: 60px; white-space: pre-wrap; color: #334155; }
           
-          .print-page { page-break-before: always; break-before: page; height: 100vh; display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box; padding-top: 20px; padding-bottom: 20px; }
-          .print-header { border-bottom: 2px solid #4f46e5; padding-bottom: 15px; margin-bottom: 20px; }
-          .image-container { flex: 1; display: flex; align-items: center; justify-content: center; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; padding: 10px; }
-          .image-container img { max-width: 100%; max-height: 75vh; object-fit: contain; }
-          .pdf-print-container { flex: 1; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; display: flex; }
-          .pdf-print-container iframe { width: 100%; height: 100%; border: none; }
+          /* Pagine dedicate agli allegati senza bordi o anteprime di stampa */
+          .print-page { page-break-before: always; break-before: page; height: 100vh; width: 100vw; position: absolute; top: 0; left: 0; background: white; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+          .print-page iframe { width: 100%; height: 100%; border: none; }
+          .image-fullscreen { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
+          .image-fullscreen img { max-width: 100%; max-height: 100%; object-fit: contain; }
+
+          @media print {
+            body { padding: 0; max-width: none; }
+            .no-print { display: none; }
+            .print-page { position: relative; height: 100vh; width: 100%; page-break-after: always; }
+          }
         </style></head><body>
-          <div>
+          <div class="no-print">
             <div class="header"><div style="display: flex; justify-content: space-between; align-items: start;">
               <div><div class="logo-text">SGA STUDIO GRAFICO ASSOCIATO</div><h1 class="title">SCHEDA COMMESSA</h1><span class="badge">STATO: ${COLUMNS_CONFIG.find(col => col.id === card.stage)?.label.toUpperCase() || card.stage}</span></div>
               <div style="text-align: right; font-size: 12px; color: #64748b; line-height: 1.5;">Rif. Ordine: <strong style="color: #0f172a;">#${card.id.slice(-4).toUpperCase()}</strong><br>Data Creazione: <strong style="color: #0f172a;">${new Date(card.createdAt).toLocaleDateString('it-IT')}</strong></div>
