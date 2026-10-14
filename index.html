@@ -8,6 +8,11 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Icone Lucide -->
   <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- PDF.js per la conversione nativa dei PDF in immagini -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script>
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  </script>
   <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
@@ -258,14 +263,11 @@
     </div>
   </div>
 
-  <!-- MODAL: VISUALIZZATORE IMMAGINI / PDF PULITO (SENZA BARRE DI ANTEPRIMA) -->
+  <!-- MODAL: VISUALIZZATORE IMMAGINI / PDF -->
   <div id="galleryModal" class="hidden fixed inset-0 bg-black/95 z-[60] flex flex-col items-center justify-center select-none">
     <div class="absolute top-0 w-full p-4 flex justify-between items-center z-10 bg-gradient-to-b from-black/80 to-transparent">
       <div id="galleryCounter" class="text-white font-mono text-sm font-bold bg-black/50 px-3 py-1 rounded-full"></div>
       <div class="flex gap-4 items-center">
-        <a id="downloadPdfBtn" href="#" target="_blank" class="hidden text-white px-3 py-1.5 bg-red-600 hover:bg-red-500 rounded-lg text-xs font-semibold flex items-center gap-1.5">
-          <i data-lucide="download" class="w-4 h-4"></i> Scarica / Apri PDF
-        </a>
         <button id="btnRotate" onclick="rotateGalleryImage()" class="text-white p-2 bg-slate-800 hover:bg-slate-700 rounded-full transition-colors" title="Ruota immagine">
           <i data-lucide="rotate-cw" class="w-5 h-5"></i>
         </button>
@@ -275,13 +277,7 @@
       </div>
     </div>
     <div class="relative w-full h-full flex items-center justify-center p-4">
-      <img id="galleryImage" src="" class="max-w-full max-h-[90vh] object-contain transition-transform duration-300 hidden">
-      <!-- Contenitore pulito nativo PDF senza bordi/padding superflui -->
-      <div id="galleryPdfContainer" class="hidden w-[95vw] h-[90vh] bg-white rounded-lg overflow-hidden flex flex-col">
-        <object id="galleryPdfObject" data="" type="application/pdf" class="w-full h-full">
-          <iframe id="galleryPdfIframe" src="" class="w-full h-full border-none"></iframe>
-        </object>
-      </div>
+      <img id="galleryImage" src="" class="max-w-full max-h-[90vh] object-contain transition-transform duration-300">
       
       <button onclick="prevGalleryImage()" class="absolute left-4 top-1/2 -translate-y-1/2 text-white p-3 bg-slate-800/80 hover:bg-slate-700 rounded-full transition-colors" id="btnPrevGallery">
         <i data-lucide="chevron-left" class="w-6 h-6"></i>
@@ -297,7 +293,7 @@
     // ==========================================
     // CONFIGURAZIONE PASSWORD CONDIVISA
     // ==========================================
-    const SHARED_PASSWORD = "sga2026"; // <-- Puoi cambiarla qui quando vuoi
+    const SHARED_PASSWORD = "sga2026";
 
     function checkAuth() {
       const isAuth = localStorage.getItem('workflow_sga_auth');
@@ -457,7 +453,7 @@
       db.collection('workflow_sga_cards').doc(cardId).delete().catch(e => console.error(e));
     }
 
-    function compressImage(file, maxWidth = 800, maxHeight = 800, quality = 0.45) {
+    function compressImage(file, maxWidth = 1200, maxHeight = 1200, quality = 0.6) {
       return new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = (e) => {
@@ -483,12 +479,39 @@
       });
     }
 
+    // Conversione PDF in Immagine (Foto) tramite PDF.js
+    function convertPdfToImage(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = async function(e) {
+          try {
+            const typedarray = new Uint8Array(e.target.result);
+            const pdf = await pdfjsLib.getDocument({ data: typedarray }).promise;
+            const page = await pdf.getPage(1);
+            
+            const viewport = page.getViewport({ scale: 2.0 }); // Alta risoluzione per la stampa
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            canvas.height = viewport.height;
+            canvas.width = viewport.width;
+
+            await page.render({ canvasContext: context, viewport: viewport }).promise;
+            resolve(canvas.toDataURL('image/jpeg', 0.85));
+          } catch (err) {
+            console.error("Errore conversione PDF:", err);
+            reject(err);
+          }
+        };
+        reader.readAsArrayBuffer(file);
+      });
+    }
+
     function sanitizeCard(card) {
       if (!card) return null;
       if (!Array.isArray(card.photos)) card.photos = [];
       card.photos = card.photos.map(p => {
-        if (typeof p === 'string') return { image: p, rotation: 0, type: 'image' };
-        if (!p.type) p.type = 'image';
+        if (typeof p === 'string') return { image: p, rotation: 0 };
+        if (!p.rotation) p.rotation = 0;
         return p;
       });
       if (!Array.isArray(card.history)) card.history = [];
@@ -600,14 +623,11 @@
       const badgeStyle = getJobTypeClass(card.jobType);
       const thumbnailHTML = card.photos && card.photos.length > 0 
         ? `<div class="mt-2 flex gap-1 overflow-hidden h-10">
-             ${card.photos.map(p => {
-               if (p.type === 'pdf') {
-                 return `<div class="w-10 h-10 shrink-0 rounded border border-slate-700 bg-red-950/50 flex flex-col items-center justify-center text-red-400 font-bold text-[9px]">PDF</div>`;
-               }
-               return `<div class="w-10 h-10 shrink-0 overflow-hidden rounded border border-slate-700 bg-slate-900 flex items-center justify-center">
+             ${card.photos.map(p => `
+               <div class="w-10 h-10 shrink-0 overflow-hidden rounded border border-slate-700 bg-slate-900 flex items-center justify-center">
                  <img src="${p.image}" style="transform: rotate(${p.rotation || 0}deg);" class="min-w-full min-h-full object-cover">
-               </div>`;
-             }).join('')}
+               </div>
+             `).join('')}
            </div>` 
         : '';
       const cardIdShort = card.id ? card.id.slice(-4).toUpperCase() : '0000';
@@ -813,21 +833,10 @@
         card.photos.forEach((photoObj, index) => {
           const thumb = document.createElement('div');
           thumb.className = "relative group w-full h-24 bg-slate-900 rounded border border-slate-700 overflow-hidden flex items-center justify-center cursor-pointer";
-          
-          if (photoObj.type === 'pdf') {
-            thumb.innerHTML = `
-              <div onclick="openGallery(${index})" class="w-full h-full flex flex-col items-center justify-center bg-red-950/30 text-red-400">
-                <i data-lucide="file-text" class="w-8 h-8 mb-1"></i>
-                <span class="text-[10px] font-bold">PDF #${index + 1}</span>
-              </div>
-              <button onclick="removePhoto(event, ${index})" class="absolute top-1 right-1 bg-red-600/95 hover:bg-red-500 text-white p-1.5 rounded-md shadow-lg active:scale-90 opacity-0 group-hover:opacity-100 transition-opacity"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
-            `;
-          } else {
-            thumb.innerHTML = `
-              <img src="${photoObj.image}" onclick="openGallery(${index})" style="transform: rotate(${photoObj.rotation || 0}deg);" class="min-w-full min-h-full object-cover transition-transform duration-300">
-              <button onclick="removePhoto(event, ${index})" class="absolute top-1 right-1 bg-red-600/95 hover:bg-red-500 text-white p-1.5 rounded-md shadow-lg active:scale-90 opacity-0 group-hover:opacity-100 transition-opacity"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
-            `;
-          }
+          thumb.innerHTML = `
+            <img src="${photoObj.image}" onclick="openGallery(${index})" style="transform: rotate(${photoObj.rotation || 0}deg);" class="min-w-full min-h-full object-cover transition-transform duration-300">
+            <button onclick="removePhoto(event, ${index})" class="absolute top-1 right-1 bg-red-600/95 hover:bg-red-500 text-white p-1.5 rounded-md shadow-lg active:scale-90 opacity-0 group-hover:opacity-100 transition-opacity"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+          `;
           container.appendChild(thumb);
         });
         lucide.createIcons();
@@ -836,35 +845,32 @@
       }
     }
 
-    function handleDocumentUpload(event) {
+    async function handleDocumentUpload(event) {
       const files = Array.from(event.target.files);
       if (!files || files.length === 0) return;
       const card = state.cards.find(c => c.id === activeCardId);
       if (!card) return;
       if (!card.photos) card.photos = [];
 
-      const promises = files.map(file => {
-        return new Promise((resolve) => {
+      for (const file of files) {
+        try {
+          let imgData = "";
           if (file.type === 'application/pdf') {
-            const reader = new FileReader();
-            reader.onload = (e) => resolve({ image: e.target.result, rotation: 0, type: 'pdf' });
-            reader.readAsDataURL(file);
+            imgData = await convertPdfToImage(file);
           } else {
-            compressImage(file).then(imgData => {
-              resolve({ image: imgData, rotation: 0, type: 'image' });
-            }).catch(() => resolve(null));
+            imgData = await compressImage(file);
           }
-        });
-      });
+          if (imgData) {
+            card.photos.push({ image: imgData, rotation: 0 });
+          }
+        } catch (e) {
+          console.error("Errore caricamento file:", e);
+        }
+      }
 
-      Promise.all(promises).then(results => {
-        results.forEach(item => {
-          if (item) card.photos.push(item);
-        });
-        saveLocal();
-        renderAttachments(card);
-        syncCardToCloud(card);
-      });
+      saveLocal();
+      renderAttachments(card);
+      syncCardToCloud(card);
       event.target.value = '';
     }
 
@@ -895,28 +901,8 @@
       const item = card.photos[currentGalleryIndex];
       
       const imgEl = document.getElementById('galleryImage');
-      const pdfContainer = document.getElementById('galleryPdfContainer');
-      const pdfObject = document.getElementById('galleryPdfObject');
-      const pdfIframe = document.getElementById('galleryPdfIframe');
-      const btnRotate = document.getElementById('btnRotate');
-      const downloadPdfBtn = document.getElementById('downloadPdfBtn');
-
-      if (item.type === 'pdf') {
-        imgEl.classList.add('hidden');
-        pdfContainer.classList.remove('hidden');
-        btnRotate.style.display = 'none';
-        downloadPdfBtn.classList.remove('hidden');
-        downloadPdfBtn.href = item.image;
-        pdfObject.data = item.image;
-        pdfIframe.src = item.image;
-      } else {
-        pdfContainer.classList.add('hidden');
-        imgEl.classList.remove('hidden');
-        btnRotate.style.display = 'block';
-        downloadPdfBtn.classList.add('hidden');
-        imgEl.src = item.image;
-        imgEl.style.transform = `rotate(${item.rotation || 0}deg)`;
-      }
+      imgEl.src = item.image;
+      imgEl.style.transform = `rotate(${item.rotation || 0}deg)`;
 
       document.getElementById('galleryCounter').innerText = `${currentGalleryIndex + 1} / ${card.photos.length}`;
       document.getElementById('btnPrevGallery').style.display = currentGalleryIndex === 0 ? 'none' : 'block';
@@ -934,13 +920,11 @@
       const card = state.cards.find(c => c.id === activeCardId);
       if (!card || !card.photos) return;
       const item = card.photos[currentGalleryIndex];
-      if(item.type !== 'pdf') {
-        item.rotation = ((item.rotation || 0) + 90) % 360;
-        saveLocal(); 
-        updateGalleryView(); 
-        renderAttachments(card);
-        syncCardToCloud(card);
-      }
+      item.rotation = ((item.rotation || 0) + 90) % 360;
+      saveLocal(); 
+      updateGalleryView(); 
+      renderAttachments(card);
+      syncCardToCloud(card);
     }
 
     function deleteCurrentCard() {
@@ -952,80 +936,92 @@
       }
     }
 
-    // STAMPA CON SCHEDA COMMESSA ORIGINALE SULLA PRIMA PAGINA E PDF/FOTO A PIENA RISOLUZIONE NATIVI NELLE SUCCESSIVE
+    // STAMPA CON SCHEDA COMMESSA ORIGINALE SULLA PRIMA PAGINA E ALLEGATI COME FOTO PULITE SULLE SUCCESSIVE
     function printCard() {
       const card = state.cards.find(c => c.id === activeCardId);
       if (!card) return;
       const printWindow = window.open('', '_blank');
 
-      const historyHtml = (card.history || []).map((h, i) => {
-        return `<div style="margin-bottom: 10px; padding-left: 15px; border-left: 2px solid #cbd5e1; position: relative;">
-                  <div style="position: absolute; left: -5px; top: 2px; width: 8px; height: 8px; border-radius: 50%; background: #475569;"></div>
-                  <div style="font-weight: bold; font-size: 12px; color: #1e293b;">Passaggio #${i+1}: ${h.label}</div>
-                  <div style="font-size: 10px; color: #64748b;">Data: ${new Date(h.timestamp).toLocaleString('it-IT')}</div>
-                </div>`;
-      }).join('');
-
       let attachmentsPrintHtml = '';
       if (card.photos && card.photos.length > 0) {
         attachmentsPrintHtml = card.photos.map((p, idx) => {
-          if (p.type === 'pdf') {
-            return `<div class="print-page">
-                      <object data="${p.image}" type="application/pdf" width="100%" height="100%">
-                        <iframe src="${p.image}" style="width:100%; height:100%; border:none;"></iframe>
-                      </object>
-                    </div>`;
-          } else {
-            return `<div class="print-page">
-                      <div class="image-fullscreen">
-                        <img src="${p.image}" style="transform: rotate(${p.rotation || 0}deg);">
-                      </div>
-                    </div>`;
-          }
+          return `<div class="print-page">
+                    <div class="image-fullscreen">
+                      <img src="${p.image}" style="transform: rotate(${p.rotation || 0}deg);">
+                    </div>
+                  </div>`;
         }).join('');
       }
 
       printWindow.document.write(`
         <html><head><title>Commessa SGA #${card.id.slice(-4).toUpperCase()}</title><style>
-          body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; padding: 30px; color: #0f172a; max-width: 800px; margin: 0 auto; background: white; }
-          .header { border-bottom: 3px solid #4f46e5; padding-bottom: 15px; margin-bottom: 25px; }
-          .logo-text { font-size: 13px; color: #64748b; font-weight: bold; letter-spacing: 1px; margin-bottom: 4px; }
-          .title { font-size: 24px; font-weight: 800; margin: 0 0 6px; color: #1e293b; text-transform: uppercase; }
-          .badge { font-size: 11px; font-weight: bold; background: #e0e7ff; color: #4338ca; padding: 4px 10px; border-radius: 4px; display: inline-block; }
-          .section-title { font-size: 12px; font-weight: bold; text-transform: uppercase; color: #475569; margin-top: 25px; margin-bottom: 10px; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; }
-          .details { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px; }
-          .details div { background: #f8fafc; padding: 10px 12px; border-radius: 6px; border: 1px solid #e2e8f0; }
-          .details label { font-size: 10px; color: #64748b; font-weight: bold; display: block; text-transform: uppercase; margin-bottom: 3px; }
-          .details strong { font-size: 13px; color: #0f172a; }
-          .notes-box { background: #f8fafc; border: 1px solid #e2e8f0; padding: 12px; border-radius: 6px; font-size: 12px; line-height: 1.5; min-height: 50px; white-space: pre-wrap; color: #334155; }
+          body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; margin: 0; padding: 20px; color: #000; background: #fff; }
           
-          /* Pagine dedicate agli allegati a piena pagina ad altissima risoluzione nativa */
-          .print-page { page-break-before: always; break-before: page; height: 100vh; width: 100vw; position: absolute; top: 0; left: 0; background: white; display: flex; align-items: center; justify-content: center; overflow: hidden; margin: 0; padding: 0; box-sizing: border-box; }
-          .print-page object, .print-page iframe { width: 100%; height: 100%; border: none; }
-          .image-fullscreen { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
+          /* STILE SCHEDA COMMESSA ORIGINALE (PRIMA PAGINA) */
+          .sheet { width: 100%; max-width: 800px; margin: 0 auto; box-sizing: border-box; }
+          .header { border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: flex-end; }
+          .logo-title { font-size: 20px; font-weight: bold; text-transform: uppercase; }
+          .meta-info { text-align: right; font-size: 12px; }
+          .section-title { font-size: 12px; font-weight: bold; text-transform: uppercase; background: #eee; padding: 4px 8px; margin-top: 15px; margin-bottom: 8px; border: 1px solid #ccc; }
+          .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+          .box { border: 1px solid #ccc; padding: 8px; min-height: 40px; }
+          .box label { font-size: 10px; font-weight: bold; display: block; color: #555; text-transform: uppercase; margin-bottom: 2px; }
+          .box span { font-size: 14px; font-weight: bold; }
+          .notes-box { border: 1px solid #ccc; padding: 10px; min-height: 80px; font-size: 13px; white-space: pre-wrap; }
+          
+          .history-list { font-size: 11px; border: 1px solid #ccc; padding: 8px; }
+          .history-item { margin-bottom: 4px; border-bottom: 1px dashed #eee; padding-bottom: 4px; }
+
+          /* PAGINE SUCCESSIVE PER ALLEGATI (FOTO / PDF CONVERTITI) */
+          .print-page { page-break-before: always; break-before: page; height: 100vh; width: 100vw; position: absolute; top: 0; left: 0; background: white; display: flex; align-items: center; justify-content: center; overflow: hidden; box-sizing: border-box; }
+          .image-fullscreen { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; padding: 10px; box-sizing: border-box; }
           .image-fullscreen img { max-width: 100%; max-height: 100%; object-fit: contain; }
 
           @media print {
-            body { padding: 20px; max-width: none; background: white; }
+            body { padding: 0; background: white; }
+            .sheet { padding: 20px; page-break-after: always; height: 100vh; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between; }
             .print-page { position: relative; height: 100vh; width: 100%; page-break-after: always; }
           }
         </style></head><body>
-          <div>
-            <div class="header"><div style="display: flex; justify-content: space-between; align-items: start;">
-              <div><div class="logo-text">SGA STUDIO GRAFICO ASSOCIATO</div><h1 class="title">SCHEDA COMMESSA</h1><span class="badge">STATO: ${COLUMNS_CONFIG.find(col => col.id === card.stage)?.label.toUpperCase() || card.stage}</span></div>
-              <div style="text-align: right; font-size: 11px; color: #64748b; line-height: 1.4;">Rif. Ordine: <strong style="color: #0f172a;">#${card.id.slice(-4).toUpperCase()}</strong><br>Data Creazione: <strong style="color: #0f172a;">${new Date(card.createdAt).toLocaleDateString('it-IT')}</strong></div>
-            </div></div>
-            <div class="details">
-              <div><label>Cliente / Titolo</label><strong>${card.title}</strong></div>
-              <div><label>Tipo Lavorazione</label><strong>${card.jobType}</strong></div>
-              <div style="grid-column: span 2;"><label>Referente / Contatto</label><strong>${card.client || 'Nessun referente'}</strong></div>
+          <div class="sheet">
+            <div>
+              <div class="header">
+                <div>
+                  <div style="font-size: 10px; font-weight: bold; letter-spacing: 1px; color: #555;">SGA STUDIO GRAFICO ASSOCIATO</div>
+                  <div class="logo-title">SCHEDA COMMESSA</div>
+                </div>
+                <div class="meta-info">
+                  <div>Rif: <strong>#${card.id.slice(-4).toUpperCase()}</strong></div>
+                  <div>Data: <strong>${new Date(card.createdAt).toLocaleDateString('it-IT')}</strong></div>
+                  <div>Stato: <strong>${COLUMNS_CONFIG.find(col => col.id === card.stage)?.label.toUpperCase() || card.stage}</strong></div>
+                </div>
+              </div>
+
+              <div class="grid-2">
+                <div class="box"><label>Cliente / Titolo Progetto</label><span>${card.title}</span></div>
+                <div class="box"><label>Tipo Lavorazione</label><span>${card.jobType}</span></div>
+              </div>
+              <div class="box" style="margin-bottom: 10px;"><label>Referente / Contatto</label><span>${card.client || '-'}</span></div>
+
+              <div class="section-title">Note & Specifiche di Lavoro</div>
+              <div class="notes-box">${card.notes || 'Nessuna specifica inserita.'}</div>
+
+              <div class="section-title">Storyboard / Cronologia Passaggi</div>
+              <div class="history-list">
+                ${(card.history || []).map((h, i) => `
+                  <div class="history-item"><strong>#${i+1} -${h.label}</strong> <span style="float: right; color: #666;">${new Date(h.timestamp).toLocaleString('it-IT')}</span></div>
+                `).join('')}
+              </div>
             </div>
-            <div class="section-title">Note di Lavoro</div><div class="notes-box">${card.notes || '-'}</div>
-            <div class="section-title" style="margin-top: 30px;">Storyboard Lavorazione</div>
-            <div style="margin-top: 10px; background: #f8fafc; padding: 12px; border-radius: 6px; border: 1px solid #e2e8f0;">${historyHtml}</div>
+            
+            <div style="text-align: center; font-size: 10px; color: #777; border-top: 1px solid #ccc; padding-top: 5px;">
+              SGA Studio Grafico Associato - Documento Interno di Lavorazione
+            </div>
           </div>
+
           ${attachmentsPrintHtml}
-          <script>window.onload = function(){ setTimeout(function(){ window.print(); }, 500); };<\/script>
+
+          <script>window.onload = function(){ setTimeout(function(){ window.print(); }, 800); };<\/script>
         </body></html>
       `);
       printWindow.document.close();
