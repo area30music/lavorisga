@@ -71,10 +71,10 @@
       </div>
       
       <div class="p-5 overflow-y-auto space-y-5 flex-1 text-sm">
-        <!-- Modifica Anagrafica (Titolo e Cliente) -->
+        <!-- Modifica Anagrafica (Titolo, Cliente e Tipo Lavoro Modificabile) -->
         <div class="space-y-3 bg-slate-950 p-3.5 rounded-lg border border-slate-800">
           <div>
-            <label class="text-[10px] text-indigo-400 font-semibold uppercase tracking-wider block mb-1">Cliente / Titolo Progetto (Modificabile)</label>
+            <label class="text-[10px] text-indigo-400 font-semibold uppercase tracking-wider block mb-1">Cliente / Titolo Progetto</label>
             <input type="text" id="editTitle" class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-1.5 text-slate-100 font-semibold text-base focus:outline-none focus:border-indigo-500">
           </div>
           <div class="grid grid-cols-2 gap-3">
@@ -83,16 +83,25 @@
               <input type="text" id="editClient" class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-1.5 text-slate-200 text-sm focus:outline-none focus:border-indigo-500">
             </div>
             <div>
-              <label class="text-[10px] text-indigo-400 font-semibold uppercase tracking-wider block mb-1">Tipo Lavoro</label>
-              <p id="detailJobType" class="text-sm font-medium text-slate-300 py-1.5">-</p>
+              <label class="text-[10px] text-indigo-400 font-semibold uppercase tracking-wider block mb-1">Tipo Lavorazione (Modificabile)</label>
+              <select id="editJobType" onchange="checkEditCustomJobType(this.value)" class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-1.5 text-slate-200 text-sm focus:outline-none focus:border-indigo-500">
+                <option value="Stampa Digitale / Banner">Stampa Digitale / Banner</option>
+                <option value="Abbigliamento / Ricamo">Abbigliamento / Ricamo</option>
+                <option value="Insegne & Vetrofanie">Insegne & Vetrofanie</option>
+                <option value="Etichette & Adesivi">Etichette & Adesivi</option>
+                <option value="Grafica / Progettazione">Grafica / Progettazione</option>
+                <option value="Altro">Altro</option>
+                <option value="custom">Personalizza...</option>
+              </select>
+              <input type="text" id="editCustomJobType" placeholder="Specifica nuovo tipo..." class="hidden mt-2 w-full bg-slate-900 border border-indigo-500 rounded px-3 py-1.5 text-slate-200 text-xs focus:outline-none">
             </div>
           </div>
           <button onclick="saveCardEdits()" class="bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-300 border border-indigo-500/30 text-xs px-3 py-1.5 rounded font-semibold flex items-center gap-1.5 transition-colors">
-            <i data-lucide="save" class="w-3.5 h-3.5"></i> Aggiorna Anagrafica Commessa
+            <i data-lucide="save" class="w-3.5 h-3.5"></i> Aggiorna Anagrafica e Tipo Lavoro
           </button>
         </div>
 
-        <!-- Modifica Note & Specifiche in qualsiasi momento -->
+        <!-- Modifica Note & Specifiche -->
         <div class="space-y-2 bg-slate-950 p-3.5 rounded-lg border border-slate-800">
           <label class="text-[10px] text-indigo-400 font-semibold uppercase tracking-wider block">Dettagli & Note (Modificabili in ogni momento)</label>
           <textarea id="editNotes" rows="3" class="w-full bg-slate-900 border border-slate-700 rounded p-2.5 text-slate-200 text-sm focus:outline-none focus:border-indigo-500 resize-none"></textarea>
@@ -162,14 +171,16 @@
           </div>
           <div>
             <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Tipo Lavorazione</label>
-            <select id="formJobType" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-indigo-500">
+            <select id="formJobType" onchange="checkNewCustomJobType(this.value)" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-indigo-500">
               <option value="Stampa Digitale / Banner">Stampa Digitale / Banner</option>
               <option value="Abbigliamento / Ricamo">Abbigliamento / Ricamo</option>
               <option value="Insegne & Vetrofanie">Insegne & Vetrofanie</option>
               <option value="Etichette & Adesivi">Etichette & Adesivi</option>
               <option value="Grafica / Progettazione">Grafica / Progettazione</option>
               <option value="Altro">Altro</option>
+              <option value="custom">Personalizza...</option>
             </select>
+            <input type="text" id="formCustomJobType" placeholder="Specifica nuovo tipo..." class="hidden mt-2 w-full bg-slate-950 border border-indigo-500 rounded-lg px-3 py-2 text-slate-200 text-xs focus:outline-none">
           </div>
         </div>
         <div>
@@ -236,13 +247,8 @@
     </div>
     <div class="relative w-full h-full flex items-center justify-center p-4">
       <img id="galleryImage" src="" class="max-w-full max-h-[85vh] object-contain transition-transform duration-300 hidden">
-      <div id="galleryPdfContainer" class="hidden flex flex-col items-center justify-center text-center p-6 bg-slate-900 border border-slate-800 rounded-xl max-w-md w-full">
-        <i data-lucide="file-text" class="w-16 h-16 text-red-500 mb-3"></i>
-        <h4 class="font-bold text-lg text-white mb-2">Documento PDF Allegato</h4>
-        <p class="text-xs text-slate-400 mb-4">Puoi aprire o scaricare il documento PDF originale per visualizzarlo a pieno schermo.</p>
-        <a id="viewPdfModalBtn" href="#" target="_blank" class="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold px-4 py-2 rounded-lg text-sm flex items-center gap-2">
-          <i data-lucide="external-link" class="w-4 h-4"></i> Apri PDF in nuova scheda
-        </a>
+      <div id="galleryPdfContainer" class="hidden w-full h-[85vh] bg-white rounded-lg overflow-hidden flex flex-col">
+        <iframe id="galleryPdfIframe" src="" class="w-full flex-1 border-none"></iframe>
       </div>
       
       <button onclick="prevGalleryImage()" class="absolute left-4 top-1/2 -translate-y-1/2 text-white p-3 bg-slate-800/80 hover:bg-slate-700 rounded-full transition-colors" id="btnPrevGallery">
@@ -594,11 +600,36 @@
       }
     }
 
+    function checkNewCustomJobType(val) {
+      const customInput = document.getElementById('formCustomJobType');
+      if (val === 'custom') {
+        customInput.classList.remove('hidden');
+        customInput.required = true;
+      } else {
+        customInput.classList.add('hidden');
+        customInput.required = false;
+        customInput.value = '';
+      }
+    }
+
+    function checkEditCustomJobType(val) {
+      const customInput = document.getElementById('editCustomJobType');
+      if (val === 'custom') {
+        customInput.classList.remove('hidden');
+      } else {
+        customInput.classList.add('hidden');
+        customInput.value = '';
+      }
+    }
+
     function createNewCard(event) {
       event.preventDefault();
       const title = document.getElementById('formTitle').value.trim();
       const client = document.getElementById('formClient') ? document.getElementById('formClient').value.trim() : '';
-      const jobType = document.getElementById('formJobType').value;
+      let jobType = document.getElementById('formJobType').value;
+      if (jobType === 'custom') {
+        jobType = document.getElementById('formCustomJobType').value.trim() || 'Altro';
+      }
       const notes = document.getElementById('formNotes') ? document.getElementById('formNotes').value.trim() : '';
       if (!title) return;
 
@@ -615,22 +646,28 @@
       saveLocal();
       syncCardToCloud(newCard);
       document.getElementById('newCardForm').reset();
+      document.getElementById('formCustomJobType').classList.add('hidden');
       closeModal('addCardModal');
     }
 
-    // SALVATAGGIO ANAGRAFICA (Titolo e Cliente)
+    // SALVATAGGIO ANAGRAFICA E TIPO LAVORO
     function saveCardEdits() {
       const card = state.cards.find(c => c.id === activeCardId);
       if (!card) return;
       const newTitle = document.getElementById('editTitle').value.trim();
       const newClient = document.getElementById('editClient').value.trim();
+      let newJobType = document.getElementById('editJobType').value;
+      if (newJobType === 'custom') {
+        newJobType = document.getElementById('editCustomJobType').value.trim() || card.jobType;
+      }
       if (!newTitle) return alert("Il titolo / cliente non può essere vuoto.");
 
       card.title = newTitle;
       card.client = newClient;
+      card.jobType = newJobType;
       saveLocal();
       syncCardToCloud(card);
-      alert("Anagrafica commessa aggiornata con successo!");
+      alert("Anagrafica e tipo lavorazione aggiornati con successo!");
     }
 
     // SALVATAGGIO NOTE (Modificabili in qualsiasi momento)
@@ -656,7 +693,25 @@
       document.getElementById('editTitle').value = card.title || '';
       document.getElementById('editClient').value = card.client || '';
       document.getElementById('editNotes').value = card.notes || '';
-      document.getElementById('detailJobType').textContent = card.jobType || '-';
+      
+      const jobSelect = document.getElementById('editJobType');
+      const customJobInput = document.getElementById('editCustomJobType');
+      let found = false;
+      for (let i = 0; i < jobSelect.options.length; i++) {
+        if (jobSelect.options[i].value === card.jobType) {
+          jobSelect.value = card.jobType;
+          found = true;
+          break;
+        }
+      }
+      if (!found && card.jobType) {
+        jobSelect.value = 'custom';
+        customJobInput.value = card.jobType;
+        customJobInput.classList.remove('hidden');
+      } else {
+        customJobInput.value = '';
+        customJobInput.classList.add('hidden');
+      }
 
       renderAttachments(card);
 
@@ -770,9 +825,9 @@
       
       const imgEl = document.getElementById('galleryImage');
       const pdfContainer = document.getElementById('galleryPdfContainer');
+      const pdfIframe = document.getElementById('galleryPdfIframe');
       const btnRotate = document.getElementById('btnRotate');
       const downloadPdfBtn = document.getElementById('downloadPdfBtn');
-      const viewPdfModalBtn = document.getElementById('viewPdfModalBtn');
 
       if (item.type === 'pdf') {
         imgEl.classList.add('hidden');
@@ -780,7 +835,7 @@
         btnRotate.style.display = 'none';
         downloadPdfBtn.classList.remove('hidden');
         downloadPdfBtn.href = item.image;
-        viewPdfModalBtn.href = item.image;
+        pdfIframe.src = item.image;
       } else {
         pdfContainer.classList.add('hidden');
         imgEl.classList.remove('hidden');
@@ -824,7 +879,7 @@
       }
     }
 
-    // STAMPA PROFESSIONALE CON VISUALIZZAZIONE DIRETTA DEI PDF E FOTO VERTICALI
+    // STAMPA PROFESSIONALE CON VISUALIZZAZIONE REALE E INTEGRATA DEI PDF
     function printCard() {
       const card = state.cards.find(c => c.id === activeCardId);
       if (!card) return;
@@ -848,10 +903,8 @@
                         <h2 style="font-size: 20px; margin: 0; color: #1e293b; text-transform: uppercase;">ALLEGATO PDF #${idx + 1}</h2>
                         <div style="font-size: 12px; color: #64748b;">Commessa #${card.id.slice(-4).toUpperCase()} - ${card.title}</div>
                       </div>
-                      <div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; text-align: center;">
-                        <h3 style="font-size: 18px; color: #1e293b; margin-bottom: 10px;">Documento PDF Integrato</h3>
-                        <p style="font-size: 13px; color: #64748b; margin-bottom: 20px;">Questo allegato è un file PDF ufficiale associato alla commessa.</p>
-                        <a href="${p.image}" target="_blank" style="background: #4f46e5; color: white; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 14px;">Apri / Stampa PDF Originale</a>
+                      <div class="pdf-print-container">
+                        <iframe src="${p.image}"></iframe>
                       </div>
                     </div>`;
           } else {
@@ -887,6 +940,8 @@
           .print-header { border-bottom: 2px solid #4f46e5; padding-bottom: 15px; margin-bottom: 20px; }
           .image-container { flex: 1; display: flex; align-items: center; justify-content: center; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; padding: 10px; }
           .image-container img { max-width: 100%; max-height: 75vh; object-fit: contain; }
+          .pdf-print-container { flex: 1; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; display: flex; }
+          .pdf-print-container iframe { width: 100%; height: 100%; border: none; }
         </style></head><body>
           <div>
             <div class="header"><div style="display: flex; justify-content: space-between; align-items: start;">
