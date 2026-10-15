@@ -63,9 +63,11 @@
   <!-- ALERT VIDEOGAME POPUP (SCADENZE INGRANDITO) -->
   <div id="arcadeAlertModal" class="hidden fixed inset-0 bg-black/85 backdrop-blur-md z-[150] flex items-center justify-center p-4">
     <div class="arcade-alert-box rounded-3xl w-full max-w-2xl p-8 shadow-2xl relative space-y-6">
-      <button onclick="closeArcadeAlert()" class="hide-in-master absolute top-4 right-4 bg-red-600 hover:bg-red-500 text-white rounded-full p-2 shadow-lg active:scale-95 transition-all">
+      <!-- Tasto X di chiusura sempre attivo anche in Master View -->
+      <button onclick="closeArcadeAlert()" class="absolute top-4 right-4 bg-red-600 hover:bg-red-500 text-white rounded-full p-2 shadow-lg active:scale-95 transition-all cursor-pointer z-10" title="Chiudi avviso">
         <i data-lucide="x" class="w-6 h-6"></i>
       </button>
+      
       <div class="text-center space-y-2">
         <div class="inline-flex items-center justify-center bg-red-600/30 p-4 rounded-full border-2 border-red-500 mb-1 animate-bounce">
           <i data-lucide="alert-triangle" class="w-10 h-10 text-red-500"></i>
@@ -79,10 +81,10 @@
       </div>
 
       <div class="pt-2 text-center">
-        <button onclick="closeArcadeAlert()" class="hide-in-master bg-red-600 hover:bg-red-500 text-white font-black px-8 py-3.5 rounded-xl text-base uppercase tracking-wider shadow-xl shadow-red-900/50 active:scale-95 transition-transform border border-red-400">
+        <button onclick="closeArcadeAlert()" class="bg-red-600 hover:bg-red-500 text-white font-black px-8 py-3.5 rounded-xl text-base uppercase tracking-wider shadow-xl shadow-red-900/50 active:scale-95 transition-transform border border-red-400 cursor-pointer">
           Ricevuto / Chiudi Avviso
         </button>
-        <p class="show-in-master hidden text-xs text-slate-400 mt-3 italic animate-pulse">Questo avviso si chiuderà automaticamente tra 1 minuto...</p>
+        <p class="text-xs text-slate-400 mt-3 italic animate-pulse">Questo avviso si chiuderà automaticamente tra 1 minuto (o puoi chiuderlo prima con la X o il tasto)...</p>
       </div>
     </div>
   </div>
@@ -124,8 +126,8 @@
         <input type="file" accept="image/png, image/jpeg" class="absolute inset-0 opacity-0 cursor-pointer hide-in-master" onchange="uploadCompanyLogo(event)" title="Carica Logo Aziendale">
       </div>
 
-      <!-- Tasto Torna Indietro in Master View posizionato subito dopo il logo (visibile in master mode) -->
-      <button onclick="toggleMasterMode(); playSound('close');" class="master-back-btn hidden bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2.5 rounded-lg text-sm font-extrabold items-center gap-2 active:scale-95 transition-transform shadow-lg shadow-indigo-900/40 border border-indigo-400" title="Torna alla schermata di programmazione">
+      <!-- Tasto Torna Indietro in Master View posizionato subito dopo il logo -->
+      <button onclick="toggleMasterMode(); playSound('close');" class="master-back-btn hidden bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2.5 rounded-lg text-sm font-extrabold items-center gap-2 active:scale-95 transition-transform shadow-lg shadow-indigo-900/40 border border-indigo-400 cursor-pointer" title="Torna alla schermata di programmazione">
         <i data-lucide="arrow-left" class="w-5 h-5"></i> Torna a Programmazione
       </button>
 
@@ -181,14 +183,14 @@
     <!-- Colonne generate via JS -->
   </main>
 
-  <!-- MODAL: IMPOSTAZIONI GRAFICHE E GENERALI -->
+  <!-- MODAL: IMPOSTAZIONI GRAFICHE E GENERALI (INCLUSO PROGRAMMAZIONE SVEGLIE ALERT) -->
   <div id="settingsModal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
     <div class="bg-slate-900 border border-slate-800 rounded-xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden shadow-2xl">
       <div class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-850">
         <h3 class="font-bold text-base text-slate-100 flex items-center gap-2">
           <i data-lucide="sliders" class="w-5 h-5 text-indigo-400"></i> Personalizzazione Impostazioni
         </h3>
-        <button onclick="playSound('close'); closeModal('settingsModal');" class="text-slate-400 hover:text-slate-200 bg-slate-800 rounded-full p-1">
+        <button onclick="playSound('close'); closeModal('settingsModal');" class="text-slate-400 hover:text-slate-200 bg-slate-800 rounded-full p-1 cursor-pointer">
           <i data-lucide="x" class="w-4 h-4"></i>
         </button>
       </div>
@@ -207,7 +209,7 @@
                 <i data-lucide="upload" class="w-3.5 h-3.5"></i> Carica Logo PNG
                 <input type="file" accept="image/png, image/jpeg" class="hidden" onchange="uploadCompanyLogo(event)">
               </label>
-              <button onclick="removeCompanyLogo()" class="bg-slate-800 hover:bg-slate-700 text-red-400 text-xs px-3 py-2 rounded font-semibold transition-colors">
+              <button onclick="removeCompanyLogo()" class="bg-slate-800 hover:bg-slate-700 text-red-400 text-xs px-3 py-2 rounded font-semibold transition-colors cursor-pointer">
                 Rimuovi Logo
               </button>
             </div>
@@ -219,10 +221,29 @@
           <h4 class="text-xs font-bold text-indigo-400 uppercase tracking-wider">Dimensione Caratteri Applicazione</h4>
           <p class="text-xs text-slate-400">Scegli la grandezza del testo per adattarla al tuo monitor o dispositivo.</p>
           <div class="grid grid-cols-4 gap-2 pt-1">
-            <button onclick="changeFontSize('sm')" id="fontBtn-sm" class="py-2 px-3 rounded bg-slate-900 border border-slate-800 text-xs font-semibold text-slate-300 hover:border-indigo-500 transition-colors">Compatto</button>
-            <button onclick="changeFontSize('md')" id="fontBtn-md" class="py-2 px-3 rounded bg-slate-900 border border-slate-800 text-sm font-semibold text-slate-300 hover:border-indigo-500 transition-colors">Normale</button>
-            <button onclick="changeFontSize('lg')" id="fontBtn-lg" class="py-2 px-3 rounded bg-slate-900 border border-slate-800 text-base font-semibold text-slate-300 hover:border-indigo-500 transition-colors">Grande</button>
-            <button onclick="changeFontSize('xl')" id="fontBtn-xl" class="py-2 px-3 rounded bg-slate-900 border border-slate-800 text-lg font-semibold text-slate-300 hover:border-indigo-500 transition-colors">Enorme</button>
+            <button onclick="changeFontSize('sm')" id="fontBtn-sm" class="py-2 px-3 rounded bg-slate-900 border border-slate-800 text-xs font-semibold text-slate-300 hover:border-indigo-500 transition-colors cursor-pointer">Compatto</button>
+            <button onclick="changeFontSize('md')" id="fontBtn-md" class="py-2 px-3 rounded bg-slate-900 border border-slate-800 text-sm font-semibold text-slate-300 hover:border-indigo-500 transition-colors cursor-pointer">Normale</button>
+            <button onclick="changeFontSize('lg')" id="fontBtn-lg" class="py-2 px-3 rounded bg-slate-900 border border-slate-800 text-base font-semibold text-slate-300 hover:border-indigo-500 transition-colors cursor-pointer">Grande</button>
+            <button onclick="changeFontSize('xl')" id="fontBtn-xl" class="py-2 px-3 rounded bg-slate-900 border border-slate-800 text-lg font-semibold text-slate-300 hover:border-indigo-500 transition-colors cursor-pointer">Enorme</button>
+          </div>
+        </div>
+
+        <!-- PROGRAMMAZIONE SVEGLIE PER VISUALIZZAZIONE ALERT SCADENZE -->
+        <div class="bg-slate-950 p-4 rounded-lg border border-slate-800 space-y-3">
+          <div class="flex justify-between items-center">
+            <div>
+              <h4 class="text-xs font-bold text-indigo-400 uppercase tracking-wider flex items-center gap-1.5">
+                <i data-lucide="alarm-clock" class="w-4 h-4"></i> Programmazione Sveglie Alert Scadenze
+              </h4>
+              <p class="text-xs text-slate-400 mt-0.5">Imposta giorni e orari in cui il programma deve mostrarti automaticamente l'alert delle scadenze.</p>
+            </div>
+            <button onclick="playSound('click'); addAlarmRule();" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs px-3 py-1.5 rounded font-semibold flex items-center gap-1 cursor-pointer transition-colors shadow">
+              <i data-lucide="plus" class="w-3.5 h-3.5"></i> Aggiungi Sveglia
+            </button>
+          </div>
+          
+          <div id="alarmsListContainer" class="space-y-2 max-h-48 overflow-y-auto pr-1">
+            <!-- Popolato via JS -->
           </div>
         </div>
 
@@ -231,17 +252,17 @@
           <h4 class="text-xs font-bold text-indigo-400 uppercase tracking-wider">Colori delle Fasi / Colonne</h4>
           <p class="text-xs text-slate-400">Modifica lo stile visivo di ciascuna colonna del workflow.</p>
           
-          <div id="columnsColorSettingsList" class="space-y-2 max-h-56 overflow-y-auto pr-2">
+          <div id="columnsColorSettingsList" class="space-y-2 max-h-44 overflow-y-auto pr-2">
             <!-- Popolato via JS -->
           </div>
         </div>
       </div>
 
       <div class="p-4 border-t border-slate-800 bg-slate-950 flex justify-between items-center">
-        <button onclick="playSound('click'); resetDefaultSettings();" class="text-xs text-slate-400 hover:text-red-400 transition-colors underline">
+        <button onclick="playSound('click'); resetDefaultSettings();" class="text-xs text-slate-400 hover:text-red-400 transition-colors underline cursor-pointer">
           Ripristina Predefiniti
         </button>
-        <button onclick="playSound('success'); saveSettings();" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-5 py-2 rounded-lg text-xs active:scale-95 transition-transform shadow-lg shadow-indigo-900/20">
+        <button onclick="playSound('success'); saveSettings();" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-5 py-2 rounded-lg text-xs active:scale-95 transition-transform shadow-lg shadow-indigo-900/20 cursor-pointer">
           Salva e Applica
         </button>
       </div>
@@ -256,7 +277,7 @@
           <span id="detailBadge" class="px-2 py-0.5 rounded text-xs font-bold text-white uppercase"></span>
           <h2 class="text-lg font-bold">Dettaglio Commessa</h2>
         </div>
-        <button onclick="playSound('close'); closeModal('detailModal');" class="text-slate-400 hover:text-slate-200 bg-slate-800 rounded-full p-1">
+        <button onclick="playSound('close'); closeModal('detailModal');" class="text-slate-400 hover:text-slate-200 bg-slate-800 rounded-full p-1 cursor-pointer">
           <i data-lucide="x" class="w-5 h-5"></i>
         </button>
       </div>
@@ -300,11 +321,11 @@
             </div>
             <div class="flex items-center gap-2">
               <input type="color" id="editCardColor" class="w-9 h-9 rounded bg-transparent cursor-pointer border border-slate-700">
-              <button onclick="resetCardCustomColor()" class="text-xs bg-slate-900 hover:bg-slate-800 text-slate-300 px-2.5 py-1.5 rounded border border-slate-700">Predefinito</button>
+              <button onclick="resetCardCustomColor()" class="text-xs bg-slate-900 hover:bg-slate-800 text-slate-300 px-2.5 py-1.5 rounded border border-slate-700 cursor-pointer">Predefinito</button>
             </div>
           </div>
 
-          <button onclick="playSound('success'); saveCardEdits();" class="bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-300 border border-indigo-500/30 text-xs px-3 py-1.5 rounded font-semibold flex items-center gap-1.5 transition-colors mt-2">
+          <button onclick="playSound('success'); saveCardEdits();" class="bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-300 border border-indigo-500/30 text-xs px-3 py-1.5 rounded font-semibold flex items-center gap-1.5 transition-colors mt-2 cursor-pointer">
             <i data-lucide="save" class="w-3.5 h-3.5"></i> Aggiorna Anagrafica e Colore
           </button>
         </div>
@@ -313,7 +334,7 @@
         <div class="space-y-3 bg-slate-950 p-3.5 rounded-lg border border-slate-800">
           <div class="flex justify-between items-center">
             <label class="text-xs text-indigo-400 font-bold uppercase tracking-wider block">Dettagli Articoli & Preventivo</label>
-            <button onclick="playSound('click'); addArticleRow();" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs px-2.5 py-1 rounded font-semibold flex items-center gap-1 active:scale-95 transition-transform shadow">
+            <button onclick="playSound('click'); addArticleRow();" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs px-2.5 py-1 rounded font-semibold flex items-center gap-1 active:scale-95 transition-transform shadow cursor-pointer">
               <i data-lucide="plus" class="w-3.5 h-3.5"></i> Aggiungi Riga
             </button>
           </div>
@@ -341,7 +362,7 @@
           </div>
 
           <div class="flex justify-between items-center pt-3 border-t border-slate-800 flex-wrap gap-3">
-            <button onclick="playSound('success'); saveArticlesEdits();" class="bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-300 border border-indigo-500/30 text-xs px-3 py-1.5 rounded font-semibold flex items-center gap-1.5 transition-colors">
+            <button onclick="playSound('success'); saveArticlesEdits();" class="bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-300 border border-indigo-500/30 text-xs px-3 py-1.5 rounded font-semibold flex items-center gap-1.5 transition-colors cursor-pointer">
               <i data-lucide="save" class="w-3.5 h-3.5"></i> Salva Articoli
             </button>
             <div class="flex gap-4 text-right">
@@ -387,14 +408,14 @@
 
       <!-- Footer -->
       <div class="p-4 border-t border-slate-800 bg-slate-950 flex justify-between gap-3">
-        <button onclick="playSound('delete'); deleteCurrentCard();" class="bg-red-950/40 hover:bg-red-900/60 text-red-400 border border-red-900/50 px-4 py-2 rounded-lg font-semibold flex items-center gap-2 active:scale-95 transition-all text-xs">
+        <button onclick="playSound('delete'); deleteCurrentCard();" class="bg-red-950/40 hover:bg-red-900/60 text-red-400 border border-red-900/50 px-4 py-2 rounded-lg font-semibold flex items-center gap-2 active:scale-95 transition-all text-xs cursor-pointer">
           <i data-lucide="trash-2" class="w-4 h-4"></i> Elimina
         </button>
         <div class="flex gap-2">
-          <button onclick="playSound('click'); printCard();" class="bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded-lg font-semibold flex items-center gap-2 active:scale-95 transition-all text-xs">
+          <button onclick="playSound('click'); printCard();" class="bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded-lg font-semibold flex items-center gap-2 active:scale-95 transition-all text-xs cursor-pointer">
             <i data-lucide="printer" class="w-4 h-4"></i> Stampa Scheda
           </button>
-          <button onclick="playSound('close'); closeModal('detailModal');" class="bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-2 rounded-lg font-semibold active:scale-95 transition-all text-xs shadow-lg shadow-indigo-900/20">
+          <button onclick="playSound('close'); closeModal('detailModal');" class="bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-2 rounded-lg font-semibold active:scale-95 transition-all text-xs shadow-lg shadow-indigo-900/20 cursor-pointer">
             Chiudi Scheda
           </button>
         </div>
@@ -407,7 +428,7 @@
     <div class="bg-slate-900 border border-slate-800 rounded-xl w-full max-w-md p-5 shadow-2xl max-h-[92vh] overflow-y-auto">
       <div class="flex justify-between items-center mb-4">
         <h3 class="font-bold text-lg text-slate-100">Nuova Commessa SGA</h3>
-        <button onclick="playSound('close'); closeModal('addCardModal');" class="text-slate-400 hover:text-slate-200 bg-slate-800 rounded-full p-1">
+        <button onclick="playSound('close'); closeModal('addCardModal');" class="text-slate-400 hover:text-slate-200 bg-slate-800 rounded-full p-1 cursor-pointer">
           <i data-lucide="x" class="w-4 h-4"></i>
         </button>
       </div>
@@ -475,7 +496,7 @@
           <div id="formFilePreview" class="hidden text-[11px] text-emerald-400 font-mono text-center truncate"></div>
         </div>
 
-        <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2.5 px-4 rounded-lg active:scale-[0.98] transition-transform flex items-center justify-center gap-2 shadow-lg shadow-indigo-900/20">
+        <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2.5 px-4 rounded-lg active:scale-[0.98] transition-transform flex items-center justify-center gap-2 shadow-lg shadow-indigo-900/20 cursor-pointer">
           <i data-lucide="plus" class="w-4 h-4"></i> Inserisci in Workflow
         </button>
       </form>
@@ -489,7 +510,7 @@
         <h3 class="font-bold text-lg text-slate-100 flex items-center gap-2">
           <i data-lucide="settings" class="w-5 h-5 text-indigo-400"></i> Impostazioni Cloud
         </h3>
-        <button onclick="playSound('close'); closeModal('cloudModal');" class="text-slate-400 hover:text-slate-200 bg-slate-800 rounded-full p-1">
+        <button onclick="playSound('close'); closeModal('cloudModal');" class="text-slate-400 hover:text-slate-200 bg-slate-800 rounded-full p-1 cursor-pointer">
           <i data-lucide="x" class="w-4 h-4"></i>
         </button>
       </div>
@@ -510,10 +531,10 @@
         </div>
 
         <div class="flex gap-2 pt-2">
-          <button onclick="playSound('success'); saveFirebaseConfig();" class="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2 px-4 rounded-lg active:scale-[0.98] transition-transform flex items-center justify-center gap-2 shadow-lg shadow-indigo-900/20">
+          <button onclick="playSound('success'); saveFirebaseConfig();" class="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2 px-4 rounded-lg active:scale-[0.98] transition-transform flex items-center justify-center gap-2 shadow-lg shadow-indigo-900/20 cursor-pointer">
             <i data-lucide="check" class="w-4 h-4"></i> Salva e Connetti
           </button>
-          <button onclick="playSound('close'); resetFirebaseConfig();" class="bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold py-2 px-3 rounded-lg active:scale-[0.98] transition-transform text-xs" title="Disconnetti e torna a salvare in locale">
+          <button onclick="playSound('close'); resetFirebaseConfig();" class="bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold py-2 px-3 rounded-lg active:scale-[0.98] transition-transform text-xs cursor-pointer" title="Disconnetti e torna a salvare in locale">
             Scollega
           </button>
         </div>
@@ -526,10 +547,10 @@
     <div class="absolute top-0 w-full p-4 flex justify-between items-center z-10 bg-gradient-to-b from-black/80 to-transparent">
       <div id="galleryCounter" class="text-white font-mono text-sm font-bold bg-black/50 px-3 py-1 rounded-full"></div>
       <div class="flex gap-4 items-center">
-        <button id="btnRotate" onclick="playSound('click'); rotateGalleryImage();" class="text-white p-2 bg-slate-800 hover:bg-slate-700 rounded-full transition-colors" title="Ruota immagine">
+        <button id="btnRotate" onclick="playSound('click'); rotateGalleryImage();" class="text-white p-2 bg-slate-800 hover:bg-slate-700 rounded-full transition-colors cursor-pointer" title="Ruota immagine">
           <i data-lucide="rotate-cw" class="w-5 h-5"></i>
         </button>
-        <button onclick="playSound('close'); closeGallery();" class="text-white p-2 bg-slate-800 hover:bg-slate-700 rounded-full transition-colors" title="Chiudi">
+        <button onclick="playSound('close'); closeGallery();" class="text-white p-2 bg-slate-800 hover:bg-slate-700 rounded-full transition-colors cursor-pointer" title="Chiudi">
           <i data-lucide="x" class="w-5 h-5"></i>
         </button>
       </div>
@@ -537,10 +558,10 @@
     <div class="relative w-full h-full flex items-center justify-center p-4">
       <img id="galleryImage" src="" class="max-w-full max-h-[90vh] object-contain transition-transform duration-300 bg-white shadow-2xl">
       
-      <button onclick="playSound('click'); prevGalleryImage();" class="absolute left-4 top-1/2 -translate-y-1/2 text-white p-3 bg-slate-800/80 hover:bg-slate-700 rounded-full transition-colors" id="btnPrevGallery">
+      <button onclick="playSound('click'); prevGalleryImage();" class="absolute left-4 top-1/2 -translate-y-1/2 text-white p-3 bg-slate-800/80 hover:bg-slate-700 rounded-full transition-colors cursor-pointer" id="btnPrevGallery">
         <i data-lucide="chevron-left" class="w-6 h-6"></i>
       </button>
-      <button onclick="playSound('click'); nextGalleryImage();" class="absolute right-4 top-1/2 -translate-y-1/2 text-white p-3 bg-slate-800/80 hover:bg-slate-700 rounded-full transition-colors" id="btnNextGallery">
+      <button onclick="playSound('click'); nextGalleryImage();" class="absolute right-4 top-1/2 -translate-y-1/2 text-white p-3 bg-slate-800/80 hover:bg-slate-700 rounded-full transition-colors cursor-pointer" id="btnNextGallery">
         <i data-lucide="chevron-right" class="w-6 h-6"></i>
       </button>
     </div>
@@ -573,6 +594,7 @@
     ];
 
     let COLUMNS_CONFIG = JSON.parse(JSON.stringify(DEFAULT_COLUMNS_CONFIG));
+    let USER_ALARMS = []; // Array di sveglie programmate [{id, day, time, active}]
 
     const COLOR_OPTIONS = [
       { label: "Arancione", value: "bg-orange-600/20 border-orange-500/50 text-orange-400", border: "border-l-4 border-l-orange-500" },
@@ -590,7 +612,7 @@
 
     let currentFontSize = 'md';
 
-    // --- AGGIORNAMENTO ORA E DATA IN TEMPO REALE ---
+    // --- AGGIORNAMENTO ORA E DATA & CONTROLLO SVEGLIE PER ALERT SCADENZE ---
     function updateLiveClock() {
       const now = new Date();
       const timeStr = now.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
@@ -600,8 +622,49 @@
       const dateEl = document.getElementById('headerClockDate');
       if (timeEl) timeEl.innerText = timeStr;
       if (dateEl) dateEl.innerText = dateStr;
+
+      // Controllo sveglie programmate ogni secondo per mostrare l'alert delle scadenze nei giorni/orari impostati
+      checkScheduledAlarms(now);
     }
     setInterval(updateLiveClock, 1000);
+
+    let lastTriggeredMinute = "";
+    function checkScheduledAlarms(now) {
+      if (!USER_ALARMS || USER_ALARMS.length === 0) return;
+      const currentDay = now.getDay(); // 0=Domenica, 1=Lunedì, ... 6=Sabato
+      const currentHours = String(now.getHours()).padStart(2, '0');
+      const currentMinutes = String(now.getMinutes()).padStart(2, '0');
+      const currentTimeStr = `${currentHours}:${currentMinutes}`;
+
+      if (now.getSeconds() === 0 && lastTriggeredMinute !== currentTimeStr) {
+        USER_ALARMS.forEach(alarm => {
+          if (alarm.active && parseInt(alarm.day) === currentDay && alarm.time === currentTimeStr) {
+            lastTriggeredMinute = currentTimeStr;
+            triggerAlarmAlert();
+          }
+        });
+      }
+    }
+
+    function triggerAlarmAlert() {
+      // Mostra l'alert delle scadenze imminenti in base alla programmazione della sveglia
+      const urgentCards = state.cards.filter(card => {
+        if (card.stage === 'consegnato' || card.stage === 'fatturato') return false;
+        if (!card.deliveryDate) return false;
+        const delivery = new Date(card.deliveryDate);
+        delivery.setHours(0,0,0,0);
+        const today = new Date();
+        today.setHours(0,0,0,0);
+        const diffDays = Math.ceil((delivery - today) / (1000 * 60 * 60 * 24));
+        return diffDays <= 7;
+      });
+
+      // Se ci sono scadenze o mostriamo tutte le commesse aperte per controllo programmato
+      const cardsToDisplay = urgentCards.length > 0 ? urgentCards : state.cards.filter(card => card.stage !== 'consegnato' && card.stage !== 'fatturato');
+      if (cardsToDisplay.length > 0) {
+        showArcadeAlert(cardsToDisplay);
+      }
+    }
 
     // --- SUONI OTTIMIZZATI E SIRENA ELEGANTE ---
     let audioCtx = null;
@@ -804,12 +867,16 @@
       }
     }
 
-    // --- GESTIONE IMPOSTAZIONI UTENTE ---
+    // --- GESTIONE IMPOSTAZIONI UTENTE & SVEGLIE ---
     function loadUserSettings() {
       loadCompanyLogo();
       const savedCols = localStorage.getItem('workflow_sga_columns_config');
       if (savedCols) {
         try { COLUMNS_CONFIG = JSON.parse(savedCols); } catch(e){}
+      }
+      const savedAlarms = localStorage.getItem('workflow_sga_alarms');
+      if (savedAlarms) {
+        try { USER_ALARMS = JSON.parse(savedAlarms); } catch(e){ USER_ALARMS = []; }
       }
       const savedFont = localStorage.getItem('workflow_sga_fontsize');
       if (savedFont) {
@@ -828,9 +895,9 @@
         const btn = document.getElementById(`fontBtn-${s}`);
         if (btn) {
           if (s === size) {
-            btn.className = "py-2 px-3 rounded bg-indigo-600 text-white font-bold border border-indigo-500 shadow transition-colors";
+            btn.className = "py-2 px-3 rounded bg-indigo-600 text-white font-bold border border-indigo-500 shadow transition-colors cursor-pointer";
           } else {
-            btn.className = "py-2 px-3 rounded bg-slate-900 border border-slate-800 text-slate-300 hover:border-indigo-500 transition-colors";
+            btn.className = "py-2 px-3 rounded bg-slate-900 border border-slate-800 text-slate-300 hover:border-indigo-500 transition-colors cursor-pointer";
           }
         }
       });
@@ -841,7 +908,66 @@
       applyFontSize(size);
     }
 
+    function addAlarmRule() {
+      USER_ALARMS.push({ id: 'a' + Date.now(), day: 1, time: "09:00", active: true });
+      renderAlarmsList();
+    }
+
+    function removeAlarmRule(id) {
+      USER_ALARMS = USER_ALARMS.filter(a => a.id !== id);
+      renderAlarmsList();
+    }
+
+    function updateAlarmField(id, field, val) {
+      const alarm = USER_ALARMS.find(a => a.id === id);
+      if (alarm) {
+        alarm[field] = val;
+      }
+    }
+
+    function renderAlarmsList() {
+      const container = document.getElementById('alarmsListContainer');
+      if (!container) return;
+      container.innerHTML = '';
+
+      if (USER_ALARMS.length === 0) {
+        container.innerHTML = `<p class="text-xs text-slate-500 italic py-2 text-center">Nessuna sveglia programmata. Clicca su "Aggiungi Sveglia".</p>`;
+        return;
+      }
+
+      const daysOptions = [
+        {val: 1, label: "Lunedì"},
+        {val: 2, label: "Martedì"},
+        {val: 3, label: "Mercoledì"},
+        {val: 4, label: "Giovedì"},
+        {val: 5, label: "Venerdì"},
+        {val: 6, label: "Sabato"},
+        {val: 0, label: "Domenica"}
+      ];
+
+      USER_ALARMS.forEach(alarm => {
+        const row = document.createElement('div');
+        row.className = "flex items-center justify-between bg-slate-900 p-2 rounded border border-slate-800 gap-2";
+
+        let dayOptsHtml = daysOptions.map(d => `<option value="${d.val}" ${alarm.day == d.val ? 'selected' : ''}>${d.label}</option>`).join('');
+
+        row.innerHTML = `
+          <div class="flex items-center gap-2 flex-1">
+            <input type="checkbox" ${alarm.active ? 'checked' : ''} onchange="updateAlarmField('${alarm.id}', 'active', this.checked)" class="w-4 h-4 rounded bg-slate-950 border-slate-700 text-indigo-600 cursor-pointer" title="Attiva/Disattiva">
+            <select onchange="updateAlarmField('${alarm.id}', 'day', this.value)" class="bg-slate-950 border border-slate-700 rounded px-2 py-1 text-xs text-slate-200 focus:outline-none">
+              ${dayOptsHtml}
+            </select>
+            <input type="time" value="${alarm.time || '09:00'}" onchange="updateAlarmField('${alarm.id}', 'time', this.value)" class="bg-slate-950 border border-slate-700 rounded px-2 py-1 text-xs text-emerald-400 font-mono focus:outline-none">
+          </div>
+          <button onclick="playSound('delete'); removeAlarmRule('${alarm.id}')" class="text-red-400 hover:text-red-300 p-1 cursor-pointer" title="Elimina"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+        `;
+        container.appendChild(row);
+      });
+      lucide.createIcons();
+    }
+
     function openSettingsModal() {
+      renderAlarmsList();
       const container = document.getElementById('columnsColorSettingsList');
       container.innerHTML = '';
 
@@ -882,18 +1008,21 @@
       });
 
       localStorage.setItem('workflow_sga_columns_config', JSON.stringify(COLUMNS_CONFIG));
+      localStorage.setItem('workflow_sga_alarms', JSON.stringify(USER_ALARMS));
       localStorage.setItem('workflow_sga_fontsize', currentFontSize);
       
       closeModal('settingsModal');
       renderBoard();
-      alert("Impostazioni salvate con successo!");
+      alert("Impostazioni e sveglie salvate con successo!");
     }
 
     function resetDefaultSettings() {
       if (confirm("Vuoi ripristinare i colori e le impostazioni predefinite?")) {
         COLUMNS_CONFIG = JSON.parse(JSON.stringify(DEFAULT_COLUMNS_CONFIG));
+        USER_ALARMS = [];
         currentFontSize = 'md';
         localStorage.removeItem('workflow_sga_columns_config');
+        localStorage.removeItem('workflow_sga_alarms');
         localStorage.removeItem('workflow_sga_fontsize');
         applyFontSize('md');
         closeModal('settingsModal');
@@ -904,29 +1033,6 @@
     // ------------------------------------
 
     // --- CHECK SCADENZE & ARCADE ALERT ---
-    function checkDueSoonCommissions() {
-      if (!state || !state.cards) return;
-      const today = new Date();
-      today.setHours(0,0,0,0);
-
-      const urgentCards = state.cards.filter(card => {
-        if (card.stage === 'consegnato' || card.stage === 'fatturato') return false;
-        if (!card.deliveryDate) return false;
-
-        const delivery = new Date(card.deliveryDate);
-        delivery.setHours(0,0,0,0);
-
-        const diffTime = delivery - today;
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-        return diffDays <= 7;
-      });
-
-      if (urgentCards.length > 0) {
-        showArcadeAlert(urgentCards);
-      }
-    }
-
     function showArcadeAlert(cards) {
       playSound('alert');
       const listEl = document.getElementById('arcadeAlertList');
@@ -936,26 +1042,33 @@
         const stageObj = COLUMNS_CONFIG.find(c => c.id === card.stage);
         const stageName = stageObj ? stageObj.label : card.stage;
         
-        const delivery = new Date(card.deliveryDate);
-        delivery.setHours(0,0,0,0);
-        const today = new Date();
-        today.setHours(0,0,0,0);
-        const diffDays = Math.ceil((delivery - today) / (1000 * 60 * 60 * 24));
-
+        let diffDays = 0;
         let timeText = '';
         let badgeColor = 'bg-orange-600 text-white';
-        if (diffDays < 0) {
-          timeText = `SCADUTA da ${Math.abs(diffDays)} giorni!`;
-          badgeColor = 'bg-red-600 text-white animate-pulse';
-        } else if (diffDays === 0) {
-          timeText = 'Scade OGGI!';
-          badgeColor = 'bg-red-600 text-white animate-pulse';
-        } else if (diffDays <= 3) {
-          timeText = `Scade tra ${diffDays} giorni (URGENTE)`;
-          badgeColor = 'bg-amber-600 text-white';
+        
+        if (card.deliveryDate) {
+          const delivery = new Date(card.deliveryDate);
+          delivery.setHours(0,0,0,0);
+          const today = new Date();
+          today.setHours(0,0,0,0);
+          diffDays = Math.ceil((delivery - today) / (1000 * 60 * 60 * 24));
+
+          if (diffDays < 0) {
+            timeText = `SCADUTA da ${Math.abs(diffDays)} giorni!`;
+            badgeColor = 'bg-red-600 text-white animate-pulse';
+          } else if (diffDays === 0) {
+            timeText = 'Scade OGGI!';
+            badgeColor = 'bg-red-600 text-white animate-pulse';
+          } else if (diffDays <= 3) {
+            timeText = `Scade tra ${diffDays} giorni (URGENTE)`;
+            badgeColor = 'bg-amber-600 text-white';
+          } else {
+            timeText = `Scade tra ${diffDays} giorni`;
+            badgeColor = 'bg-yellow-600 text-slate-950 font-bold';
+          }
         } else {
-          timeText = `Scade tra ${diffDays} giorni`;
-          badgeColor = 'bg-yellow-600 text-slate-950 font-bold';
+          timeText = 'In Lavorazione';
+          badgeColor = 'bg-indigo-600 text-white';
         }
 
         const item = document.createElement('div');
@@ -967,7 +1080,7 @@
           </div>
           <div class="shrink-0 text-right space-y-1">
             <span class="text-xs px-3 py-1.5 rounded-lg font-mono uppercase tracking-wider ${badgeColor}">${timeText}</span>
-            <div class="text-xs text-slate-400 font-semibold mt-1">Consegna: ${new Date(card.deliveryDate).toLocaleDateString('it-IT')}</div>
+            <div class="text-xs text-slate-400 font-semibold mt-1">${card.deliveryDate ? 'Consegna: ' + new Date(card.deliveryDate).toLocaleDateString('it-IT') : ''}</div>
           </div>
         `;
         listEl.appendChild(item);
@@ -976,12 +1089,10 @@
       document.getElementById('arcadeAlertModal').classList.remove('hidden');
       lucide.createIcons();
 
-      if (isMasterMode) {
-        if (arcadeTimer) clearTimeout(arcadeTimer);
-        arcadeTimer = setTimeout(() => {
-          closeArcadeAlert();
-        }, 60000);
-      }
+      if (arcadeTimer) clearTimeout(arcadeTimer);
+      arcadeTimer = setTimeout(() => {
+        closeArcadeAlert();
+      }, 60000); // Chiude automaticamente dopo 1 minuto se non viene chiuso prima
     }
 
     function closeArcadeAlert() {
@@ -1003,7 +1114,6 @@
       const body = document.body;
       const board = document.getElementById('board');
       
-      // Gestione esplicita visibilità tasto indietro Master View
       const backBtns = document.querySelectorAll('.master-back-btn');
       
       if (isMasterMode) {
@@ -1012,7 +1122,6 @@
         backBtns.forEach(el => el.style.display = 'flex');
         renderBoard();
         startAutoScroll();
-        checkDueSoonCommissions();
       } else {
         body.classList.remove('master-mode');
         backBtns.forEach(el => el.classList.add('hidden'));
@@ -1443,7 +1552,6 @@
           if (cfg.imgbbKey) document.getElementById('cfgImgbbKey').value = cfg.imgbbKey;
         } catch(e){}
       }
-      setTimeout(checkDueSoonCommissions, 1000);
     }
 
     function renderBoard() {
@@ -1514,11 +1622,13 @@
       let customCardStyle = '';
       let customTextStyle = '';
       let customSubTextStyle = 'text-slate-400';
-      if (card.customColor) {
+      let baseCardClass = 'bg-slate-900 border border-slate-800';
+
+      if (card.customColor && card.customColor !== '') {
         const contrastColor = getContrastTextColor(card.customColor);
         customCardStyle = `background-color: ${card.customColor}; border-color: ${card.customColor};`;
         customTextStyle = `color: ${contrastColor};`;
-        customSubTextStyle = '';
+        baseCardClass = 'border shadow-md';
         if (contrastColor === '#0f172a') {
           customSubTextStyle = 'text-slate-800 font-semibold';
         } else {
@@ -1546,7 +1656,7 @@
       return `
         <div draggable="true" ondragstart="handleDragStart(event)" id="card-${card.id}" data-id="${card.id}" onclick="${isMasterMode ? '' : `playSound('click'); openDetail('${card.id}')`}"
              style="${customCardStyle}"
-             class="bg-slate-900 border border-slate-800 hover:border-indigo-500/50 p-3 rounded-lg shadow-md cursor-pointer transition-all active:scale-95 space-y-2 group relative ${urgentClass}">
+             class="${baseCardClass} hover:border-indigo-500/50 p-3 rounded-lg shadow-md cursor-pointer transition-all active:scale-95 space-y-2 group relative ${urgentClass}">
           <div class="flex justify-between items-start gap-1">
             <span class="text-[10px] px-1.5 py-0.5 rounded font-medium ${badgeStyle}">${card.jobType || 'Generico'}</span>
             <span class="text-[9px]" style="${card.customColor ? customTextStyle : 'color: #64748b;'}">${card.createdAt ? new Date(card.createdAt).toLocaleDateString('it-IT', {day: 'numeric', month: 'short'}) : ''}</span>
@@ -1560,13 +1670,13 @@
               <span class="text-[9px] font-mono" style="${card.customColor ? customTextStyle : 'color: #475569;'}">#${cardIdShort}</span>
               <!-- Tasti Riordinamento Verticale -->
               <div class="hide-in-master flex items-center bg-black/20 rounded ml-2">
-                <button onclick="moveCardVertical('${card.id}', -1)" class="p-0.5 hover:bg-black/30 rounded text-xs px-1" title="Sposta su" style="${card.customColor ? customTextStyle : 'color: #cbd5e1;'}">▲</button>
-                <button onclick="moveCardVertical('${card.id}', 1)" class="p-0.5 hover:bg-black/30 rounded text-xs px-1" title="Sposta giù" style="${card.customColor ? customTextStyle : 'color: #cbd5e1;'}">▼</button>
+                <button onclick="moveCardVertical('${card.id}', -1)" class="p-0.5 hover:bg-black/30 rounded text-xs px-1 cursor-pointer" title="Sposta su" style="${card.customColor ? customTextStyle : 'color: #cbd5e1;'}">▲</button>
+                <button onclick="moveCardVertical('${card.id}', 1)" class="p-0.5 hover:bg-black/30 rounded text-xs px-1 cursor-pointer" title="Sposta giù" style="${card.customColor ? customTextStyle : 'color: #cbd5e1;'}">▼</button>
               </div>
             </div>
             <div class="flex gap-1.5 hide-in-master">
-              <button onclick="moveCardStep('${card.id}', -1)" class="p-1 rounded bg-slate-900 hover:bg-slate-700 text-slate-400 hover:text-slate-200 transition-colors"><i data-lucide="chevron-left" class="w-3.5 h-3.5"></i></button>
-              <button onclick="moveCardStep('${card.id}', 1)" class="p-1 rounded bg-slate-900 hover:bg-slate-700 text-slate-400 hover:text-slate-200 transition-colors"><i data-lucide="chevron-right" class="w-3.5 h-3.5"></i></button>
+              <button onclick="moveCardStep('${card.id}', -1)" class="p-1 rounded bg-slate-900 hover:bg-slate-700 text-slate-400 hover:text-slate-200 transition-colors cursor-pointer" title="Indietro"><i data-lucide="chevron-left" class="w-3.5 h-3.5"></i></button>
+              <button onclick="moveCardStep('${card.id}', 1)" class="p-1 rounded bg-slate-900 hover:bg-slate-700 text-slate-400 hover:text-slate-200 transition-colors cursor-pointer" title="Avanti"><i data-lucide="chevron-right" class="w-3.5 h-3.5"></i></button>
             </div>
           </div>
         </div>
@@ -1667,12 +1777,12 @@
     function resetCardCustomColor() {
       const card = state.cards.find(c => c.id === activeCardId);
       if (card) {
-        card.customColor = null; // Rimuove completamente il colore personalizzato così torna al default bg-slate-900
+        card.customColor = ""; // Rimuove completamente il colore personalizzato così torna al colore standard
         const colDef = COLUMNS_CONFIG.find(col => col.id === card.stage);
         document.getElementById('editCardColor').value = colDef ? colDef.hexDefault : '#4f46e5';
         saveLocal();
         syncCardToCloud(card);
-        alert("Colore personalizzato rimosso (ripristinato predefinito di default).");
+        alert("Colore personalizzato rimosso: la scheda è tornata al colore predefinito.");
       }
     }
 
@@ -1820,8 +1930,8 @@
         tr.innerHTML = `
           <td class="py-1.5 px-1 text-center align-middle">
             <div class="flex items-center justify-center gap-0.5 bg-slate-900 rounded p-0.5 border border-slate-800">
-              <button onclick="moveArticleRowVertical(${idx}, -1)" class="hover:bg-slate-800 text-slate-300 text-xs px-1 rounded" title="Sposta su">▲</button>
-              <button onclick="moveArticleRowVertical(${idx}, 1)" class="hover:bg-slate-800 text-slate-300 text-xs px-1 rounded" title="Sposta giù">▼</button>
+              <button onclick="moveArticleRowVertical(${idx}, -1)" class="hover:bg-slate-800 text-slate-300 text-xs px-1 rounded cursor-pointer" title="Sposta su">▲</button>
+              <button onclick="moveArticleRowVertical(${idx}, 1)" class="hover:bg-slate-800 text-slate-300 text-xs px-1 rounded cursor-pointer" title="Sposta giù">▼</button>
             </div>
           </td>
           <td class="py-1.5 px-1"><input type="text" value="${art.code || ''}" data-field="code" data-index="${idx}" oninput="updateArticleField(this)" placeholder="Codice" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-xs font-mono focus:outline-none focus:border-indigo-500"></td>
@@ -1832,7 +1942,7 @@
           <td class="py-1.5 px-1 text-right font-mono text-slate-300 align-middle"><span id="row-net-${idx}">€ ${rowTotalNet.toFixed(2)}</span></td>
           <td class="py-1.5 px-1 text-right font-mono text-slate-300 align-middle"><span id="row-unit-taxed-${idx}">€ ${unitTaxPrice.toFixed(2)}</span></td>
           <td class="py-1.5 px-2 text-right font-mono font-bold text-slate-300 align-middle"><span id="row-total-${idx}">€ ${rowTotalTaxed.toFixed(2)}</span></td>
-          <td class="py-1.5 px-1 text-center align-middle"><button onclick="playSound('delete'); removeArticleRow(${idx})" class="text-red-400 hover:text-red-300 p-1"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button></td>
+          <td class="py-1.5 px-1 text-center align-middle"><button onclick="playSound('delete'); removeArticleRow(${idx})" class="text-red-400 hover:text-red-300 p-1 cursor-pointer" title="Elimina"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button></td>
         `;
         tbody.appendChild(tr);
       });
@@ -2011,7 +2121,7 @@
           thumb.className = "relative group w-full h-24 bg-slate-900 rounded border border-slate-700 overflow-hidden flex items-center justify-center cursor-pointer";
           thumb.innerHTML = `
             <img src="${photoObj.image}" onclick="playSound('click'); openGallery(${index})" style="transform: rotate(${photoObj.rotation || 0}deg);" class="min-w-full min-h-full object-cover bg-white">
-            <button onclick="playSound('delete'); removePhoto(event, ${index})" class="absolute top-1 right-1 bg-red-600/95 hover:bg-red-500 text-white p-1.5 rounded-md shadow-lg active:scale-90 opacity-0 group-hover:opacity-100 transition-opacity"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+            <button onclick="playSound('delete'); removePhoto(event, ${index})" class="absolute top-1 right-1 bg-red-600/95 hover:bg-red-500 text-white p-1.5 rounded-md shadow-lg active:scale-90 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer" title="Elimina"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
           `;
           container.appendChild(thumb);
         });
