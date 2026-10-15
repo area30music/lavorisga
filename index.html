@@ -23,7 +23,7 @@
     .board-column { min-width: 280px; max-width: 280px; }
     * { touch-action: manipulation; }
     
-    /* GESTIONE DINAMICA DIMENSIONE FONT APPLICAZIONE (PIÙ EVIDENTE) */
+    /* GESTIONE DINAMICA DIMENSIONE FONT APPLICAZIONE */
     body.font-size-sm { font-size: 12px; }
     body.font-size-md { font-size: 15px; }
     body.font-size-lg { font-size: 18px; }
@@ -38,18 +38,18 @@
 
     /* STILE VIDEOGAME ALERT ARCADE */
     @keyframes arcadeGlow {
-      0% { box-shadow: 0 0 10px #ef4444, inset 0 0 10px #ef4444; border-color: #f87171; }
-      50% { box-shadow: 0 0 25px #dc2626, inset 0 0 15px #dc2626; border-color: #fef08a; }
-      100% { box-shadow: 0 0 10px #ef4444, inset 0 0 10px #ef4444; border-color: #f87171; }
+      0% { box-shadow: 0 0 15px #ef4444, inset 0 0 15px #ef4444; border-color: #f87171; }
+      50% { box-shadow: 0 0 35px #dc2626, inset 0 0 25px #dc2626; border-color: #fef08a; }
+      100% { box-shadow: 0 0 15px #ef4444, inset 0 0 15px #ef4444; border-color: #f87171; }
     }
     .arcade-alert-box {
       background: radial-gradient(circle, #18181b 0%, #09090b 100%);
-      border: 3px solid #ef4444;
+      border: 4px solid #ef4444;
       animation: arcadeGlow 1.5s infinite alternate;
       font-family: 'Courier New', Courier, monospace;
     }
     .arcade-text {
-      text-shadow: 0 0 8px rgba(239, 68, 68, 0.8);
+      text-shadow: 0 0 10px rgba(239, 68, 68, 0.9);
       letter-spacing: 1px;
     }
     .card-urgent {
@@ -60,29 +60,29 @@
 </head>
 <body class="bg-slate-950 text-slate-100 font-sans h-screen flex flex-col overflow-hidden font-size-md">
 
-  <!-- ALERT VIDEOGAME POPUP (SCADENZE) -->
+  <!-- ALERT VIDEOGAME POPUP (SCADENZE INGRANDITO) -->
   <div id="arcadeAlertModal" class="hidden fixed inset-0 bg-black/85 backdrop-blur-md z-[150] flex items-center justify-center p-4">
-    <div class="arcade-alert-box rounded-2xl w-full max-w-lg p-6 shadow-2xl relative space-y-4">
-      <button onclick="closeArcadeAlert()" class="hide-in-master absolute top-3 right-3 bg-red-600 hover:bg-red-500 text-white rounded-full p-1.5 shadow-lg active:scale-95 transition-all">
-        <i data-lucide="x" class="w-5 h-5"></i>
+    <div class="arcade-alert-box rounded-3xl w-full max-w-2xl p-8 shadow-2xl relative space-y-6">
+      <button onclick="closeArcadeAlert()" class="hide-in-master absolute top-4 right-4 bg-red-600 hover:bg-red-500 text-white rounded-full p-2 shadow-lg active:scale-95 transition-all">
+        <i data-lucide="x" class="w-6 h-6"></i>
       </button>
-      <div class="text-center space-y-1">
-        <div class="inline-flex items-center justify-center bg-red-600/30 p-3 rounded-full border border-red-500 mb-1 animate-bounce">
-          <i data-lucide="alert-triangle" class="w-8 h-8 text-red-500"></i>
+      <div class="text-center space-y-2">
+        <div class="inline-flex items-center justify-center bg-red-600/30 p-4 rounded-full border-2 border-red-500 mb-1 animate-bounce">
+          <i data-lucide="alert-triangle" class="w-10 h-10 text-red-500"></i>
         </div>
-        <h2 class="text-2xl font-black text-red-500 arcade-text uppercase">⚠️ ATTENZIONE: SCADENZE IMMINENTI! ⚠️</h2>
-        <p class="text-xs text-yellow-400 font-bold uppercase tracking-widest">Le seguenti commesse richiedono azione immediata</p>
+        <h2 class="text-3xl font-black text-red-500 arcade-text uppercase">⚠️ ATTENZIONE: SCADENZE IMMINENTI! ⚠️</h2>
+        <p class="text-sm text-yellow-400 font-bold uppercase tracking-widest">Le seguenti commesse richiedono azione immediata</p>
       </div>
       
-      <div id="arcadeAlertList" class="space-y-2 max-h-60 overflow-y-auto pr-1">
+      <div id="arcadeAlertList" class="space-y-3 max-h-80 overflow-y-auto pr-2">
         <!-- Lista inserita via JS -->
       </div>
 
       <div class="pt-2 text-center">
-        <button onclick="closeArcadeAlert()" class="hide-in-master bg-red-600 hover:bg-red-500 text-white font-black px-6 py-2.5 rounded-lg text-sm uppercase tracking-wider shadow-lg shadow-red-900/50 active:scale-95 transition-transform border border-red-400">
+        <button onclick="closeArcadeAlert()" class="hide-in-master bg-red-600 hover:bg-red-500 text-white font-black px-8 py-3.5 rounded-xl text-base uppercase tracking-wider shadow-xl shadow-red-900/50 active:scale-95 transition-transform border border-red-400">
           Ricevuto / Chiudi Avviso
         </button>
-        <p class="show-in-master hidden text-[10px] text-slate-400 mt-2 italic animate-pulse">Questo avviso si chiuderà automaticamente tra 1 minuto...</p>
+        <p class="show-in-master hidden text-xs text-slate-400 mt-3 italic animate-pulse">Questo avviso si chiuderà automaticamente tra 1 minuto...</p>
       </div>
     </div>
   </div>
@@ -124,6 +124,11 @@
         <input type="file" accept="image/png, image/jpeg" class="absolute inset-0 opacity-0 cursor-pointer hide-in-master" onchange="uploadCompanyLogo(event)" title="Carica Logo Aziendale">
       </div>
 
+      <!-- Tasto Torna Indietro in Master View posizionato subito dopo il logo -->
+      <button onclick="toggleMasterMode(); playSound('close');" class="show-in-master hidden bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2.5 rounded-lg text-sm font-extrabold items-center gap-2 active:scale-95 transition-transform shadow-lg shadow-indigo-900/40 border border-indigo-400" title="Torna alla schermata di programmazione">
+        <i data-lucide="arrow-left" class="w-5 h-5"></i> Torna a Programmazione
+      </button>
+
       <div>
         <h1 class="font-bold text-lg leading-tight text-white flex items-center gap-3">
           Workflow SGA
@@ -135,21 +140,16 @@
       </div>
     </div>
     
-    <div class="flex space-x-2 items-center">
-      <!-- WIDGET DATA E ORA -->
-      <div id="liveClockWidget" class="hidden md:flex items-center gap-1.5 bg-slate-950 border border-slate-800 px-3 py-1.5 rounded-lg text-xs font-mono text-slate-300 shadow-inner">
-        <i data-lucide="clock" class="w-3.5 h-3.5 text-indigo-400"></i>
-        <span id="headerClockTime">--:--:--</span>
-        <span class="text-slate-600">|</span>
-        <span id="headerClockDate" class="text-slate-400">--/--/----</span>
+    <div class="flex space-x-3 items-center">
+      <!-- WIDGET DATA E ORA MOLTO PIÙ GRANDE ED EVIDENTE -->
+      <div id="liveClockWidget" class="flex items-center gap-2 bg-slate-950 border border-slate-700 px-4 py-2 rounded-xl text-base font-mono text-emerald-400 font-bold shadow-lg">
+        <i data-lucide="clock" class="w-5 h-5 text-indigo-400 animate-pulse"></i>
+        <span id="headerClockTime" class="tracking-wider">--:--:--</span>
+        <span class="text-slate-600 font-normal">|</span>
+        <span id="headerClockDate" class="text-slate-300 font-medium">--/--/----</span>
       </div>
 
-      <!-- Tasto Torna Indietro in Master View -->
-      <button onclick="toggleMasterMode(); playSound('click');" class="show-in-master hidden bg-indigo-600 hover:bg-indigo-500 text-white px-3.5 py-2 rounded-lg text-xs font-bold items-center gap-2 active:scale-95 transition-transform shadow-lg shadow-indigo-900/30" title="Torna alla schermata di programmazione">
-        <i data-lucide="arrow-left" class="w-4 h-4"></i> Torna a Programmazione
-      </button>
-
-      <button onclick="playSound('click'); logoutApp();" class="hide-in-master bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 active:scale-95 transition-transform" title="Esci dall'account">
+      <button onclick="playSound('close'); logoutApp();" class="hide-in-master bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 active:scale-95 transition-transform" title="Esci dall'account">
         <i data-lucide="log-out" class="w-4 h-4"></i> Esci
       </button>
       <button onclick="playSound('click'); openSettingsModal();" class="hide-in-master bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 active:scale-95 transition-transform" title="Impostazioni grafiche e generali">
@@ -188,7 +188,7 @@
         <h3 class="font-bold text-base text-slate-100 flex items-center gap-2">
           <i data-lucide="sliders" class="w-5 h-5 text-indigo-400"></i> Personalizzazione Impostazioni
         </h3>
-        <button onclick="playSound('click'); closeModal('settingsModal');" class="text-slate-400 hover:text-slate-200 bg-slate-800 rounded-full p-1">
+        <button onclick="playSound('close'); closeModal('settingsModal');" class="text-slate-400 hover:text-slate-200 bg-slate-800 rounded-full p-1">
           <i data-lucide="x" class="w-4 h-4"></i>
         </button>
       </div>
@@ -256,7 +256,7 @@
           <span id="detailBadge" class="px-2 py-0.5 rounded text-xs font-bold text-white uppercase"></span>
           <h2 class="text-lg font-bold">Dettaglio Commessa</h2>
         </div>
-        <button onclick="playSound('click'); closeModal('detailModal');" class="text-slate-400 hover:text-slate-200 bg-slate-800 rounded-full p-1">
+        <button onclick="playSound('close'); closeModal('detailModal');" class="text-slate-400 hover:text-slate-200 bg-slate-800 rounded-full p-1">
           <i data-lucide="x" class="w-5 h-5"></i>
         </button>
       </div>
@@ -394,7 +394,7 @@
           <button onclick="playSound('click'); printCard();" class="bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded-lg font-semibold flex items-center gap-2 active:scale-95 transition-all text-xs">
             <i data-lucide="printer" class="w-4 h-4"></i> Stampa Scheda
           </button>
-          <button onclick="playSound('click'); closeModal('detailModal');" class="bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-2 rounded-lg font-semibold active:scale-95 transition-all text-xs shadow-lg shadow-indigo-900/20">
+          <button onclick="playSound('close'); closeModal('detailModal');" class="bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-2 rounded-lg font-semibold active:scale-95 transition-all text-xs shadow-lg shadow-indigo-900/20">
             Chiudi Scheda
           </button>
         </div>
@@ -407,7 +407,7 @@
     <div class="bg-slate-900 border border-slate-800 rounded-xl w-full max-w-md p-5 shadow-2xl max-h-[92vh] overflow-y-auto">
       <div class="flex justify-between items-center mb-4">
         <h3 class="font-bold text-lg text-slate-100">Nuova Commessa SGA</h3>
-        <button onclick="playSound('click'); closeModal('addCardModal');" class="text-slate-400 hover:text-slate-200 bg-slate-800 rounded-full p-1">
+        <button onclick="playSound('close'); closeModal('addCardModal');" class="text-slate-400 hover:text-slate-200 bg-slate-800 rounded-full p-1">
           <i data-lucide="x" class="w-4 h-4"></i>
         </button>
       </div>
@@ -489,7 +489,7 @@
         <h3 class="font-bold text-lg text-slate-100 flex items-center gap-2">
           <i data-lucide="settings" class="w-5 h-5 text-indigo-400"></i> Impostazioni Cloud
         </h3>
-        <button onclick="playSound('click'); closeModal('cloudModal');" class="text-slate-400 hover:text-slate-200 bg-slate-800 rounded-full p-1">
+        <button onclick="playSound('close'); closeModal('cloudModal');" class="text-slate-400 hover:text-slate-200 bg-slate-800 rounded-full p-1">
           <i data-lucide="x" class="w-4 h-4"></i>
         </button>
       </div>
@@ -513,7 +513,7 @@
           <button onclick="playSound('success'); saveFirebaseConfig();" class="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2 px-4 rounded-lg active:scale-[0.98] transition-transform flex items-center justify-center gap-2 shadow-lg shadow-indigo-900/20">
             <i data-lucide="check" class="w-4 h-4"></i> Salva e Connetti
           </button>
-          <button onclick="playSound('click'); resetFirebaseConfig();" class="bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold py-2 px-3 rounded-lg active:scale-[0.98] transition-transform text-xs" title="Disconnetti e torna a salvare in locale">
+          <button onclick="playSound('close'); resetFirebaseConfig();" class="bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold py-2 px-3 rounded-lg active:scale-[0.98] transition-transform text-xs" title="Disconnetti e torna a salvare in locale">
             Scollega
           </button>
         </div>
@@ -529,7 +529,7 @@
         <button id="btnRotate" onclick="playSound('click'); rotateGalleryImage();" class="text-white p-2 bg-slate-800 hover:bg-slate-700 rounded-full transition-colors" title="Ruota immagine">
           <i data-lucide="rotate-cw" class="w-5 h-5"></i>
         </button>
-        <button onclick="playSound('click'); closeGallery();" class="text-white p-2 bg-slate-800 hover:bg-slate-700 rounded-full transition-colors" title="Chiudi">
+        <button onclick="playSound('close'); closeGallery();" class="text-white p-2 bg-slate-800 hover:bg-slate-700 rounded-full transition-colors" title="Chiudi">
           <i data-lucide="x" class="w-5 h-5"></i>
         </button>
       </div>
@@ -603,7 +603,7 @@
     }
     setInterval(updateLiveClock, 1000);
 
-    // --- SINTESI SUONI ARCADE / SIRENA 2 SECONDI ---
+    // --- SUONI OTTIMIZZATI E SIRENA ELEGANTE ---
     let audioCtx = null;
     function initAudio() {
       if (!audioCtx) {
@@ -632,6 +632,19 @@
           gain.connect(audioCtx.destination);
           osc.start(now);
           osc.stop(now + 0.05);
+        } else if (type === 'close') {
+          // Suono di chiusura finestra più carino e armonioso
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(440, now);
+          osc.frequency.exponentialRampToValueAtTime(220, now + 0.12);
+          gain.gain.setValueAtTime(0.2, now);
+          gain.gain.linearRampToValueAtTime(0.01, now + 0.12);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start(now);
+          osc.stop(now + 0.12);
         } else if (type === 'success') {
           const osc = audioCtx.createOscillator();
           const gain = audioCtx.createGain();
@@ -646,11 +659,12 @@
           osc.start(now);
           osc.stop(now + 0.3);
         } else if (type === 'alert') {
+          // Sirena migliorata, calda ed elegante stile emergenza di classe
           if (sirenInterval) clearInterval(sirenInterval);
           let startTime = Date.now();
 
           sirenInterval = setInterval(() => {
-            if (Date.now() - startTime > 2000) {
+            if (Date.now() - startTime > 2500) {
               clearInterval(sirenInterval);
               sirenInterval = null;
               return;
@@ -659,18 +673,18 @@
               const sNow = audioCtx.currentTime;
               const osc = audioCtx.createOscillator();
               const gain = audioCtx.createGain();
-              osc.type = 'sawtooth';
-              osc.frequency.setValueAtTime(400, sNow);
-              osc.frequency.linearRampToValueAtTime(800, sNow + 0.25);
-              osc.frequency.linearRampToValueAtTime(400, sNow + 0.5);
-              gain.gain.setValueAtTime(0.2, sNow);
-              gain.gain.linearRampToValueAtTime(0.01, sNow + 0.5);
+              osc.type = 'sine';
+              osc.frequency.setValueAtTime(350, sNow);
+              osc.frequency.linearRampToValueAtTime(880, sNow + 0.35);
+              osc.frequency.linearRampToValueAtTime(350, sNow + 0.7);
+              gain.gain.setValueAtTime(0.25, sNow);
+              gain.gain.linearRampToValueAtTime(0.01, sNow + 0.7);
               osc.connect(gain);
               gain.connect(audioCtx.destination);
               osc.start(sNow);
-              osc.stop(sNow + 0.5);
+              osc.stop(sNow + 0.7);
             } catch(e){}
-          }, 500);
+          }, 700);
 
         } else if (type === 'delete') {
           const osc = audioCtx.createOscillator();
@@ -891,7 +905,7 @@
     }
     // ------------------------------------
 
-    // --- CHECK SCADENZE & ARCADE ALERT ---
+    // --- CHECK SCADENZE & ARCADE ALERT (TESTO INGRANDITO) ---
     function checkDueSoonCommissions() {
       if (!state || !state.cards) return;
       const today = new Date();
@@ -947,15 +961,15 @@
         }
 
         const item = document.createElement('div');
-        item.className = "bg-black/60 border border-red-500/50 p-3 rounded-lg flex justify-between items-center gap-2";
+        item.className = "bg-black/70 border-2 border-red-500/60 p-4 rounded-xl flex justify-between items-center gap-4 shadow-lg";
         item.innerHTML = `
-          <div class="overflow-hidden">
-            <h4 class="font-bold text-sm text-white truncate">${card.title}</h4>
-            <p class="text-[11px] text-slate-400">Cliente: ${card.client || 'N/D'} | Stato: <span class="text-indigo-300">${stageName}</span></p>
+          <div class="overflow-hidden space-y-1">
+            <h4 class="font-black text-lg text-white tracking-wide truncate">${card.title}</h4>
+            <p class="text-sm text-slate-300 font-medium">Cliente: <span class="text-indigo-300">${card.client || 'N/D'}</span> | Stato: <span class="text-yellow-300">${stageName}</span></p>
           </div>
-          <div class="shrink-0 text-right">
-            <span class="text-[10px] px-2 py-1 rounded font-mono uppercase ${badgeColor}">${timeText}</span>
-            <div class="text-[10px] text-slate-400 mt-1">Consegna: ${new Date(card.deliveryDate).toLocaleDateString('it-IT')}</div>
+          <div class="shrink-0 text-right space-y-1">
+            <span class="text-xs px-3 py-1.5 rounded-lg font-mono uppercase tracking-wider ${badgeColor}">${timeText}</span>
+            <div class="text-xs text-slate-400 font-semibold mt-1">Consegna: ${new Date(card.deliveryDate).toLocaleDateString('it-IT')}</div>
           </div>
         `;
         listEl.appendChild(item);
@@ -973,7 +987,7 @@
     }
 
     function closeArcadeAlert() {
-      playSound('click');
+      playSound('close');
       if (sirenInterval) {
         clearInterval(sirenInterval);
         sirenInterval = null;
