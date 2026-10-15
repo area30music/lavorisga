@@ -23,6 +23,12 @@
     .board-column { min-width: 280px; max-width: 280px; }
     * { touch-action: manipulation; }
     
+    /* GESTIONE DINAMICA DIMENSIONE FONT APPLICAZIONE */
+    body.font-size-sm { font-size: 13px; }
+    body.font-size-md { font-size: 15px; }
+    body.font-size-lg { font-size: 17px; }
+    body.font-size-xl { font-size: 19px; }
+
     /* STILI MASTER VIEW */
     body.master-mode .hide-in-master { display: none !important; }
     body:not(.master-mode) .show-in-master { display: none !important; }
@@ -52,7 +58,7 @@
     }
   </style>
 </head>
-<body class="bg-slate-950 text-slate-100 font-sans h-screen flex flex-col overflow-hidden">
+<body class="bg-slate-950 text-slate-100 font-sans h-screen flex flex-col overflow-hidden font-size-md">
 
   <!-- ALERT VIDEOGAME POPUP (SCADENZE) -->
   <div id="arcadeAlertModal" class="hidden fixed inset-0 bg-black/85 backdrop-blur-md z-[150] flex items-center justify-center p-4">
@@ -111,11 +117,15 @@
   <!-- TOP BAR -->
   <header class="bg-slate-900 border-b border-slate-800 px-4 py-3 flex justify-between items-center shrink-0 flex-wrap gap-3 z-10 relative">
     <div class="flex items-center space-x-3">
-      <div class="bg-indigo-600 p-2 rounded-lg text-white shadow-lg shadow-indigo-900/20 hide-in-master">
-        <i data-lucide="layers" class="w-5 h-5"></i>
+      <!-- LOGO AZIENDALE O ICONA DEFAULT -->
+      <div id="companyLogoContainer" class="relative group cursor-pointer bg-indigo-600 p-2 rounded-lg text-white shadow-lg shadow-indigo-900/20 hide-in-master flex items-center justify-center" style="width: 42px; height: 42px;" title="Clicca per caricare il logo aziendale PNG">
+        <div id="logoDefaultIcon" class="flex items-center justify-center"><i data-lucide="layers" class="w-5 h-5"></i></div>
+        <img id="logoImageDisplay" src="" class="hidden max-h-full max-w-full object-contain">
+        <input type="file" accept="image/png, image/jpeg" class="absolute inset-0 opacity-0 cursor-pointer" onchange="uploadCompanyLogo(event)" title="Carica Logo Aziendale">
       </div>
-      <!-- Tasto di ritorno rapido in Master Mode -->
-      <button onclick="toggleMasterMode()" class="show-in-master hidden bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-lg text-xs font-bold items-center gap-1.5 active:scale-95 transition-transform border border-slate-700 shadow" title="Torna alla schermata di programmazione">
+
+      <!-- Tasto Torna Indietro in Master Mode posizionato accanto al titolo -->
+      <button onclick="toggleMasterMode(); playSound('click');" class="show-in-master hidden bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold items-center gap-1.5 active:scale-95 transition-transform shadow" title="Torna alla schermata di programmazione">
         <i data-lucide="arrow-left" class="w-4 h-4"></i> Torna Indietro
       </button>
       <div>
@@ -123,17 +133,20 @@
           Workflow SGA
           <span class="show-in-master hidden bg-emerald-600/20 border border-emerald-500/50 text-emerald-400 px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider animate-pulse">Monitor Attivo</span>
         </h1>
-        <p id="cloudStatus" onclick="if(!isMasterMode) openModal('cloudModal')" class="text-xs flex items-center gap-1 cursor-pointer transition-colors mt-0.5" title="Clicca per impostazioni Cloud">
+        <p id="cloudStatus" onclick="if(!isMasterMode) { playSound('click'); openModal('cloudModal'); }" class="text-xs flex items-center gap-1 cursor-pointer transition-colors mt-0.5" title="Clicca per impostazioni Cloud">
           <i data-lucide="hard-drive" class="w-3 h-3 text-slate-400"></i> <span class="text-slate-400 hover:text-slate-200">Modalità Locale (Clicca per configurare)</span>
         </p>
       </div>
     </div>
     
     <div class="flex space-x-2 items-center">
-      <button onclick="logoutApp()" class="hide-in-master bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 active:scale-95 transition-transform" title="Esci dall'account">
+      <button onclick="playSound('click'); logoutApp();" class="hide-in-master bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 active:scale-95 transition-transform" title="Esci dall'account">
         <i data-lucide="log-out" class="w-4 h-4"></i> Esci
       </button>
-      <button onclick="exportBackup()" class="hide-in-master bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 active:scale-95 transition-transform" title="Scarica un file di sicurezza">
+      <button onclick="playSound('click'); openSettingsModal();" class="hide-in-master bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 active:scale-95 transition-transform" title="Impostazioni grafiche e generali">
+        <i data-lucide="sliders" class="w-4 h-4"></i> Impostazioni
+      </button>
+      <button onclick="playSound('success'); exportBackup();" class="hide-in-master bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 active:scale-95 transition-transform" title="Scarica un file di sicurezza">
         <i data-lucide="download-cloud" class="w-4 h-4"></i> Backup
       </button>
       <label class="hide-in-master bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 cursor-pointer active:scale-95 transition-transform" title="Carica un file di backup">
@@ -144,17 +157,12 @@
       <div class="hide-in-master w-px h-6 bg-slate-700 mx-1"></div>
 
       <!-- Pulsante Avvio Master View -->
-      <button onclick="toggleMasterMode()" class="hide-in-master bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-emerald-900/50 px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-2 active:scale-95 transition-transform" title="Attiva Monitor Pubblico">
+      <button onclick="playSound('click'); toggleMasterMode();" class="hide-in-master bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-emerald-900/50 px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-2 active:scale-95 transition-transform" title="Attiva Monitor Pubblico">
         <i data-lucide="monitor" class="w-4 h-4"></i> Master View
       </button>
       
-      <button onclick="openModal('addCardModal')" class="hide-in-master bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 active:scale-95 transition-transform shadow-lg shadow-indigo-900/20">
+      <button onclick="playSound('click'); openModal('addCardModal');" class="hide-in-master bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 active:scale-95 transition-transform shadow-lg shadow-indigo-900/20">
         <i data-lucide="plus" class="w-4 h-4"></i> Nuova Commessa
-      </button>
-
-      <!-- Pulsante Uscita Master View (Visibile solo in Master Mode) -->
-      <button onclick="toggleMasterMode()" class="show-in-master hidden bg-red-600 hover:bg-red-500 text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 active:scale-95 transition-transform shadow-lg shadow-red-900/30">
-        <i data-lucide="x-octagon" class="w-4 h-4"></i> Esci da Master View
       </button>
     </div>
   </header>
@@ -164,6 +172,73 @@
     <!-- Colonne generate via JS -->
   </main>
 
+  <!-- MODAL: IMPOSTAZIONI GRAFICHE E GENERALI -->
+  <div id="settingsModal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden shadow-2xl">
+      <div class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-850">
+        <h3 class="font-bold text-base text-slate-100 flex items-center gap-2">
+          <i data-lucide="sliders" class="w-5 h-5 text-indigo-400"></i> Personalizzazione Impostazioni
+        </h3>
+        <button onclick="playSound('click'); closeModal('settingsModal');" class="text-slate-400 hover:text-slate-200 bg-slate-800 rounded-full p-1">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <div class="p-5 overflow-y-auto space-y-6 flex-1 text-sm">
+        <!-- Gestione Logo Aziendale -->
+        <div class="bg-slate-950 p-4 rounded-lg border border-slate-800 space-y-3">
+          <h4 class="text-xs font-bold text-indigo-400 uppercase tracking-wider">Logo Aziendale Barra Menù</h4>
+          <p class="text-xs text-slate-400">Carica il tuo logo in formato PNG trasparente per sostituire l'icona predefinita.</p>
+          <div class="flex items-center gap-4">
+            <div id="settingsLogoPreviewBox" class="w-16 h-12 bg-slate-900 border border-slate-700 rounded flex items-center justify-center overflow-hidden">
+              <span class="text-[10px] text-slate-500">Nessun Logo</span>
+            </div>
+            <div class="flex gap-2">
+              <label class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs px-3 py-2 rounded font-semibold cursor-pointer transition-colors flex items-center gap-1.5">
+                <i data-lucide="upload" class="w-3.5 h-3.5"></i> Carica Logo PNG
+                <input type="file" accept="image/png, image/jpeg" class="hidden" onchange="uploadCompanyLogo(event)">
+              </label>
+              <button onclick="removeCompanyLogo()" class="bg-slate-800 hover:bg-slate-700 text-red-400 text-xs px-3 py-2 rounded font-semibold transition-colors">
+                Rimuovi Logo
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Selezione Dimensione Font -->
+        <div class="bg-slate-950 p-4 rounded-lg border border-slate-800 space-y-2">
+          <h4 class="text-xs font-bold text-indigo-400 uppercase tracking-wider">Dimensione Caratteri Applicazione</h4>
+          <p class="text-xs text-slate-400">Scegli la grandezza del testo per adattarla al tuo monitor o dispositivo.</p>
+          <div class="grid grid-cols-4 gap-2 pt-1">
+            <button onclick="changeFontSize('sm')" id="fontBtn-sm" class="py-2 px-3 rounded bg-slate-900 border border-slate-800 text-xs font-semibold text-slate-300 hover:border-indigo-500 transition-colors">Compatto</button>
+            <button onclick="changeFontSize('md')" id="fontBtn-md" class="py-2 px-3 rounded bg-slate-900 border border-slate-800 text-sm font-semibold text-slate-300 hover:border-indigo-500 transition-colors">Normale</button>
+            <button onclick="changeFontSize('lg')" id="fontBtn-lg" class="py-2 px-3 rounded bg-slate-900 border border-slate-800 text-base font-semibold text-slate-300 hover:border-indigo-500 transition-colors">Grande</button>
+            <button onclick="changeFontSize('xl')" id="fontBtn-xl" class="py-2 px-3 rounded bg-slate-900 border border-slate-800 text-lg font-semibold text-slate-300 hover:border-indigo-500 transition-colors">Enorme</button>
+          </div>
+        </div>
+
+        <!-- Personalizzazione Colori Colonne -->
+        <div class="bg-slate-950 p-4 rounded-lg border border-slate-800 space-y-3">
+          <h4 class="text-xs font-bold text-indigo-400 uppercase tracking-wider">Colori delle Fasi / Colonne</h4>
+          <p class="text-xs text-slate-400">Modifica lo stile visivo di ciascuna colonna del workflow.</p>
+          
+          <div id="columnsColorSettingsList" class="space-y-2 max-h-56 overflow-y-auto pr-2">
+            <!-- Popolato via JS -->
+          </div>
+        </div>
+      </div>
+
+      <div class="p-4 border-t border-slate-800 bg-slate-950 flex justify-between items-center">
+        <button onclick="playSound('click'); resetDefaultSettings();" class="text-xs text-slate-400 hover:text-red-400 transition-colors underline">
+          Ripristina Predefiniti
+        </button>
+        <button onclick="playSound('success'); saveSettings();" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-5 py-2 rounded-lg text-xs active:scale-95 transition-transform shadow-lg shadow-indigo-900/20">
+          Salva e Applica
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- MODAL: DETTAGLIO SCHEDA -->
   <div id="detailModal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
     <div class="bg-slate-900 border border-slate-800 rounded-xl w-full max-w-5xl max-h-[92vh] flex flex-col overflow-hidden shadow-2xl">
@@ -172,13 +247,13 @@
           <span id="detailBadge" class="px-2 py-0.5 rounded text-xs font-bold text-white uppercase"></span>
           <h2 class="text-lg font-bold">Dettaglio Commessa</h2>
         </div>
-        <button onclick="closeModal('detailModal')" class="text-slate-400 hover:text-slate-200 bg-slate-800 rounded-full p-1">
+        <button onclick="playSound('click'); closeModal('detailModal');" class="text-slate-400 hover:text-slate-200 bg-slate-800 rounded-full p-1">
           <i data-lucide="x" class="w-5 h-5"></i>
         </button>
       </div>
       
       <div class="p-5 overflow-y-auto space-y-5 flex-1 text-sm">
-        <!-- Modifica Anagrafica -->
+        <!-- Modifica Anagrafica & Colore Singola Commessa -->
         <div class="space-y-3 bg-slate-950 p-3.5 rounded-lg border border-slate-800">
           <div>
             <label class="text-[10px] text-indigo-400 font-semibold uppercase tracking-wider block mb-1">Cliente / Titolo Progetto</label>
@@ -207,8 +282,21 @@
               <input type="text" id="editCustomJobType" placeholder="Specifica nuovo tipo..." class="hidden mt-2 w-full bg-slate-900 border border-indigo-500 rounded px-3 py-1.5 text-slate-200 text-xs focus:outline-none">
             </div>
           </div>
-          <button onclick="saveCardEdits()" class="bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-300 border border-indigo-500/30 text-xs px-3 py-1.5 rounded font-semibold flex items-center gap-1.5 transition-colors">
-            <i data-lucide="save" class="w-3.5 h-3.5"></i> Aggiorna Anagrafica e Tipo Lavoro
+          
+          <!-- Selezione Colore Evidenziazione Scheda -->
+          <div class="pt-2 border-t border-slate-900 flex items-center justify-between">
+            <div>
+              <label class="text-[10px] text-indigo-400 font-semibold uppercase tracking-wider block">Colore Evidenziazione Scheda</label>
+              <p class="text-[10px] text-slate-400">Assegna un colore personalizzato a questa specifica commessa (il testo si adatterà automaticamente in contrasto).</p>
+            </div>
+            <div class="flex items-center gap-2">
+              <input type="color" id="editCardColor" class="w-9 h-9 rounded bg-transparent cursor-pointer border border-slate-700">
+              <button onclick="resetCardCustomColor()" class="text-xs bg-slate-900 hover:bg-slate-800 text-slate-300 px-2.5 py-1.5 rounded border border-slate-700">Predefinito</button>
+            </div>
+          </div>
+
+          <button onclick="playSound('success'); saveCardEdits();" class="bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-300 border border-indigo-500/30 text-xs px-3 py-1.5 rounded font-semibold flex items-center gap-1.5 transition-colors mt-2">
+            <i data-lucide="save" class="w-3.5 h-3.5"></i> Aggiorna Anagrafica e Colore
           </button>
         </div>
 
@@ -216,7 +304,7 @@
         <div class="space-y-3 bg-slate-950 p-3.5 rounded-lg border border-slate-800">
           <div class="flex justify-between items-center">
             <label class="text-xs text-indigo-400 font-bold uppercase tracking-wider block">Dettagli Articoli & Preventivo</label>
-            <button onclick="addArticleRow()" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs px-2.5 py-1 rounded font-semibold flex items-center gap-1 active:scale-95 transition-transform shadow">
+            <button onclick="playSound('click'); addArticleRow();" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs px-2.5 py-1 rounded font-semibold flex items-center gap-1 active:scale-95 transition-transform shadow">
               <i data-lucide="plus" class="w-3.5 h-3.5"></i> Aggiungi Riga
             </button>
           </div>
@@ -242,7 +330,7 @@
           </div>
 
           <div class="flex justify-between items-center pt-3 border-t border-slate-800 flex-wrap gap-3">
-            <button onclick="saveArticlesEdits()" class="bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-300 border border-indigo-500/30 text-xs px-3 py-1.5 rounded font-semibold flex items-center gap-1.5 transition-colors">
+            <button onclick="playSound('success'); saveArticlesEdits();" class="bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-300 border border-indigo-500/30 text-xs px-3 py-1.5 rounded font-semibold flex items-center gap-1.5 transition-colors">
               <i data-lucide="save" class="w-3.5 h-3.5"></i> Salva Articoli
             </button>
             <div class="flex gap-4 text-right">
@@ -288,14 +376,14 @@
 
       <!-- Footer -->
       <div class="p-4 border-t border-slate-800 bg-slate-950 flex justify-between gap-3">
-        <button onclick="deleteCurrentCard()" class="bg-red-950/40 hover:bg-red-900/60 text-red-400 border border-red-900/50 px-4 py-2 rounded-lg font-semibold flex items-center gap-2 active:scale-95 transition-all text-xs">
+        <button onclick="playSound('delete'); deleteCurrentCard();" class="bg-red-950/40 hover:bg-red-900/60 text-red-400 border border-red-900/50 px-4 py-2 rounded-lg font-semibold flex items-center gap-2 active:scale-95 transition-all text-xs">
           <i data-lucide="trash-2" class="w-4 h-4"></i> Elimina
         </button>
         <div class="flex gap-2">
-          <button onclick="printCard()" class="bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded-lg font-semibold flex items-center gap-2 active:scale-95 transition-all text-xs">
+          <button onclick="playSound('click'); printCard();" class="bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded-lg font-semibold flex items-center gap-2 active:scale-95 transition-all text-xs">
             <i data-lucide="printer" class="w-4 h-4"></i> Stampa Scheda
           </button>
-          <button onclick="closeModal('detailModal')" class="bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-2 rounded-lg font-semibold active:scale-95 transition-all text-xs shadow-lg shadow-indigo-900/20">
+          <button onclick="playSound('click'); closeModal('detailModal');" class="bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-2 rounded-lg font-semibold active:scale-95 transition-all text-xs shadow-lg shadow-indigo-900/20">
             Chiudi Scheda
           </button>
         </div>
@@ -308,7 +396,7 @@
     <div class="bg-slate-900 border border-slate-800 rounded-xl w-full max-w-md p-5 shadow-2xl max-h-[92vh] overflow-y-auto">
       <div class="flex justify-between items-center mb-4">
         <h3 class="font-bold text-lg text-slate-100">Nuova Commessa SGA</h3>
-        <button onclick="closeModal('addCardModal')" class="text-slate-400 hover:text-slate-200 bg-slate-800 rounded-full p-1">
+        <button onclick="playSound('click'); closeModal('addCardModal');" class="text-slate-400 hover:text-slate-200 bg-slate-800 rounded-full p-1">
           <i data-lucide="x" class="w-4 h-4"></i>
         </button>
       </div>
@@ -390,7 +478,7 @@
         <h3 class="font-bold text-lg text-slate-100 flex items-center gap-2">
           <i data-lucide="settings" class="w-5 h-5 text-indigo-400"></i> Impostazioni Cloud
         </h3>
-        <button onclick="closeModal('cloudModal')" class="text-slate-400 hover:text-slate-200 bg-slate-800 rounded-full p-1">
+        <button onclick="playSound('click'); closeModal('cloudModal');" class="text-slate-400 hover:text-slate-200 bg-slate-800 rounded-full p-1">
           <i data-lucide="x" class="w-4 h-4"></i>
         </button>
       </div>
@@ -411,10 +499,10 @@
         </div>
 
         <div class="flex gap-2 pt-2">
-          <button onclick="saveFirebaseConfig()" class="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2 px-4 rounded-lg active:scale-[0.98] transition-transform flex items-center justify-center gap-2 shadow-lg shadow-indigo-900/20">
+          <button onclick="playSound('success'); saveFirebaseConfig();" class="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2 px-4 rounded-lg active:scale-[0.98] transition-transform flex items-center justify-center gap-2 shadow-lg shadow-indigo-900/20">
             <i data-lucide="check" class="w-4 h-4"></i> Salva e Connetti
           </button>
-          <button onclick="resetFirebaseConfig()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold py-2 px-3 rounded-lg active:scale-[0.98] transition-transform text-xs" title="Disconnetti e torna a salvare in locale">
+          <button onclick="playSound('click'); resetFirebaseConfig();" class="bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold py-2 px-3 rounded-lg active:scale-[0.98] transition-transform text-xs" title="Disconnetti e torna a salvare in locale">
             Scollega
           </button>
         </div>
@@ -427,10 +515,10 @@
     <div class="absolute top-0 w-full p-4 flex justify-between items-center z-10 bg-gradient-to-b from-black/80 to-transparent">
       <div id="galleryCounter" class="text-white font-mono text-sm font-bold bg-black/50 px-3 py-1 rounded-full"></div>
       <div class="flex gap-4 items-center">
-        <button id="btnRotate" onclick="rotateGalleryImage()" class="text-white p-2 bg-slate-800 hover:bg-slate-700 rounded-full transition-colors" title="Ruota immagine">
+        <button id="btnRotate" onclick="playSound('click'); rotateGalleryImage();" class="text-white p-2 bg-slate-800 hover:bg-slate-700 rounded-full transition-colors" title="Ruota immagine">
           <i data-lucide="rotate-cw" class="w-5 h-5"></i>
         </button>
-        <button onclick="closeGallery()" class="text-white p-2 bg-slate-800 hover:bg-slate-700 rounded-full transition-colors" title="Chiudi">
+        <button onclick="playSound('click'); closeGallery();" class="text-white p-2 bg-slate-800 hover:bg-slate-700 rounded-full transition-colors" title="Chiudi">
           <i data-lucide="x" class="w-5 h-5"></i>
         </button>
       </div>
@@ -438,10 +526,10 @@
     <div class="relative w-full h-full flex items-center justify-center p-4">
       <img id="galleryImage" src="" class="max-w-full max-h-[90vh] object-contain transition-transform duration-300 bg-white shadow-2xl">
       
-      <button onclick="prevGalleryImage()" class="absolute left-4 top-1/2 -translate-y-1/2 text-white p-3 bg-slate-800/80 hover:bg-slate-700 rounded-full transition-colors" id="btnPrevGallery">
+      <button onclick="playSound('click'); prevGalleryImage();" class="absolute left-4 top-1/2 -translate-y-1/2 text-white p-3 bg-slate-800/80 hover:bg-slate-700 rounded-full transition-colors" id="btnPrevGallery">
         <i data-lucide="chevron-left" class="w-6 h-6"></i>
       </button>
-      <button onclick="nextGalleryImage()" class="absolute right-4 top-1/2 -translate-y-1/2 text-white p-3 bg-slate-800/80 hover:bg-slate-700 rounded-full transition-colors" id="btnNextGallery">
+      <button onclick="playSound('click'); nextGalleryImage();" class="absolute right-4 top-1/2 -translate-y-1/2 text-white p-3 bg-slate-800/80 hover:bg-slate-700 rounded-full transition-colors" id="btnNextGallery">
         <i data-lucide="chevron-right" class="w-6 h-6"></i>
       </button>
     </div>
@@ -457,6 +545,115 @@
     let lastScrollTime = 0;
     let arcadeTimer = null;
 
+    // --- CONFIGURAZIONE DEFAULT COLONNE E TEMI ---
+    const DEFAULT_COLUMNS_CONFIG = [
+      { id: "prev-da-fare", label: "Prev. da fare", color: "bg-orange-600/20 border-orange-500/50 text-orange-400", border: "border-l-4 border-l-orange-500" },
+      { id: "prev-inviato", label: "Prev. inviato", color: "bg-amber-600/20 border-amber-500/50 text-amber-400", border: "border-l-4 border-l-amber-500" },
+      { id: "accettato-mod", label: "Accettato/Modifica", color: "bg-yellow-600/20 border-yellow-500/50 text-yellow-300", border: "border-l-4 border-l-yellow-500" },
+      { id: "da-ordinare", label: "Da ordinare", color: "bg-rose-600/20 border-rose-500/50 text-rose-400", border: "border-l-4 border-l-rose-500" },
+      { id: "ordinato", label: "Ordinato", color: "bg-pink-600/20 border-pink-500/50 text-pink-400", border: "border-l-4 border-l-pink-500" },
+      { id: "magazzino", label: "In magazzino", color: "bg-fuchsia-600/20 border-fuchsia-500/50 text-fuchsia-400", border: "border-l-4 border-l-fuchsia-500" },
+      { id: "da-lavorare", label: "Da lavorare", color: "bg-violet-600/20 border-violet-500/50 text-violet-400", border: "border-l-4 border-l-violet-500" },
+      { id: "in-lavorazione", label: "In lavorazione", color: "bg-cyan-600/20 border-cyan-500/50 text-cyan-400", border: "border-l-4 border-l-cyan-500" },
+      { id: "lavorato", label: "Lavorato", color: "bg-emerald-600/20 border-emerald-500/50 text-emerald-400", border: "border-l-4 border-l-emerald-500" },
+      { id: "consegnato", label: "Consegnato", color: "bg-teal-600/20 border-teal-500/50 text-teal-400", border: "border-l-4 border-l-teal-500" },
+      { id: "fatturato", label: "Fatturato", color: "bg-blue-600/20 border-blue-500/50 text-blue-400", border: "border-l-4 border-l-blue-500" }
+    ];
+
+    let COLUMNS_CONFIG = JSON.parse(JSON.stringify(DEFAULT_COLUMNS_CONFIG));
+
+    const COLOR_OPTIONS = [
+      { label: "Arancione", value: "bg-orange-600/20 border-orange-500/50 text-orange-400", border: "border-l-4 border-l-orange-500" },
+      { label: "Ambra", value: "bg-amber-600/20 border-amber-500/50 text-amber-400", border: "border-l-4 border-l-amber-500" },
+      { label: "Giallo", value: "bg-yellow-600/20 border-yellow-500/50 text-yellow-300", border: "border-l-4 border-l-yellow-500" },
+      { label: "Rosso / Rosa", value: "bg-rose-600/20 border-rose-500/50 text-rose-400", border: "border-l-4 border-l-rose-500" },
+      { label: "Fucsia", value: "bg-fuchsia-600/20 border-fuchsia-500/50 text-fuchsia-400", border: "border-l-4 border-l-fuchsia-500" },
+      { label: "Viola", value: "bg-violet-600/20 border-violet-500/50 text-violet-400", border: "border-l-4 border-l-violet-500" },
+      { label: "Ciano / Azzurro", value: "bg-cyan-600/20 border-cyan-500/50 text-cyan-400", border: "border-l-4 border-l-cyan-500" },
+      { label: "Verde Smeraldo", value: "bg-emerald-600/20 border-emerald-500/50 text-emerald-400", border: "border-l-4 border-l-emerald-500" },
+      { label: "Verde Teal", value: "bg-teal-600/20 border-teal-500/50 text-teal-400", border: "border-l-4 border-l-teal-500" },
+      { label: "Blu", value: "bg-blue-600/20 border-blue-500/50 text-blue-400", border: "border-l-4 border-l-blue-500" },
+      { label: "Grigio Neutro", value: "bg-slate-800/60 border-slate-700 text-slate-300", border: "border-l-4 border-l-slate-500" }
+    ];
+
+    let currentFontSize = 'md';
+
+    // --- SINTESI SUONI ARCADE / FEEDBACK ACUSTICI ---
+    let audioCtx = null;
+    function initAudio() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+    }
+
+    function playSound(type) {
+      try {
+        initAudio();
+        if (!audioCtx) return;
+        const now = audioCtx.currentTime;
+
+        if (type === 'click') {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(600, now);
+          osc.frequency.exponentialRampToValueAtTime(300, now + 0.05);
+          gain.gain.setValueAtTime(0.15, now);
+          gain.gain.linearRampToValueAtTime(0.01, now + 0.05);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start(now);
+          osc.stop(now + 0.05);
+        } else if (type === 'success') {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(523.25, now);
+          osc.frequency.setValueAtTime(659.25, now + 0.08);
+          osc.frequency.setValueAtTime(783.99, now + 0.16);
+          gain.gain.setValueAtTime(0.2, now);
+          gain.gain.linearRampToValueAtTime(0.01, now + 0.3);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start(now);
+          osc.stop(now + 0.3);
+        } else if (type === 'alert') {
+          for (let i = 0; i < 2; i++) {
+            let startT = now + (i * 0.15);
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(300, startT);
+            osc.frequency.linearRampToValueAtTime(150, startT + 0.12);
+            gain.gain.setValueAtTime(0.25, startT);
+            gain.gain.linearRampToValueAtTime(0.01, startT + 0.12);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start(startT);
+            osc.stop(startT + 0.12);
+          }
+        } else if (type === 'delete') {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = 'square';
+          osc.frequency.setValueAtTime(250, now);
+          osc.frequency.linearRampToValueAtTime(80, now + 0.2);
+          gain.gain.setValueAtTime(0.2, now);
+          gain.gain.linearRampToValueAtTime(0.01, now + 0.2);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start(now);
+          osc.stop(now + 0.2);
+        }
+      } catch (e) {
+        console.error("Audio non supportato o bloccato dal browser", e);
+      }
+    }
+    // ------------------------------------------------
+
     function checkAuth() {
       const isAuth = localStorage.getItem('workflow_sga_auth') || sessionStorage.getItem('workflow_sga_auth');
       const loginScreen = document.getElementById('loginScreen');
@@ -471,6 +668,7 @@
 
     function handleLogin(event) {
       event.preventDefault(); 
+      playSound('success');
       const pwInput = document.getElementById('loginPassword').value.trim();
       const remember = document.getElementById('rememberMe').checked;
       const errorMsg = document.getElementById('loginError');
@@ -485,6 +683,7 @@
         document.getElementById('loginScreen').classList.add('hidden');
         init();
       } else {
+        playSound('alert');
         errorMsg.classList.remove('hidden');
         document.getElementById('loginPassword').value = '';
       }
@@ -498,25 +697,162 @@
       }
     }
 
-    const COLUMNS_CONFIG = [
-      { id: "prev-da-fare", label: "Prev. da fare", color: "bg-orange-600/20 border-orange-500/50 text-orange-400", border: "border-l-4 border-l-orange-500" },
-      { id: "prev-inviato", label: "Prev. inviato", color: "bg-amber-600/20 border-amber-500/50 text-amber-400", border: "border-l-4 border-l-amber-500" },
-      { id: "accettato-mod", label: "Accettato/Modifica", color: "bg-yellow-600/20 border-yellow-500/50 text-yellow-300", border: "border-l-4 border-l-yellow-500" },
-      { id: "da-ordinare", label: "Da ordinare", color: "bg-rose-600/20 border-rose-500/50 text-rose-400", border: "border-l-4 border-l-rose-500" },
-      { id: "ordinato", label: "Ordinato", color: "bg-pink-600/20 border-pink-500/50 text-pink-400", border: "border-l-4 border-l-pink-500" },
-      { id: "magazzino", label: "In magazzino", color: "bg-fuchsia-600/20 border-fuchsia-500/50 text-fuchsia-400", border: "border-l-4 border-l-fuchsia-500" },
-      { id: "da-lavorare", label: "Da lavorare", color: "bg-violet-600/20 border-violet-500/50 text-violet-400", border: "border-l-4 border-l-violet-500" },
-      { id: "in-lavorazione", label: "In lavorazione", color: "bg-cyan-600/20 border-cyan-500/50 text-cyan-400", border: "border-l-4 border-l-cyan-500" },
-      { id: "lavorato", label: "Lavorato", color: "bg-emerald-600/20 border-emerald-500/50 text-emerald-400", border: "border-l-4 border-l-emerald-500" },
-      { id: "consegnato", label: "Consegnato", color: "bg-teal-600/20 border-teal-500/50 text-teal-400", border: "border-l-4 border-l-teal-500" },
-      { id: "fatturato", label: "Fatturato", color: "bg-blue-600/20 border-blue-500/50 text-blue-400", border: "border-l-4 border-l-blue-500" }
-    ];
-
     let state = { cards: [] };
     let activeCardId = null;
     let currentGalleryIndex = 0;
     let db = null; 
     let tempFormFile = null;
+
+    // --- GESTIONE LOGO AZIENDALE ---
+    function loadCompanyLogo() {
+      const savedLogo = localStorage.getItem('workflow_sga_company_logo');
+      const defaultIcon = document.getElementById('logoDefaultIcon');
+      const logoImg = document.getElementById('logoImageDisplay');
+      const logoContainer = document.getElementById('companyLogoContainer');
+      const settingsBox = document.getElementById('settingsLogoPreviewBox');
+
+      if (savedLogo) {
+        if (defaultIcon) defaultIcon.classList.add('hidden');
+        if (logoImg) {
+          logoImg.src = savedLogo;
+          logoImg.classList.remove('hidden');
+        }
+        if (logoContainer) {
+          logoContainer.classList.remove('bg-indigo-600');
+          logoContainer.style.background = 'transparent';
+        }
+        if (settingsBox) {
+          settingsBox.innerHTML = `<img src="${savedLogo}" class="max-h-full max-w-full object-contain">`;
+        }
+      } else {
+        if (defaultIcon) defaultIcon.classList.remove('hidden');
+        if (logoImg) logoImg.classList.add('hidden');
+        if (logoContainer) logoContainer.className = "relative group cursor-pointer bg-indigo-600 p-2 rounded-lg text-white shadow-lg shadow-indigo-900/20 hide-in-master flex items-center justify-center";
+        if (settingsBox) settingsBox.innerHTML = `<span class="text-[10px] text-slate-500">Nessun Logo</span>`;
+      }
+    }
+
+    function uploadCompanyLogo(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const base64Logo = e.target.result;
+        localStorage.setItem('workflow_sga_company_logo', base64Logo);
+        loadCompanyLogo();
+        playSound('success');
+        alert("Logo aziendale caricato con successo!");
+      };
+      reader.readAsDataURL(file);
+      event.target.value = '';
+    }
+
+    function removeCompanyLogo() {
+      if (confirm("Vuoi rimuovere il logo aziendale e ripristinare l'icona predefinita?")) {
+        localStorage.removeItem('workflow_sga_company_logo');
+        loadCompanyLogo();
+        playSound('delete');
+      }
+    }
+
+    // --- GESTIONE IMPOSTAZIONI UTENTE ---
+    function loadUserSettings() {
+      loadCompanyLogo();
+      const savedCols = localStorage.getItem('workflow_sga_columns_config');
+      if (savedCols) {
+        try { COLUMNS_CONFIG = JSON.parse(savedCols); } catch(e){}
+      }
+      const savedFont = localStorage.getItem('workflow_sga_fontsize');
+      if (savedFont) {
+        currentFontSize = savedFont;
+      }
+      applyFontSize(currentFontSize);
+    }
+
+    function applyFontSize(size) {
+      currentFontSize = size;
+      const body = document.body;
+      body.classList.remove('font-size-sm', 'font-size-md', 'font-size-lg', 'font-size-xl');
+      body.classList.add(`font-size-${size}`);
+      
+      ['sm', 'md', 'lg', 'xl'].forEach(s => {
+        const btn = document.getElementById(`fontBtn-${s}`);
+        if (btn) {
+          if (s === size) {
+            btn.className = "py-2 px-3 rounded bg-indigo-600 text-white font-bold border border-indigo-500 shadow transition-colors";
+          } else {
+            btn.className = "py-2 px-3 rounded bg-slate-900 border border-slate-800 text-slate-300 hover:border-indigo-500 transition-colors";
+          }
+        }
+      });
+    }
+
+    function changeFontSize(size) {
+      playSound('click');
+      applyFontSize(size);
+    }
+
+    function openSettingsModal() {
+      const container = document.getElementById('columnsColorSettingsList');
+      container.innerHTML = '';
+
+      COLUMNS_CONFIG.forEach(col => {
+        const row = document.createElement('div');
+        row.className = "flex items-center justify-between bg-slate-900 p-2.5 rounded border border-slate-800 gap-3";
+        
+        let optionsHtml = COLOR_OPTIONS.map(opt => {
+          const selected = opt.value === col.color ? 'selected' : '';
+          return `<option value="${opt.label}" ${selected}>${opt.label}</option>`;
+        }).join('');
+
+        row.innerHTML = `
+          <div class="font-semibold text-xs text-slate-200 truncate w-1/3">${col.label}</div>
+          <div class="w-2/3">
+            <select id="colColorSelect-${col.id}" class="w-full bg-slate-950 border border-slate-700 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">
+              ${optionsHtml}
+            </select>
+          </div>
+        `;
+        container.appendChild(row);
+      });
+
+      openModal('settingsModal');
+    }
+
+    function saveSettings() {
+      COLUMNS_CONFIG.forEach(col => {
+        const select = document.getElementById(`colColorSelect-${col.id}`);
+        if (select) {
+          const selectedLabel = select.value;
+          const matchedOpt = COLOR_OPTIONS.find(o => o.label === selectedLabel);
+          if (matchedOpt) {
+            col.color = matchedOpt.value;
+            col.border = matchedOpt.border;
+          }
+        }
+      });
+
+      localStorage.setItem('workflow_sga_columns_config', JSON.stringify(COLUMNS_CONFIG));
+      localStorage.setItem('workflow_sga_fontsize', currentFontSize);
+      
+      closeModal('settingsModal');
+      renderBoard();
+      alert("Impostazioni salvate con successo!");
+    }
+
+    function resetDefaultSettings() {
+      if (confirm("Vuoi ripristinare i colori e le impostazioni predefinite?")) {
+        COLUMNS_CONFIG = JSON.parse(JSON.stringify(DEFAULT_COLUMNS_CONFIG));
+        currentFontSize = 'md';
+        localStorage.removeItem('workflow_sga_columns_config');
+        localStorage.removeItem('workflow_sga_fontsize');
+        applyFontSize('md');
+        closeModal('settingsModal');
+        renderBoard();
+        alert("Impostazioni ripristinate ai valori predefiniti.");
+      }
+    }
+    // ------------------------------------
 
     // --- CHECK SCADENZE & ARCADE ALERT ---
     function checkDueSoonCommissions() {
@@ -543,6 +879,7 @@
     }
 
     function showArcadeAlert(cards) {
+      playSound('alert');
       const listEl = document.getElementById('arcadeAlertList');
       listEl.innerHTML = '';
 
@@ -599,6 +936,7 @@
     }
 
     function closeArcadeAlert() {
+      playSound('click');
       document.getElementById('arcadeAlertModal').classList.add('hidden');
       if (arcadeTimer) {
         clearTimeout(arcadeTimer);
@@ -640,15 +978,15 @@
           if (autoScrollPause > 0) {
             autoScrollPause -= elapsed;
           } else {
-            const pxToScroll = elapsed * 0.04;
+            const pxToScroll = elapsed * 0.08;
             board.scrollLeft += (pxToScroll * autoScrollDir);
 
             if (autoScrollDir === 1 && board.scrollLeft >= (board.scrollWidth - board.clientWidth - 1)) {
               autoScrollDir = -1;
-              autoScrollPause = 2500; 
+              autoScrollPause = 2000; 
             } else if (autoScrollDir === -1 && board.scrollLeft <= 0) {
               autoScrollDir = 1;
-              autoScrollPause = 2500;
+              autoScrollPause = 2000;
             }
           }
         }
@@ -708,6 +1046,7 @@
     }
 
     function saveFirebaseConfig() {
+      playSound('success');
       const apiKey = document.getElementById('cfgApiKey').value.trim();
       const projectId = document.getElementById('cfgProjectId').value.trim();
       const imgbbKey = document.getElementById('cfgImgbbKey').value.trim();
@@ -749,7 +1088,7 @@
           }
         });
         
-        state.cards.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
+        state.cards.sort((a,b) => (a.order || 0) - (b.order || 0) || new Date(b.createdAt) - new Date(a.createdAt));
         
         const board = document.getElementById('board');
         const currentScroll = board ? board.scrollLeft : 0;
@@ -948,6 +1287,7 @@
         return p;
       });
       if (!Array.isArray(card.history)) card.history = [];
+      if (card.order === undefined) card.order = 0;
       if (!Array.isArray(card.articles)) {
         card.articles = [];
         if (card.notes && card.notes.trim()) {
@@ -1009,13 +1349,16 @@
                  count++;
                }
             });
-            state.cards.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
+            state.cards.sort((a,b) => (a.order || 0) - (b.order || 0));
             saveLocal(); 
+            playSound('success');
             alert(`Backup ripristinato con successo! Sono state importate ${count} commesse.`);
           } else {
+            playSound('alert');
             alert("File non valido.");
           }
         } catch(err) {
+          playSound('alert');
           alert("Errore durante la lettura del file.");
         }
       };
@@ -1024,7 +1367,9 @@
     }
 
     function init() {
+      loadUserSettings();
       loadState();
+      state.cards.sort((a,b) => (a.order || 0) - (b.order || 0));
       renderBoard();
       initFirebase();
       lucide.createIcons();
@@ -1060,6 +1405,8 @@
 
       columnsToRender.forEach(col => {
         const colCards = state.cards.filter(c => c && c.stage === col.id);
+        colCards.sort((a,b) => (a.order || 0) - (b.order || 0));
+
         const colEl = document.createElement('div');
         colEl.className = `board-column flex flex-col h-full bg-slate-900/60 rounded-xl border border-slate-800 shrink-0 overflow-hidden`;
         colEl.innerHTML = `
@@ -1074,6 +1421,17 @@
         board.appendChild(colEl);
       });
       lucide.createIcons();
+    }
+
+    function getContrastTextColor(hexColor) {
+      if (!hexColor) return '#f8fafc';
+      let c = hexColor.replace('#', '');
+      if (c.length === 3) c = c.split('').map(x => x + x).join('');
+      const r = parseInt(c.substr(0, 2), 16);
+      const g = parseInt(c.substr(2, 2), 16);
+      const b = parseInt(c.substr(4, 2), 16);
+      const yiq = (r * 299 + g * 587 + b * 114) / 1000;
+      return yiq >= 128 ? '#0f172a' : '#f8fafc';
     }
 
     function createCardHTML(card) {
@@ -1092,8 +1450,23 @@
 
       const urgentClass = isUrgent ? 'card-urgent' : '';
 
+      let customCardStyle = '';
+      let customTextStyle = '';
+      let customSubTextStyle = 'text-slate-400';
+      if (card.customColor) {
+        const contrastColor = getContrastTextColor(card.customColor);
+        customCardStyle = `background-color: ${card.customColor}; border-color: ${card.customColor};`;
+        customTextStyle = `color: ${contrastColor};`;
+        customSubTextStyle = '';
+        if (contrastColor === '#0f172a') {
+          customSubTextStyle = 'text-slate-800 font-semibold';
+        } else {
+          customSubTextStyle = 'text-slate-200';
+        }
+      }
+
       const deliveryHTML = card.deliveryDate 
-        ? `<div class="flex items-center gap-1.5 mt-1.5 mb-1 text-[11px] font-bold ${isUrgent ? 'text-red-400 bg-red-950/40 border border-red-900/60 animate-pulse' : 'text-orange-400 bg-orange-950/30 border border-orange-900/50'} px-2 py-1 rounded w-fit">
+        ? `<div class="flex items-center gap-1.5 mt-1.5 mb-1 text-[11px] font-bold ${isUrgent && !card.customColor ? 'text-red-400 bg-red-950/40 border border-red-900/60 animate-pulse' : ''} px-2 py-1 rounded w-fit" style="${card.customColor ? `background: rgba(0,0,0,0.15); ${customTextStyle}` : ''}">
              <i data-lucide="calendar" class="w-3.5 h-3.5"></i> Consegna: ${new Date(card.deliveryDate).toLocaleDateString('it-IT')}
            </div>` 
         : '';
@@ -1110,18 +1483,26 @@
       const cardIdShort = card.id ? card.id.slice(-4).toUpperCase() : '0000';
 
       return `
-        <div draggable="true" ondragstart="handleDragStart(event)" id="card-${card.id}" data-id="${card.id}" onclick="${isMasterMode ? '' : `openDetail('${card.id}')`}"
+        <div draggable="true" ondragstart="handleDragStart(event)" id="card-${card.id}" data-id="${card.id}" onclick="${isMasterMode ? '' : `playSound('click'); openDetail('${card.id}')`}"
+             style="${customCardStyle}"
              class="bg-slate-955 border border-slate-800 hover:border-indigo-500/50 p-3 rounded-lg shadow-md cursor-pointer transition-all active:scale-95 space-y-2 group relative ${urgentClass}">
           <div class="flex justify-between items-start gap-1">
             <span class="text-[10px] px-1.5 py-0.5 rounded font-medium ${badgeStyle}">${card.jobType || 'Generico'}</span>
-            <span class="text-[9px] text-slate-500">${card.createdAt ? new Date(card.createdAt).toLocaleDateString('it-IT', {day: 'numeric', month: 'short'}) : ''}</span>
+            <span class="text-[9px]" style="${card.customColor ? customTextStyle : 'color: #64748b;'}">${card.createdAt ? new Date(card.createdAt).toLocaleDateString('it-IT', {day: 'numeric', month: 'short'}) : ''}</span>
           </div>
-          <h4 class="font-bold text-sm text-slate-100 leading-snug truncate group-hover:text-indigo-300 transition-colors">${card.title || 'Senza Titolo'}</h4>
-          ${card.client ? `<p class="text-[11px] text-slate-400 truncate flex items-center gap-1"><i data-lucide="user" class="w-3 h-3 text-slate-500"></i> ${card.client}</p>` : ''}
+          <h4 class="font-bold text-sm leading-snug truncate transition-colors" style="${card.customColor ? customTextStyle : 'color: #f8fafc;'}">${card.title || 'Senza Titolo'}</h4>
+          ${card.client ? `<p class="text-[11px] truncate flex items-center gap-1 ${customSubTextStyle}"><i data-lucide="user" class="w-3 h-3"></i> ${card.client}</p>` : ''}
           ${deliveryHTML}
           ${thumbnailHTML}
-          <div class="pt-2 border-t border-slate-800/80 flex justify-between items-center" onclick="event.stopPropagation()">
-            <span class="text-[9px] text-slate-600 font-mono">#${cardIdShort}</span>
+          <div class="pt-2 border-t flex justify-between items-center" style="${card.customColor ? 'border-color: rgba(0,0,0,0.15);' : 'border-color: #1e293b;'}" onclick="event.stopPropagation()">
+            <div class="flex items-center gap-1">
+              <span class="text-[9px] font-mono" style="${card.customColor ? customTextStyle : 'color: #475569;'}">#${cardIdShort}</span>
+              <!-- Tasti Riordinamento Verticale -->
+              <div class="hide-in-master flex items-center bg-black/20 rounded ml-2">
+                <button onclick="moveCardVertical('${card.id}', -1)" class="p-0.5 hover:bg-black/30 rounded text-xs px-1" title="Sposta su" style="${card.customColor ? customTextStyle : 'color: #cbd5e1;'}">▲</button>
+                <button onclick="moveCardVertical('${card.id}', 1)" class="p-0.5 hover:bg-black/30 rounded text-xs px-1" title="Sposta giù" style="${card.customColor ? customTextStyle : 'color: #cbd5e1;'}">▼</button>
+              </div>
+            </div>
             <div class="flex gap-1.5 hide-in-master">
               <button onclick="moveCardStep('${card.id}', -1)" class="p-1 rounded bg-slate-900 hover:bg-slate-700 text-slate-400 hover:text-slate-200 transition-colors"><i data-lucide="chevron-left" class="w-3.5 h-3.5"></i></button>
               <button onclick="moveCardStep('${card.id}', 1)" class="p-1 rounded bg-slate-900 hover:bg-slate-700 text-slate-400 hover:text-slate-200 transition-colors"><i data-lucide="chevron-right" class="w-3.5 h-3.5"></i></button>
@@ -1129,6 +1510,33 @@
           </div>
         </div>
       `;
+    }
+
+    function moveCardVertical(cardId, direction) {
+      playSound('click');
+      const card = state.cards.find(c => c.id === cardId);
+      if (!card) return;
+
+      const colCards = state.cards.filter(c => c.stage === card.stage);
+      colCards.sort((a, b) => (a.order || 0) - (b.order || 0));
+
+      const currentIndex = colCards.findIndex(c => c.id === cardId);
+      const targetIndex = currentIndex + direction;
+
+      if (targetIndex >= 0 && targetIndex < colCards.length) {
+        const tempOrder = colCards[currentIndex].order;
+        colCards[currentIndex].order = colCards[targetIndex].order;
+        colCards[targetIndex].order = tempOrder;
+
+        if (colCards[currentIndex].order === colCards[targetIndex].order) {
+          colCards[currentIndex].order = targetIndex;
+          colCards[targetIndex].order = currentIndex;
+        }
+
+        saveLocal();
+        syncCardToCloud(colCards[currentIndex]);
+        syncCardToCloud(colCards[targetIndex]);
+      }
     }
 
     function getJobTypeClass(type) {
@@ -1162,7 +1570,9 @@
     function changeCardStage(cardId, targetStageId) {
       const card = state.cards.find(c => c.id === cardId);
       if (card && card.stage !== targetStageId) {
+        playSound('click');
         card.stage = targetStageId;
+        card.order = Date.now();
         const stageLabel = COLUMNS_CONFIG.find(col => col.id === targetStageId)?.label || targetStageId;
         if (!Array.isArray(card.history)) card.history = [];
         card.history.push({ stage: targetStageId, label: stageLabel, timestamp: new Date().toISOString() });
@@ -1193,6 +1603,17 @@
       }
     }
 
+    function resetCardCustomColor() {
+      const card = state.cards.find(c => c.id === activeCardId);
+      if (card) {
+        card.customColor = '';
+        document.getElementById('editCardColor').value = '#4f46e5';
+        saveLocal();
+        syncCardToCloud(card);
+        alert("Colore personalizzato rimosso.");
+      }
+    }
+
     function handleFormFileSelect(event) {
       const file = event.target.files[0];
       if (!file) return;
@@ -1204,6 +1625,7 @@
 
     async function createNewCard(event) {
       event.preventDefault();
+      playSound('success');
       const title = document.getElementById('formTitle').value.trim();
       const client = document.getElementById('formClient') ? document.getElementById('formClient').value.trim() : '';
       const deliveryDate = document.getElementById('formDeliveryDate') ? document.getElementById('formDeliveryDate').value : '';
@@ -1273,6 +1695,7 @@
         title, client, jobType, deliveryDate,
         articles: extractedArticles,
         stage: initialStage,
+        order: Date.now(),
         createdAt: new Date().toISOString(),
         photos: initialPhotos,
         history: [{ stage: initialStage, label: `Inserito in "${initialStageLabel}"`, timestamp: new Date().toISOString() }]
@@ -1295,6 +1718,7 @@
       const newTitle = document.getElementById('editTitle').value.trim();
       const newClient = document.getElementById('editClient').value.trim();
       const newDeliveryDate = document.getElementById('editDeliveryDate').value;
+      const newCustomColor = document.getElementById('editCardColor').value;
       let newJobType = document.getElementById('editJobType').value;
       if (newJobType === 'custom') {
         newJobType = document.getElementById('editCustomJobType').value.trim() || card.jobType;
@@ -1305,9 +1729,12 @@
       card.client = newClient;
       card.deliveryDate = newDeliveryDate;
       card.jobType = newJobType;
+      card.customColor = newCustomColor;
+
       saveLocal();
       syncCardToCloud(card);
-      alert("Anagrafica e tipo lavorazione aggiornati con successo!");
+      playSound('success');
+      alert("Anagrafica, colore e tipo lavorazione aggiornati con successo!");
     }
 
     function renderArticlesTable(card) {
@@ -1337,7 +1764,7 @@
           <td class="py-1.5 px-1"><input type="number" step="any" value="${art.tax !== undefined ? art.tax : 22}" data-field="tax" data-index="${idx}" oninput="updateArticleField(this)" placeholder="22" class="w-full bg-slate-900 border border-slate-700 rounded px-1 py-1 text-slate-200 text-xs text-center focus:outline-none focus:border-indigo-500"></td>
           <td class="py-1.5 px-1 text-right font-mono text-slate-300 align-middle"><span id="row-unit-taxed-${idx}">€ ${unitTaxPrice.toFixed(2)}</span></td>
           <td class="py-1.5 px-2 text-right font-mono font-bold text-slate-300 align-middle"><span id="row-total-${idx}">€ ${rowTotalTaxed.toFixed(2)}</span></td>
-          <td class="py-1.5 px-1 text-center align-middle"><button onclick="removeArticleRow(${idx})" class="text-red-400 hover:text-red-300 p-1"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button></td>
+          <td class="py-1.5 px-1 text-center align-middle"><button onclick="playSound('delete'); removeArticleRow(${idx})" class="text-red-400 hover:text-red-300 p-1"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button></td>
         `;
         tbody.appendChild(tr);
       });
@@ -1422,6 +1849,7 @@
       if (!card) return;
       saveLocal();
       syncCardToCloud(card);
+      playSound('success');
       alert("Articoli e preventivo aggiornati con successo!");
     }
 
@@ -1438,6 +1866,7 @@
       document.getElementById('editTitle').value = card.title || '';
       document.getElementById('editClient').value = card.client || '';
       document.getElementById('editDeliveryDate').value = card.deliveryDate || '';
+      document.getElementById('editCardColor').value = card.customColor || '#4f46e5';
       
       const jobSelect = document.getElementById('editJobType');
       const customJobInput = document.getElementById('editCustomJobType');
@@ -1489,8 +1918,8 @@
           const thumb = document.createElement('div');
           thumb.className = "relative group w-full h-24 bg-slate-900 rounded border border-slate-700 overflow-hidden flex items-center justify-center cursor-pointer";
           thumb.innerHTML = `
-            <img src="${photoObj.image}" onclick="openGallery(${index})" style="transform: rotate(${photoObj.rotation || 0}deg);" class="min-w-full min-h-full object-cover bg-white">
-            <button onclick="removePhoto(event, ${index})" class="absolute top-1 right-1 bg-red-600/95 hover:bg-red-500 text-white p-1.5 rounded-md shadow-lg active:scale-90 opacity-0 group-hover:opacity-100 transition-opacity"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+            <img src="${photoObj.image}" onclick="playSound('click'); openGallery(${index})" style="transform: rotate(${photoObj.rotation || 0}deg);" class="min-w-full min-h-full object-cover bg-white">
+            <button onclick="playSound('delete'); removePhoto(event, ${index})" class="absolute top-1 right-1 bg-red-600/95 hover:bg-red-500 text-white p-1.5 rounded-md shadow-lg active:scale-90 opacity-0 group-hover:opacity-100 transition-opacity"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
           `;
           container.appendChild(thumb);
         });
@@ -1575,6 +2004,7 @@
       renderAttachments(card);
       syncCardToCloud(card);
       event.target.value = '';
+      playSound('success');
       alert("PDF importato e articoli aggiornati automaticamente con successo!");
     }
 
