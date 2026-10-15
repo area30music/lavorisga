@@ -117,17 +117,13 @@
   <!-- TOP BAR -->
   <header class="bg-slate-900 border-b border-slate-800 px-4 py-2.5 flex justify-between items-center shrink-0 flex-wrap gap-3 z-10 relative">
     <div class="flex items-center space-x-3">
-      <!-- LOGO AZIENDALE GRANDE (ALTEZZA BLOCO TESTI) -->
-      <div id="companyLogoContainer" class="relative group cursor-pointer bg-indigo-600 rounded-lg text-white shadow-lg shadow-indigo-900/20 hide-in-master flex items-center justify-center overflow-hidden shrink-0" style="width: 130px; height: 48px;" title="Clicca per caricare il logo aziendale PNG">
+      <!-- LOGO AZIENDALE GRANDE -->
+      <div id="companyLogoContainer" class="relative group cursor-pointer bg-indigo-600 rounded-lg text-white shadow-lg shadow-indigo-900/20 flex items-center justify-center overflow-hidden shrink-0" style="width: 130px; height: 48px;" title="Clicca per caricare il logo aziendale PNG">
         <div id="logoDefaultIcon" class="flex items-center justify-center"><i data-lucide="layers" class="w-6 h-6"></i></div>
         <img id="logoImageDisplay" src="" class="hidden w-full h-full object-contain p-1">
-        <input type="file" accept="image/png, image/jpeg" class="absolute inset-0 opacity-0 cursor-pointer" onchange="uploadCompanyLogo(event)" title="Carica Logo Aziendale">
+        <input type="file" accept="image/png, image/jpeg" class="absolute inset-0 opacity-0 cursor-pointer hide-in-master" onchange="uploadCompanyLogo(event)" title="Carica Logo Aziendale">
       </div>
 
-      <!-- Tasto Torna Indietro in Master Mode posizionato accanto al titolo -->
-      <button onclick="toggleMasterMode(); playSound('click');" class="show-in-master hidden bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold items-center gap-1.5 active:scale-95 transition-transform shadow" title="Torna alla schermata di programmazione">
-        <i data-lucide="arrow-left" class="w-4 h-4"></i> Torna Indietro
-      </button>
       <div>
         <h1 class="font-bold text-lg leading-tight text-white flex items-center gap-3">
           Workflow SGA
@@ -140,6 +136,19 @@
     </div>
     
     <div class="flex space-x-2 items-center">
+      <!-- WIDGET DATA E ORA -->
+      <div id="liveClockWidget" class="hidden md:flex items-center gap-1.5 bg-slate-950 border border-slate-800 px-3 py-1.5 rounded-lg text-xs font-mono text-slate-300 shadow-inner">
+        <i data-lucide="clock" class="w-3.5 h-3.5 text-indigo-400"></i>
+        <span id="headerClockTime">--:--:--</span>
+        <span class="text-slate-600">|</span>
+        <span id="headerClockDate" class="text-slate-400">--/--/----</span>
+      </div>
+
+      <!-- Tasto Torna Indietro in Master View -->
+      <button onclick="toggleMasterMode(); playSound('click');" class="show-in-master hidden bg-indigo-600 hover:bg-indigo-500 text-white px-3.5 py-2 rounded-lg text-xs font-bold items-center gap-2 active:scale-95 transition-transform shadow-lg shadow-indigo-900/30" title="Torna alla schermata di programmazione">
+        <i data-lucide="arrow-left" class="w-4 h-4"></i> Torna a Programmazione
+      </button>
+
       <button onclick="playSound('click'); logoutApp();" class="hide-in-master bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 active:scale-95 transition-transform" title="Esci dall'account">
         <i data-lucide="log-out" class="w-4 h-4"></i> Esci
       </button>
@@ -241,7 +250,7 @@
 
   <!-- MODAL: DETTAGLIO SCHEDA -->
   <div id="detailModal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-    <div class="bg-slate-900 border border-slate-800 rounded-xl w-full max-w-5xl max-h-[92vh] flex flex-col overflow-hidden shadow-2xl">
+    <div class="bg-slate-900 border border-slate-800 rounded-xl w-full max-w-6xl max-h-[92vh] flex flex-col overflow-hidden shadow-2xl">
       <div class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-850">
         <div class="flex items-center gap-2">
           <span id="detailBadge" class="px-2 py-0.5 rounded text-xs font-bold text-white uppercase"></span>
@@ -313,11 +322,13 @@
             <table class="w-full text-left text-xs">
               <thead>
                 <tr class="border-b border-slate-800 text-slate-400 uppercase text-[10px]">
+                  <th class="py-2 px-1 w-16 text-center">Sposta</th>
                   <th class="py-2 px-2 w-24">Codice</th>
                   <th class="py-2 px-2">Descrizione</th>
                   <th class="py-2 px-2 w-16 text-center">Q.tà</th>
                   <th class="py-2 px-2 w-20 text-right">Prezzo Un.</th>
                   <th class="py-2 px-2 w-16 text-center">IVA %</th>
+                  <th class="py-2 px-2 w-20 text-right">Tot. Netto</th>
                   <th class="py-2 px-2 w-20 text-right">Prezzo Ivato</th>
                   <th class="py-2 px-2 w-24 text-right">Tot. Ivato</th>
                   <th class="py-2 px-2 w-10"></th>
@@ -579,6 +590,19 @@
 
     let currentFontSize = 'md';
 
+    // --- AGGIORNAMENTO ORA E DATA IN TEMPO REALE ---
+    function updateLiveClock() {
+      const now = new Date();
+      const timeStr = now.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      const dateStr = now.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' });
+      
+      const timeEl = document.getElementById('headerClockTime');
+      const dateEl = document.getElementById('headerClockDate');
+      if (timeEl) timeEl.innerText = timeStr;
+      if (dateEl) dateEl.innerText = dateStr;
+    }
+    setInterval(updateLiveClock, 1000);
+
     // --- SINTESI SUONI ARCADE / SIRENA 2 SECONDI ---
     let audioCtx = null;
     function initAudio() {
@@ -622,7 +646,6 @@
           osc.start(now);
           osc.stop(now + 0.3);
         } else if (type === 'alert') {
-          // Sirena pulsante per esattamente 2 secondi
           if (sirenInterval) clearInterval(sirenInterval);
           let startTime = Date.now();
 
@@ -741,7 +764,7 @@
       } else {
         if (defaultIcon) defaultIcon.classList.remove('hidden');
         if (logoImg) logoImg.classList.add('hidden');
-        if (logoContainer) logoContainer.className = "relative group cursor-pointer bg-indigo-600 rounded-lg text-white shadow-lg shadow-indigo-900/20 hide-in-master flex items-center justify-center overflow-hidden shrink-0";
+        if (logoContainer) logoContainer.className = "relative group cursor-pointer bg-indigo-600 rounded-lg text-white shadow-lg shadow-indigo-900/20 flex items-center justify-center overflow-hidden shrink-0";
         if (settingsBox) settingsBox.innerHTML = `<span class="text-[10px] text-slate-500">Nessun Logo</span>`;
       }
     }
@@ -1391,6 +1414,7 @@
       renderBoard();
       initFirebase();
       lucide.createIcons();
+      updateLiveClock();
       const cfgStr = localStorage.getItem('workflow_sga_firebase_config');
       if (cfgStr) {
         try {
@@ -1767,19 +1791,25 @@
         const price = parseFloat(art.price) || 0;
         const taxRate = parseFloat(art.tax) !== undefined ? parseFloat(art.tax) : 22;
         
+        const rowTotalNet = qty * price;
         const unitTaxPrice = price * (1 + taxRate / 100);
-        const rowTotalTaxable = qty * price;
-        const rowTotalTax = rowTotalTaxable * (taxRate / 100);
-        const rowTotalTaxed = rowTotalTaxable + rowTotalTax;
+        const rowTotalTaxed = rowTotalNet * (1 + taxRate / 100);
 
         const tr = document.createElement('tr');
         tr.className = "hover:bg-slate-900/50 transition-colors";
         tr.innerHTML = `
+          <td class="py-1.5 px-1 text-center align-middle">
+            <div class="flex items-center justify-center gap-0.5 bg-slate-900 rounded p-0.5 border border-slate-800">
+              <button onclick="moveArticleRowVertical(${idx}, -1)" class="hover:bg-slate-800 text-slate-300 text-xs px-1 rounded" title="Sposta su">▲</button>
+              <button onclick="moveArticleRowVertical(${idx}, 1)" class="hover:bg-slate-800 text-slate-300 text-xs px-1 rounded" title="Sposta giù">▼</button>
+            </div>
+          </td>
           <td class="py-1.5 px-1"><input type="text" value="${art.code || ''}" data-field="code" data-index="${idx}" oninput="updateArticleField(this)" placeholder="Codice" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-xs font-mono focus:outline-none focus:border-indigo-500"></td>
           <td class="py-1.5 px-1"><input type="text" value="${art.desc || ''}" data-field="desc" data-index="${idx}" oninput="updateArticleField(this)" placeholder="Descrizione articolo o lavorazione..." class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-xs focus:outline-none focus:border-indigo-500"></td>
           <td class="py-1.5 px-1"><input type="number" step="any" value="${art.qty !== undefined ? art.qty : ''}" data-field="qty" data-index="${idx}" oninput="updateArticleField(this)" placeholder="0" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-xs text-center focus:outline-none focus:border-indigo-500"></td>
           <td class="py-1.5 px-1"><input type="number" step="any" value="${art.price !== undefined ? art.price : ''}" data-field="price" data-index="${idx}" oninput="updateArticleField(this)" placeholder="0.00" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-xs text-right focus:outline-none focus:border-indigo-500"></td>
           <td class="py-1.5 px-1"><input type="number" step="any" value="${art.tax !== undefined ? art.tax : 22}" data-field="tax" data-index="${idx}" oninput="updateArticleField(this)" placeholder="22" class="w-full bg-slate-900 border border-slate-700 rounded px-1 py-1 text-slate-200 text-xs text-center focus:outline-none focus:border-indigo-500"></td>
+          <td class="py-1.5 px-1 text-right font-mono text-slate-300 align-middle"><span id="row-net-${idx}">€ ${rowTotalNet.toFixed(2)}</span></td>
           <td class="py-1.5 px-1 text-right font-mono text-slate-300 align-middle"><span id="row-unit-taxed-${idx}">€ ${unitTaxPrice.toFixed(2)}</span></td>
           <td class="py-1.5 px-2 text-right font-mono font-bold text-slate-300 align-middle"><span id="row-total-${idx}">€ ${rowTotalTaxed.toFixed(2)}</span></td>
           <td class="py-1.5 px-1 text-center align-middle"><button onclick="playSound('delete'); removeArticleRow(${idx})" class="text-red-400 hover:text-red-300 p-1"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button></td>
@@ -1788,6 +1818,23 @@
       });
       calculateGrandTotals();
       lucide.createIcons();
+    }
+
+    function moveArticleRowVertical(idx, direction) {
+      playSound('click');
+      const card = state.cards.find(c => c.id === activeCardId);
+      if (!card || !card.articles) return;
+
+      const targetIdx = idx + direction;
+      if (targetIdx >= 0 && targetIdx < card.articles.length) {
+        const temp = card.articles[idx];
+        card.articles[idx] = card.articles[targetIdx];
+        card.articles[targetIdx] = temp;
+
+        renderArticlesTable(card);
+        saveLocal();
+        syncCardToCloud(card);
+      }
     }
 
     function updateArticleField(input) {
@@ -1803,8 +1850,12 @@
         const price = parseFloat(card.articles[idx].price) || 0;
         const taxRate = parseFloat(card.articles[idx].tax) !== undefined ? parseFloat(card.articles[idx].tax) : 22;
 
+        const rowTotalNet = qty * price;
         const unitTaxPrice = price * (1 + taxRate / 100);
-        const rowTotalTaxed = (qty * price) * (1 + taxRate / 100);
+        const rowTotalTaxed = rowTotalNet * (1 + taxRate / 100);
+
+        const netSpan = document.getElementById(`row-net-${idx}`);
+        if (netSpan) netSpan.innerText = `€ ${rowTotalNet.toFixed(2)}`;
 
         const unitTaxedSpan = document.getElementById(`row-unit-taxed-${idx}`);
         if (unitTaxedSpan) unitTaxedSpan.innerText = `€ ${unitTaxPrice.toFixed(2)}`;
@@ -2130,13 +2181,14 @@
               <td style="padding: 8px; text-align: center; font-size: 11px; color: #334155;">${art.qty !== undefined && art.qty !== '' ? art.qty : '-'}</td>
               <td style="padding: 8px; text-align: right; font-size: 11px; color: #334155;">${art.price !== undefined && art.price !== '' ? '€ ' + parseFloat(art.price).toFixed(2) : '-'}</td>
               <td style="padding: 8px; text-align: center; font-size: 11px; color: #334155;">${taxRate}%</td>
+              <td style="padding: 8px; text-align: right; font-size: 11px; color: #334155;">${(art.qty !== undefined && art.price !== undefined && art.qty !== '' && art.price !== '') ? '€ ' + sub.toFixed(2) : '-'}</td>
               <td style="padding: 8px; text-align: right; font-size: 11px; color: #334155;">${(art.qty !== undefined && art.price !== undefined && art.qty !== '' && art.price !== '') ? '€ ' + unitTaxed.toFixed(2) : '-'}</td>
               <td style="padding: 8px; text-align: right; font-size: 11px; font-weight: bold; color: #0f172a;">${(art.qty !== undefined && art.price !== undefined && art.qty !== '' && art.price !== '') ? '€ ' + rowTotalTaxed.toFixed(2) : '-'}</td>
             </tr>
           `;
         });
       } else {
-        articlesRowsHtml = `<tr><td colspan="7" style="padding: 10px; text-align: center; color: #64748b; font-size: 11px;">Nessun articolo inserito</td></tr>`;
+        articlesRowsHtml = `<tr><td colspan="8" style="padding: 10px; text-align: center; color: #64748b; font-size: 11px;">Nessun articolo inserito</td></tr>`;
       }
 
       let attachmentsPrintHtml = '';
@@ -2213,13 +2265,14 @@
               <table class="articles">
                 <thead>
                   <tr>
-                    <th style="width: 20%;">Codice</th>
+                    <th style="width: 18%;">Codice</th>
                     <th>Descrizione</th>
-                    <th style="width: 10%; text-align: center;">Q.tà</th>
-                    <th style="width: 13%; text-align: right;">Prezzo Un.</th>
-                    <th style="width: 8%; text-align: center;">IVA</th>
-                    <th style="width: 13%; text-align: right;">Pr. Ivato</th>
-                    <th style="width: 15%; text-align: right;">Tot. Ivato</th>
+                    <th style="width: 8%; text-align: center;">Q.tà</th>
+                    <th style="width: 11%; text-align: right;">Prezzo Un.</th>
+                    <th style="width: 7%; text-align: center;">IVA</th>
+                    <th style="width: 12%; text-align: right;">Tot. Netto</th>
+                    <th style="width: 12%; text-align: right;">Pr. Ivato</th>
+                    <th style="width: 14%; text-align: right;">Tot. Ivato</th>
                   </tr>
                 </thead>
                 <tbody>
