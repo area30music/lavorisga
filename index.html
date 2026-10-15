@@ -183,7 +183,7 @@
     <!-- Colonne generate via JS -->
   </main>
 
-  <!-- MODAL: IMPOSTAZIONI GRAFICHE E GENERALI (INCLUSO PROGRAMMAZIONE SVEGLIE ALERT) -->
+  <!-- MODAL: IMPOSTAZIONI GRAFICHE E GENERALI (INCLUSO PROGRAMMAZIONE SVEGLIE TIPO iPHONE) -->
   <div id="settingsModal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
     <div class="bg-slate-900 border border-slate-800 rounded-xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden shadow-2xl">
       <div class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-850">
@@ -228,21 +228,21 @@
           </div>
         </div>
 
-        <!-- PROGRAMMAZIONE SVEGLIE PER VISUALIZZAZIONE ALERT SCADENZE -->
+        <!-- PROGRAMMAZIONE SVEGLIE TIPO iPHONE PER ALERT SCADENZE -->
         <div class="bg-slate-950 p-4 rounded-lg border border-slate-800 space-y-3">
           <div class="flex justify-between items-center">
             <div>
               <h4 class="text-xs font-bold text-indigo-400 uppercase tracking-wider flex items-center gap-1.5">
-                <i data-lucide="alarm-clock" class="w-4 h-4"></i> Programmazione Sveglie Alert Scadenze
+                <i data-lucide="alarm-clock" class="w-4 h-4"></i> Gestione Sveglie Alert Scadenze
               </h4>
-              <p class="text-xs text-slate-400 mt-0.5">Imposta giorni e orari in cui il programma deve mostrarti automaticamente l'alert delle scadenze.</p>
+              <p class="text-xs text-slate-400 mt-0.5">Crea più sveglie, imposta l'orario e seleziona i giorni della settimana in stile iPhone.</p>
             </div>
             <button onclick="playSound('click'); addAlarmRule();" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs px-3 py-1.5 rounded font-semibold flex items-center gap-1 cursor-pointer transition-colors shadow">
               <i data-lucide="plus" class="w-3.5 h-3.5"></i> Aggiungi Sveglia
             </button>
           </div>
           
-          <div id="alarmsListContainer" class="space-y-2 max-h-48 overflow-y-auto pr-1">
+          <div id="alarmsListContainer" class="space-y-3 max-h-60 overflow-y-auto pr-1">
             <!-- Popolato via JS -->
           </div>
         </div>
@@ -594,7 +594,7 @@
     ];
 
     let COLUMNS_CONFIG = JSON.parse(JSON.stringify(DEFAULT_COLUMNS_CONFIG));
-    let USER_ALARMS = []; // Array di sveglie programmate [{id, day, time, active}]
+    let USER_ALARMS = []; // Array di sveglie stile iPhone [{id, time, active, days: [1,2,3,4,5]}]
 
     const COLOR_OPTIONS = [
       { label: "Arancione", value: "bg-orange-600/20 border-orange-500/50 text-orange-400", border: "border-l-4 border-l-orange-500" },
@@ -612,7 +612,7 @@
 
     let currentFontSize = 'md';
 
-    // --- AGGIORNAMENTO ORA E DATA & CONTROLLO SVEGLIE PER ALERT SCADENZE ---
+    // --- AGGIORNAMENTO ORA E DATA & CONTROLLO SVEGLIE STILE iPHONE ---
     function updateLiveClock() {
       const now = new Date();
       const timeStr = now.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
@@ -623,7 +623,6 @@
       if (timeEl) timeEl.innerText = timeStr;
       if (dateEl) dateEl.innerText = dateStr;
 
-      // Controllo sveglie programmate ogni secondo per mostrare l'alert delle scadenze nei giorni/orari impostati
       checkScheduledAlarms(now);
     }
     setInterval(updateLiveClock, 1000);
@@ -638,7 +637,7 @@
 
       if (now.getSeconds() === 0 && lastTriggeredMinute !== currentTimeStr) {
         USER_ALARMS.forEach(alarm => {
-          if (alarm.active && parseInt(alarm.day) === currentDay && alarm.time === currentTimeStr) {
+          if (alarm.active && Array.isArray(alarm.days) && alarm.days.includes(currentDay) && alarm.time === currentTimeStr) {
             lastTriggeredMinute = currentTimeStr;
             triggerAlarmAlert();
           }
@@ -647,7 +646,6 @@
     }
 
     function triggerAlarmAlert() {
-      // Mostra l'alert delle scadenze imminenti in base alla programmazione della sveglia
       const urgentCards = state.cards.filter(card => {
         if (card.stage === 'consegnato' || card.stage === 'fatturato') return false;
         if (!card.deliveryDate) return false;
@@ -659,7 +657,6 @@
         return diffDays <= 7;
       });
 
-      // Se ci sono scadenze o mostriamo tutte le commesse aperte per controllo programmato
       const cardsToDisplay = urgentCards.length > 0 ? urgentCards : state.cards.filter(card => card.stage !== 'consegnato' && card.stage !== 'fatturato');
       if (cardsToDisplay.length > 0) {
         showArcadeAlert(cardsToDisplay);
@@ -867,7 +864,7 @@
       }
     }
 
-    // --- GESTIONE IMPOSTAZIONI UTENTE & SVEGLIE ---
+    // --- GESTIONE IMPOSTAZIONI UTENTE & SVEGLIE STILE iPHONE ---
     function loadUserSettings() {
       loadCompanyLogo();
       const savedCols = localStorage.getItem('workflow_sga_columns_config');
@@ -876,7 +873,16 @@
       }
       const savedAlarms = localStorage.getItem('workflow_sga_alarms');
       if (savedAlarms) {
-        try { USER_ALARMS = JSON.parse(savedAlarms); } catch(e){ USER_ALARMS = []; }
+        try { 
+          USER_ALARMS = JSON.parse(savedAlarms); 
+          // Retrocompatibilità se c'erano vecchie sveglie col formato singolo giorno
+          USER_ALARMS = USER_ALARMS.map(a => {
+            if (!Array.isArray(a.days)) {
+              a.days = a.day !== undefined ? [parseInt(a.day)] : [1,2,3,4,5];
+            }
+            return a;
+          });
+        } catch(e){ USER_ALARMS = []; }
       }
       const savedFont = localStorage.getItem('workflow_sga_fontsize');
       if (savedFont) {
@@ -909,7 +915,7 @@
     }
 
     function addAlarmRule() {
-      USER_ALARMS.push({ id: 'a' + Date.now(), day: 1, time: "09:00", active: true });
+      USER_ALARMS.push({ id: 'a' + Date.now(), time: "09:00", active: true, days: [1, 2, 3, 4, 5] }); // Default Lun-Ven
       renderAlarmsList();
     }
 
@@ -918,10 +924,28 @@
       renderAlarmsList();
     }
 
-    function updateAlarmField(id, field, val) {
+    function updateAlarmTime(id, val) {
+      const alarm = USER_ALARMS.find(a => a.id === id);
+      if (alarm) alarm.time = val;
+    }
+
+    function toggleAlarmActive(id, val) {
+      const alarm = USER_ALARMS.find(a => a.id === id);
+      if (alarm) alarm.active = val;
+    }
+
+    function toggleAlarmDay(id, dayVal) {
+      playSound('click');
       const alarm = USER_ALARMS.find(a => a.id === id);
       if (alarm) {
-        alarm[field] = val;
+        if (!Array.isArray(alarm.days)) alarm.days = [];
+        const index = alarm.days.indexOf(dayVal);
+        if (index >= 0) {
+          alarm.days.splice(index, 1);
+        } else {
+          alarm.days.push(dayVal);
+        }
+        renderAlarmsList();
       }
     }
 
@@ -931,37 +955,52 @@
       container.innerHTML = '';
 
       if (USER_ALARMS.length === 0) {
-        container.innerHTML = `<p class="text-xs text-slate-500 italic py-2 text-center">Nessuna sveglia programmata. Clicca su "Aggiungi Sveglia".</p>`;
+        container.innerHTML = `<p class="text-xs text-slate-500 italic py-3 text-center">Nessuna sveglia impostata. Clicca su "Aggiungi Sveglia" per programmare i tuoi alert.</p>`;
         return;
       }
 
-      const daysOptions = [
-        {val: 1, label: "Lunedì"},
-        {val: 2, label: "Martedì"},
-        {val: 3, label: "Mercoledì"},
-        {val: 4, label: "Giovedì"},
-        {val: 5, label: "Venerdì"},
-        {val: 6, label: "Sabato"},
-        {val: 0, label: "Domenica"}
+      // Giorni in ordine da Lunedì a Domenica (1, 2, 3, 4, 5, 6, 0)
+      const daysDef = [
+        { val: 1, label: "L" },
+        { val: 2, label: "M" },
+        { val: 3, label: "M" },
+        { val: 4, label: "G" },
+        { val: 5, label: "V" },
+        { val: 6, label: "S" },
+        { val: 0, label: "D" }
       ];
 
       USER_ALARMS.forEach(alarm => {
-        const row = document.createElement('div');
-        row.className = "flex items-center justify-between bg-slate-900 p-2 rounded border border-slate-800 gap-2";
+        const card = document.createElement('div');
+        card.className = "bg-slate-900 p-3 rounded-lg border border-slate-800 space-y-3";
 
-        let dayOptsHtml = daysOptions.map(d => `<option value="${d.val}" ${alarm.day == d.val ? 'selected' : ''}>${d.label}</option>`).join('');
+        let daysBtnsHtml = daysDef.map(d => {
+          const isSelected = Array.isArray(alarm.days) && alarm.days.includes(d.val);
+          const btnClass = isSelected 
+            ? "w-7 h-7 rounded-full bg-indigo-600 text-white font-bold text-xs flex items-center justify-center shadow cursor-pointer transition-all" 
+            : "w-7 h-7 rounded-full bg-slate-950 text-slate-400 font-semibold text-xs flex items-center justify-center border border-slate-800 hover:border-slate-700 cursor-pointer transition-all";
+          return `<button type="button" onclick="toggleAlarmDay('${alarm.id}', ${d.val})" class="${btnClass}">${d.label}</button>`;
+        }).join('');
 
-        row.innerHTML = `
-          <div class="flex items-center gap-2 flex-1">
-            <input type="checkbox" ${alarm.active ? 'checked' : ''} onchange="updateAlarmField('${alarm.id}', 'active', this.checked)" class="w-4 h-4 rounded bg-slate-950 border-slate-700 text-indigo-600 cursor-pointer" title="Attiva/Disattiva">
-            <select onchange="updateAlarmField('${alarm.id}', 'day', this.value)" class="bg-slate-950 border border-slate-700 rounded px-2 py-1 text-xs text-slate-200 focus:outline-none">
-              ${dayOptsHtml}
-            </select>
-            <input type="time" value="${alarm.time || '09:00'}" onchange="updateAlarmField('${alarm.id}', 'time', this.value)" class="bg-slate-950 border border-slate-700 rounded px-2 py-1 text-xs text-emerald-400 font-mono focus:outline-none">
+        card.innerHTML = `
+          <div class="flex items-center justify-between gap-3">
+            <div class="flex items-center gap-3">
+              <input type="time" value="${alarm.time || '09:00'}" onchange="updateAlarmTime('${alarm.id}', this.value)" class="bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-base text-emerald-400 font-mono font-bold focus:outline-none focus:border-indigo-500">
+              <label class="flex items-center cursor-pointer select-none text-xs text-slate-300 gap-1.5">
+                <input type="checkbox" ${alarm.active ? 'checked' : ''} onchange="toggleAlarmActive('${alarm.id}', this.checked)" class="w-4 h-4 rounded bg-slate-950 border-slate-700 text-indigo-600 cursor-pointer">
+                <span>Attiva</span>
+              </label>
+            </div>
+            <button onclick="playSound('delete'); removeAlarmRule('${alarm.id}')" class="text-red-400 hover:text-red-300 p-1.5 rounded-lg bg-red-950/30 hover:bg-red-950/60 transition-colors cursor-pointer" title="Elimina sveglia"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
           </div>
-          <button onclick="playSound('delete'); removeAlarmRule('${alarm.id}')" class="text-red-400 hover:text-red-300 p-1 cursor-pointer" title="Elimina"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+          <div class="flex items-center justify-between pt-1 border-t border-slate-800/60">
+            <span class="text-[10px] text-slate-400 uppercase font-semibold">Giorni attivo:</span>
+            <div class="flex gap-1.5">
+              ${daysBtnsHtml}
+            </div>
+          </div>
         `;
-        container.appendChild(row);
+        container.appendChild(card);
       });
       lucide.createIcons();
     }
