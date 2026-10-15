@@ -260,6 +260,24 @@
             <input type="text" id="formCustomJobType" placeholder="Specifica nuovo tipo..." class="hidden mt-2 w-full bg-slate-950 border border-indigo-500 rounded-lg px-3 py-2 text-slate-200 text-xs focus:outline-none">
           </div>
         </div>
+
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Stato / Passaggio Iniziale</label>
+          <select id="formInitialStage" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-indigo-500">
+            <option value="prev-da-fare">Prev. da fare</option>
+            <option value="prev-inviato">Prev. inviato</option>
+            <option value="accettato-mod">Accettato/Modifica</option>
+            <option value="da-ordinare">Da ordinare</option>
+            <option value="ordinato">Ordinato</option>
+            <option value="in-arrivo">In arrivo</option>
+            <option value="magazzino">In magazzino</option>
+            <option value="in-lavorazione">In lavorazione</option>
+            <option value="lavorato">Lavorato</option>
+            <option value="consegnato">Consegnato</option>
+            <option value="fatturato">Fatturato</option>
+          </select>
+        </div>
+
         <div>
           <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Note / Descrizione Iniziale</label>
           <textarea id="formNotes" placeholder="Dettagli lavorazione, finiture..." rows="2" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-indigo-500 resize-none"></textarea>
@@ -580,7 +598,7 @@
       });
     }
 
-    // MOTORE DI PARSING PRECISO: SOLO SEZIONE PRODOTTI E SERVIZI (DESCRIZIONE, Q.TA', PREZZO UNITARIO, IVA)
+    // MOTORE DI PARSING PRECISO: ESTRAZIONE ESATTA SEZIONE PRODOTTI E SERVIZI DA PDF ARUBA
     async function extractArticlesFromArubaPdf(file) {
       try {
         const arrayBuffer = await file.arrayBuffer();
@@ -616,7 +634,7 @@
             let rowTextFull = rowItems.map(r => r.text).join(' ');
             let lower = rowTextFull.toLowerCase();
 
-            // Interrompi rigorosamente appena finisce la sezione prodotti e iniziano i pagamenti/totali
+            // Interrompi immediatamente appena si esce dalla tabella prodotti e iniziano i pagamenti/totali
             if (inProductsSection && (
                 lower.includes('nr rata') ||
                 lower.includes('metodo di pagamento') || 
@@ -644,16 +662,17 @@
 
             if (inProductsSection) {
               // Salta la riga delle intestazioni di colonna
-              if (lower.includes('descrizione') || lower.includes('quantita') || lower.includes('prezzo') || lower.includes('importo')) {
+              if (lower.includes('descrizione') || lower.includes('quantita') || lower.includes('prezzo') || lower.includes('importo') || lower.includes('nr')) {
                 continue;
               }
 
-              // Estrai i valori monetari in formato prezzo (es. 35,00 € o 525,00 €)
+              // Raccogli tutti i valori monetari presenti nella riga
               let moneyValues = [];
               let taxRateFound = 22;
 
               rowItems.forEach(r => {
                 let cleanTxt = r.text.replace('€', '').trim();
+                // Identifica formati prezzo (es. 35,00 oppure 1.836,50)
                 if (cleanTxt.match(/^(\d{1,3}(\.\d{3})*|\d+)[,\.]\d{2}$/)) {
                   moneyValues.push({
                     text: r.text,
@@ -661,7 +680,6 @@
                     x: r.x
                   });
                 }
-                // Cerca eventuale percentuale IVA esplicita nella riga (es. 22%)
                 if (r.text.includes('%')) {
                   let taxMatch = r.text.match(/(\d+)\s*%/);
                   if (taxMatch) taxRateFound = parseInt(taxMatch[1]);
@@ -669,7 +687,7 @@
               });
 
               if (moneyValues.length >= 1) {
-                // Nel layout Aruba: il primo valore monetario è il PREZZO UNITARIO
+                // Nel formato Aruba: il primo prezzo è il PREZZO UNITARIO
                 let unitPriceObj = moneyValues[0];
                 let priceNum = unitPriceObj.val;
 
@@ -678,10 +696,10 @@
 
                 rowItems.forEach(r => {
                   let txt = r.text;
-                  // Cerca la quantità (numero intero che precede il prezzo unitario, ignorando l'indice NR iniziale)
+                  // Identifica la quantità (numero intero che si trova a sinistra del prezzo unitario)
                   if (txt.match(/^\d+$/) && parseInt(txt) < 1000 && r.x < unitPriceObj.x) {
                     let parsedQty = parseInt(txt);
-                    // Ignora se coincide con l'indice numerico di riga iniziale (1, 2, 3...)
+                    // Ignora il numero di riga iniziale (1, 2, 3...)
                     if (parsedQty > 0 && parsedQty !== parseInt(rowItems[0].text)) {
                       qtyVal = parsedQty;
                       return;
@@ -697,7 +715,7 @@
                 });
 
                 let description = descParts.join(' ').trim();
-                // Rimuovi eventuali numeri indice iniziali (es. "1", "2", "3") rimasti
+                // Rimuovi eventuali numeri indice iniziali (es. "1", "2") rimasti nella descrizione
                 description = description.replace(/^\d+\s+/, '');
 
                 if (description.length > 1 && priceNum > 0) {
@@ -963,6 +981,10 @@
       if (jobType === 'custom') {
         jobType = document.getElementById('formCustomJobType').value.trim() || 'Altro';
       }
+      const initialStage = document.getElementById('formInitialStage').value;
+      const initialStageObj = COLUMNS_CONFIG.find(col => col.id === initialStage);
+      const initialStageLabel = initialStageObj ? initialStageObj.label : 'Prev. da fare';
+
       const initialNote = document.getElementById('formNotes') ? document.getElementById('formNotes').value.trim() : '';
       if (!title) return;
 
@@ -1020,10 +1042,10 @@
         id: 'c' + Date.now().toString(36) + Math.random().toString(36).substring(2, 7),
         title, client, jobType,
         articles: extractedArticles,
-        stage: 'prev-da-fare',
+        stage: initialStage,
         createdAt: new Date().toISOString(),
         photos: initialPhotos,
-        history: [{ stage: 'prev-da-fare', label: 'Inserito in "Prev. da fare"', timestamp: new Date().toISOString() }]
+        history: [{ stage: initialStage, label: `Inserito in "${initialStageLabel}"`, timestamp: new Date().toISOString() }]
       };
 
       state.cards.unshift(newCard);
