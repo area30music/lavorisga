@@ -124,8 +124,8 @@
         <input type="file" accept="image/png, image/jpeg" class="absolute inset-0 opacity-0 cursor-pointer hide-in-master" onchange="uploadCompanyLogo(event)" title="Carica Logo Aziendale">
       </div>
 
-      <!-- Tasto Torna Indietro in Master View posizionato subito dopo il logo -->
-      <button onclick="toggleMasterMode(); playSound('close');" class="show-in-master hidden bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2.5 rounded-lg text-sm font-extrabold items-center gap-2 active:scale-95 transition-transform shadow-lg shadow-indigo-900/40 border border-indigo-400" title="Torna alla schermata di programmazione">
+      <!-- Tasto Torna Indietro in Master View posizionato subito dopo il logo (visibile in master mode) -->
+      <button onclick="toggleMasterMode(); playSound('close');" class="master-back-btn hidden bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2.5 rounded-lg text-sm font-extrabold items-center gap-2 active:scale-95 transition-transform shadow-lg shadow-indigo-900/40 border border-indigo-400" title="Torna alla schermata di programmazione">
         <i data-lucide="arrow-left" class="w-5 h-5"></i> Torna a Programmazione
       </button>
 
@@ -1003,13 +1003,20 @@
       const body = document.body;
       const board = document.getElementById('board');
       
+      // Gestione esplicita visibilità tasto indietro Master View
+      const backBtns = document.querySelectorAll('.master-back-btn');
+      
       if (isMasterMode) {
         body.classList.add('master-mode');
+        backBtns.forEach(el => el.classList.remove('hidden'));
+        backBtns.forEach(el => el.style.display = 'flex');
         renderBoard();
         startAutoScroll();
         checkDueSoonCommissions();
       } else {
         body.classList.remove('master-mode');
+        backBtns.forEach(el => el.classList.add('hidden'));
+        backBtns.forEach(el => el.style.display = 'none');
         stopAutoScroll();
         if(board) board.scrollLeft = 0;
         renderBoard();
@@ -1539,7 +1546,7 @@
       return `
         <div draggable="true" ondragstart="handleDragStart(event)" id="card-${card.id}" data-id="${card.id}" onclick="${isMasterMode ? '' : `playSound('click'); openDetail('${card.id}')`}"
              style="${customCardStyle}"
-             class="bg-slate-955 border border-slate-800 hover:border-indigo-500/50 p-3 rounded-lg shadow-md cursor-pointer transition-all active:scale-95 space-y-2 group relative ${urgentClass}">
+             class="bg-slate-900 border border-slate-800 hover:border-indigo-500/50 p-3 rounded-lg shadow-md cursor-pointer transition-all active:scale-95 space-y-2 group relative ${urgentClass}">
           <div class="flex justify-between items-start gap-1">
             <span class="text-[10px] px-1.5 py-0.5 rounded font-medium ${badgeStyle}">${card.jobType || 'Generico'}</span>
             <span class="text-[9px]" style="${card.customColor ? customTextStyle : 'color: #64748b;'}">${card.createdAt ? new Date(card.createdAt).toLocaleDateString('it-IT', {day: 'numeric', month: 'short'}) : ''}</span>
@@ -1660,12 +1667,12 @@
     function resetCardCustomColor() {
       const card = state.cards.find(c => c.id === activeCardId);
       if (card) {
-        card.customColor = '';
+        card.customColor = null; // Rimuove completamente il colore personalizzato così torna al default bg-slate-900
         const colDef = COLUMNS_CONFIG.find(col => col.id === card.stage);
-        document.getElementById('editCardColor').value = colDef ? colDef.hexDefault : '#0f172a';
+        document.getElementById('editCardColor').value = colDef ? colDef.hexDefault : '#4f46e5';
         saveLocal();
         syncCardToCloud(card);
-        alert("Colore personalizzato rimosso (ripristinato predefinito).");
+        alert("Colore personalizzato rimosso (ripristinato predefinito di default).");
       }
     }
 
@@ -1950,7 +1957,7 @@
       document.getElementById('editDeliveryDate').value = card.deliveryDate || '';
       
       const colDef = COLUMNS_CONFIG.find(col => col.id === card.stage);
-      const defaultHex = colDef ? colDef.hexDefault : '#0f172a';
+      const defaultHex = colDef ? colDef.hexDefault : '#4f46e5';
       document.getElementById('editCardColor').value = card.customColor || defaultHex;
       
       const jobSelect = document.getElementById('editJobType');
