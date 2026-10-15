@@ -466,7 +466,7 @@
 
         <div class="bg-slate-950 p-3 rounded-lg border border-slate-800 space-y-2">
           <label class="block text-xs font-bold uppercase tracking-wider text-indigo-400">Allega Preventivo PDF o Foto Iniziale</label>
-          <p class="text-[10px] text-slate-400 leading-tight">Se alleghi il PDF del preventivo Aruba, gli articoli verranno letti e compilati automaticamente.</p>
+          <p class="text-[10px] text-slate-400 leading-tight">Se alleghi il preventivo PDF Aruba, gli articoli verranno letti e compilati automaticamente.</p>
           <label class="w-full bg-slate-900 hover:bg-slate-800 border border-dashed border-slate-700 rounded-lg p-3 flex items-center justify-center gap-2 cursor-pointer text-xs text-slate-300 transition-colors">
             <i data-lucide="paperclip" class="w-4 h-4 text-indigo-400"></i>
             <span id="formFileLabel">Seleziona PDF o Foto (Opzionale)</span>
@@ -559,17 +559,17 @@
 
     // --- CONFIGURAZIONE DEFAULT COLONNE E TEMI ---
     const DEFAULT_COLUMNS_CONFIG = [
-      { id: "prev-da-fare", label: "Prev. da fare", color: "bg-orange-600/20 border-orange-500/50 text-orange-400", border: "border-l-4 border-l-orange-500" },
-      { id: "prev-inviato", label: "Prev. inviato", color: "bg-amber-600/20 border-amber-500/50 text-amber-400", border: "border-l-4 border-l-amber-500" },
-      { id: "accettato-mod", label: "Accettato/Modifica", color: "bg-yellow-600/20 border-yellow-500/50 text-yellow-300", border: "border-l-4 border-l-yellow-500" },
-      { id: "da-ordinare", label: "Da ordinare", color: "bg-rose-600/20 border-rose-500/50 text-rose-400", border: "border-l-4 border-l-rose-500" },
-      { id: "ordinato", label: "Ordinato", color: "bg-pink-600/20 border-pink-500/50 text-pink-400", border: "border-l-4 border-l-pink-500" },
-      { id: "magazzino", label: "In magazzino", color: "bg-fuchsia-600/20 border-fuchsia-500/50 text-fuchsia-400", border: "border-l-4 border-l-fuchsia-500" },
-      { id: "da-lavorare", label: "Da lavorare", color: "bg-violet-600/20 border-violet-500/50 text-violet-400", border: "border-l-4 border-l-violet-500" },
-      { id: "in-lavorazione", label: "In lavorazione", color: "bg-cyan-600/20 border-cyan-500/50 text-cyan-400", border: "border-l-4 border-l-cyan-500" },
-      { id: "lavorato", label: "Lavorato", color: "bg-emerald-600/20 border-emerald-500/50 text-emerald-400", border: "border-l-4 border-l-emerald-500" },
-      { id: "consegnato", label: "Consegnato", color: "bg-teal-600/20 border-teal-500/50 text-teal-400", border: "border-l-4 border-l-teal-500" },
-      { id: "fatturato", label: "Fatturato", color: "bg-blue-600/20 border-blue-500/50 text-blue-400", border: "border-l-4 border-l-blue-500" }
+      { id: "prev-da-fare", label: "Prev. da fare", color: "bg-orange-600/20 border-orange-500/50 text-orange-400", border: "border-l-4 border-l-orange-500", hexDefault: "#c2410c" },
+      { id: "prev-inviato", label: "Prev. inviato", color: "bg-amber-600/20 border-amber-500/50 text-amber-400", border: "border-l-4 border-l-amber-500", hexDefault: "#d97706" },
+      { id: "accettato-mod", label: "Accettato/Modifica", color: "bg-yellow-600/20 border-yellow-500/50 text-yellow-300", border: "border-l-4 border-l-yellow-500", hexDefault: "#ca8a04" },
+      { id: "da-ordinare", label: "Da ordinare", color: "bg-rose-600/20 border-rose-500/50 text-rose-400", border: "border-l-4 border-l-rose-500", hexDefault: "#e11d48" },
+      { id: "ordinato", label: "Ordinato", color: "bg-pink-600/20 border-pink-500/50 text-pink-400", border: "border-l-4 border-l-pink-500", hexDefault: "#db2777" },
+      { id: "magazzino", label: "In magazzino", color: "bg-fuchsia-600/20 border-fuchsia-500/50 text-fuchsia-400", border: "border-l-4 border-l-fuchsia-500", hexDefault: "#c026d3" },
+      { id: "da-lavorare", label: "Da lavorare", color: "bg-violet-600/20 border-violet-500/50 text-violet-400", border: "border-l-4 border-l-violet-500", hexDefault: "#7c3aed" },
+      { id: "in-lavorazione", label: "In lavorazione", color: "bg-cyan-600/20 border-cyan-500/50 text-cyan-400", border: "border-l-4 border-l-cyan-500", hexDefault: "#0891b2" },
+      { id: "lavorato", label: "Lavorato", color: "bg-emerald-600/20 border-emerald-500/50 text-emerald-400", border: "border-l-4 border-l-emerald-500", hexDefault: "#059669" },
+      { id: "consegnato", label: "Consegnato", color: "bg-teal-600/20 border-teal-500/50 text-teal-400", border: "border-l-4 border-l-teal-500", hexDefault: "#0d9488" },
+      { id: "fatturato", label: "Fatturato", color: "bg-blue-600/20 border-blue-500/50 text-blue-400", border: "border-l-4 border-l-blue-500", hexDefault: "#2563eb" }
     ];
 
     let COLUMNS_CONFIG = JSON.parse(JSON.stringify(DEFAULT_COLUMNS_CONFIG));
@@ -633,7 +633,6 @@
           osc.start(now);
           osc.stop(now + 0.05);
         } else if (type === 'close') {
-          // Suono di chiusura finestra più carino e armonioso
           const osc = audioCtx.createOscillator();
           const gain = audioCtx.createGain();
           osc.type = 'sine';
@@ -659,7 +658,6 @@
           osc.start(now);
           osc.stop(now + 0.3);
         } else if (type === 'alert') {
-          // Sirena migliorata, calda ed elegante stile emergenza di classe
           if (sirenInterval) clearInterval(sirenInterval);
           let startTime = Date.now();
 
@@ -905,7 +903,7 @@
     }
     // ------------------------------------
 
-    // --- CHECK SCADENZE & ARCADE ALERT (TESTO INGRANDITO) ---
+    // --- CHECK SCADENZE & ARCADE ALERT ---
     function checkDueSoonCommissions() {
       if (!state || !state.cards) return;
       const today = new Date();
@@ -1663,10 +1661,11 @@
       const card = state.cards.find(c => c.id === activeCardId);
       if (card) {
         card.customColor = '';
-        document.getElementById('editCardColor').value = '#4f46e5';
+        const colDef = COLUMNS_CONFIG.find(col => col.id === card.stage);
+        document.getElementById('editCardColor').value = colDef ? colDef.hexDefault : '#0f172a';
         saveLocal();
         syncCardToCloud(card);
-        alert("Colore personalizzato rimosso.");
+        alert("Colore personalizzato rimosso (ripristinato predefinito).");
       }
     }
 
@@ -1949,7 +1948,10 @@
       document.getElementById('editTitle').value = card.title || '';
       document.getElementById('editClient').value = card.client || '';
       document.getElementById('editDeliveryDate').value = card.deliveryDate || '';
-      document.getElementById('editCardColor').value = card.customColor || '#4f46e5';
+      
+      const colDef = COLUMNS_CONFIG.find(col => col.id === card.stage);
+      const defaultHex = colDef ? colDef.hexDefault : '#0f172a';
+      document.getElementById('editCardColor').value = card.customColor || defaultHex;
       
       const jobSelect = document.getElementById('editJobType');
       const customJobInput = document.getElementById('editCustomJobType');
@@ -2225,7 +2227,7 @@
           .title { font-size: 22px; font-weight: 800; margin: 0 0 5px; color: #1e293b; text-transform: uppercase; }
           .badge { font-size: 10px; font-weight: bold; background: #e0e7ff; color: #4338ca; padding: 3px 8px; border-radius: 4px; display: inline-block; }
           .section-title { font-size: 11px; font-weight: bold; text-transform: uppercase; color: #475569; margin-top: 15px; margin-bottom: 8px; border-bottom: 1px solid #e2e8f0; padding-bottom: 3px; }
-          .details { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 10px; }
+          .details { display: grid; grid-template-columns: 1fr 1fr; gap: 12mm; margin-bottom: 10px; }
           .details div { background: #f8fafc; padding: 8px 10px; border-radius: 6px; border: 1px solid #e2e8f0; }
           .details label { font-size: 9px; color: #64748b; font-weight: bold; display: block; text-transform: uppercase; margin-bottom: 2px; }
           .details strong { font-size: 12px; color: #0f172a; }
