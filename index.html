@@ -23,11 +23,11 @@
     .board-column { min-width: 280px; max-width: 280px; }
     * { touch-action: manipulation; }
     
-    /* GESTIONE DINAMICA DIMENSIONE FONT APPLICAZIONE */
-    body.font-size-sm { font-size: 13px; }
+    /* GESTIONE DINAMICA DIMENSIONE FONT APPLICAZIONE (PIÙ EVIDENTE) */
+    body.font-size-sm { font-size: 12px; }
     body.font-size-md { font-size: 15px; }
-    body.font-size-lg { font-size: 17px; }
-    body.font-size-xl { font-size: 19px; }
+    body.font-size-lg { font-size: 18px; }
+    body.font-size-xl { font-size: 22px; }
 
     /* STILI MASTER VIEW */
     body.master-mode .hide-in-master { display: none !important; }
@@ -115,12 +115,12 @@
   </div>
 
   <!-- TOP BAR -->
-  <header class="bg-slate-900 border-b border-slate-800 px-4 py-3 flex justify-between items-center shrink-0 flex-wrap gap-3 z-10 relative">
+  <header class="bg-slate-900 border-b border-slate-800 px-4 py-2.5 flex justify-between items-center shrink-0 flex-wrap gap-3 z-10 relative">
     <div class="flex items-center space-x-3">
-      <!-- LOGO AZIENDALE O ICONA DEFAULT -->
-      <div id="companyLogoContainer" class="relative group cursor-pointer bg-indigo-600 p-2 rounded-lg text-white shadow-lg shadow-indigo-900/20 hide-in-master flex items-center justify-center" style="width: 42px; height: 42px;" title="Clicca per caricare il logo aziendale PNG">
-        <div id="logoDefaultIcon" class="flex items-center justify-center"><i data-lucide="layers" class="w-5 h-5"></i></div>
-        <img id="logoImageDisplay" src="" class="hidden max-h-full max-w-full object-contain">
+      <!-- LOGO AZIENDALE GRANDE (ALTEZZA BLOCO TESTI) -->
+      <div id="companyLogoContainer" class="relative group cursor-pointer bg-indigo-600 rounded-lg text-white shadow-lg shadow-indigo-900/20 hide-in-master flex items-center justify-center overflow-hidden shrink-0" style="width: 130px; height: 48px;" title="Clicca per caricare il logo aziendale PNG">
+        <div id="logoDefaultIcon" class="flex items-center justify-center"><i data-lucide="layers" class="w-6 h-6"></i></div>
+        <img id="logoImageDisplay" src="" class="hidden w-full h-full object-contain p-1">
         <input type="file" accept="image/png, image/jpeg" class="absolute inset-0 opacity-0 cursor-pointer" onchange="uploadCompanyLogo(event)" title="Carica Logo Aziendale">
       </div>
 
@@ -190,7 +190,7 @@
           <h4 class="text-xs font-bold text-indigo-400 uppercase tracking-wider">Logo Aziendale Barra Menù</h4>
           <p class="text-xs text-slate-400">Carica il tuo logo in formato PNG trasparente per sostituire l'icona predefinita.</p>
           <div class="flex items-center gap-4">
-            <div id="settingsLogoPreviewBox" class="w-16 h-12 bg-slate-900 border border-slate-700 rounded flex items-center justify-center overflow-hidden">
+            <div id="settingsLogoPreviewBox" class="w-28 h-12 bg-slate-900 border border-slate-700 rounded flex items-center justify-center overflow-hidden">
               <span class="text-[10px] text-slate-500">Nessun Logo</span>
             </div>
             <div class="flex gap-2">
@@ -544,6 +544,7 @@
     let autoScrollPause = 0;
     let lastScrollTime = 0;
     let arcadeTimer = null;
+    let sirenInterval = null;
 
     // --- CONFIGURAZIONE DEFAULT COLONNE E TEMI ---
     const DEFAULT_COLUMNS_CONFIG = [
@@ -578,7 +579,7 @@
 
     let currentFontSize = 'md';
 
-    // --- SINTESI SUONI ARCADE / FEEDBACK ACUSTICI ---
+    // --- SINTESI SUONI ARCADE / SIRENA 2 SECONDI ---
     let audioCtx = null;
     function initAudio() {
       if (!audioCtx) {
@@ -621,20 +622,33 @@
           osc.start(now);
           osc.stop(now + 0.3);
         } else if (type === 'alert') {
-          for (let i = 0; i < 2; i++) {
-            let startT = now + (i * 0.15);
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
-            osc.type = 'sawtooth';
-            osc.frequency.setValueAtTime(300, startT);
-            osc.frequency.linearRampToValueAtTime(150, startT + 0.12);
-            gain.gain.setValueAtTime(0.25, startT);
-            gain.gain.linearRampToValueAtTime(0.01, startT + 0.12);
-            osc.connect(gain);
-            gain.connect(audioCtx.destination);
-            osc.start(startT);
-            osc.stop(startT + 0.12);
-          }
+          // Sirena pulsante per esattamente 2 secondi
+          if (sirenInterval) clearInterval(sirenInterval);
+          let startTime = Date.now();
+
+          sirenInterval = setInterval(() => {
+            if (Date.now() - startTime > 2000) {
+              clearInterval(sirenInterval);
+              sirenInterval = null;
+              return;
+            }
+            try {
+              const sNow = audioCtx.currentTime;
+              const osc = audioCtx.createOscillator();
+              const gain = audioCtx.createGain();
+              osc.type = 'sawtooth';
+              osc.frequency.setValueAtTime(400, sNow);
+              osc.frequency.linearRampToValueAtTime(800, sNow + 0.25);
+              osc.frequency.linearRampToValueAtTime(400, sNow + 0.5);
+              gain.gain.setValueAtTime(0.2, sNow);
+              gain.gain.linearRampToValueAtTime(0.01, sNow + 0.5);
+              osc.connect(gain);
+              gain.connect(audioCtx.destination);
+              osc.start(sNow);
+              osc.stop(sNow + 0.5);
+            } catch(e){}
+          }, 500);
+
         } else if (type === 'delete') {
           const osc = audioCtx.createOscillator();
           const gain = audioCtx.createGain();
@@ -727,7 +741,7 @@
       } else {
         if (defaultIcon) defaultIcon.classList.remove('hidden');
         if (logoImg) logoImg.classList.add('hidden');
-        if (logoContainer) logoContainer.className = "relative group cursor-pointer bg-indigo-600 p-2 rounded-lg text-white shadow-lg shadow-indigo-900/20 hide-in-master flex items-center justify-center";
+        if (logoContainer) logoContainer.className = "relative group cursor-pointer bg-indigo-600 rounded-lg text-white shadow-lg shadow-indigo-900/20 hide-in-master flex items-center justify-center overflow-hidden shrink-0";
         if (settingsBox) settingsBox.innerHTML = `<span class="text-[10px] text-slate-500">Nessun Logo</span>`;
       }
     }
@@ -937,6 +951,10 @@
 
     function closeArcadeAlert() {
       playSound('click');
+      if (sirenInterval) {
+        clearInterval(sirenInterval);
+        sirenInterval = null;
+      }
       document.getElementById('arcadeAlertModal').classList.add('hidden');
       if (arcadeTimer) {
         clearTimeout(arcadeTimer);
