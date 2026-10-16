@@ -25,31 +25,28 @@
     
     :root {
       --app-font-size: 15px;
-      --master-font-size: 24px;
+      --master-font-size: 32px;
     }
     body { font-size: var(--app-font-size, 15px); }
-    body.master-mode { font-size: var(--master-font-size, 24px); }
+    body.master-mode { font-size: var(--master-font-size, 32px); }
 
-    /* OTTIMIZZAZIONE TABLET & IPAD AIR 2 */
     @media (max-width: 1024px) {
-      .board-column { min-width: 260px; max-width: 260px; }
+      .board-column { min-width: 270px; max-width: 270px; }
     }
 
-    /* MASTER VIEW STILI */
     body.master-mode .hide-in-master { display: none !important; }
     body:not(.master-mode) .show-in-master { display: none !important; }
     body.master-mode .show-only-master { display: flex !important; }
     
     body.master-mode .board-column { 
       pointer-events: none; 
-      min-width: calc(300px * (var(--master-font-size, 24px) / 15px)); 
-      max-width: calc(300px * (var(--master-font-size, 24px) / 15px)); 
+      min-width: calc(300px * (var(--master-font-size, 32px) / 15px)); 
+      max-width: calc(300px * (var(--master-font-size, 32px) / 15px)); 
       transition: all 0.3s ease;
     }
     body.master-mode #board::-webkit-scrollbar { display: none; }
     body.master-mode .card-dropzone::-webkit-scrollbar { display: none; }
 
-    /* ALERT ARCADE */
     @keyframes arcadeGlow {
       0% { box-shadow: 0 0 15px #ef4444, inset 0 0 15px #ef4444; border-color: #f87171; }
       50% { box-shadow: 0 0 35px #dc2626, inset 0 0 25px #dc2626; border-color: #fef08a; }
@@ -106,61 +103,57 @@
     </div>
   </div>
 
-  <!-- TOP BAR OTTIMIZZATA PER IPAD E TABLET -->
-  <header class="bg-slate-900 border-b border-slate-800 px-3 py-2 flex flex-col md:flex-row justify-between items-center shrink-0 gap-2 z-10 relative">
-    <div class="flex items-center justify-between w-full md:w-auto space-x-3">
-      <div class="flex items-center space-x-2">
-        <!-- LOGO CONDIVISO DAL DB -->
-        <div id="companyLogoContainer" class="relative group cursor-pointer bg-indigo-600 rounded-lg text-white shadow-lg flex items-center justify-center overflow-hidden shrink-0" style="width: 110px; height: 40px;" title="Logo Aziendale Condiviso">
-          <div id="logoDefaultIcon" class="flex items-center justify-center"><i data-lucide="layers" class="w-5 h-5"></i></div>
-          <img id="logoImageDisplay" src="" class="hidden w-full h-full object-contain p-1">
-          <input type="file" accept="image/png, image/jpeg" class="absolute inset-0 opacity-0 cursor-pointer hide-in-master" onchange="uploadCompanyLogo(event)" title="Carica Logo">
-        </div>
-
-        <button onclick="toggleMasterMode(); playSound('close');" class="master-back-btn hidden bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-lg text-xs font-extrabold items-center gap-1.5 shadow-lg border border-indigo-400 cursor-pointer">
-          <i data-lucide="arrow-left" class="w-4 h-4"></i> Torna a Programmazione
-        </button>
-
-        <div>
-          <h1 class="font-bold text-sm leading-tight text-white flex items-center gap-1.5">
-            Workflow SGA
-            <span class="show-in-master hidden bg-emerald-600/25 border border-emerald-500/50 text-emerald-400 px-1.5 py-0.5 rounded text-[9px] uppercase font-bold tracking-wider animate-pulse">Monitor</span>
-          </h1>
-          <p id="cloudStatus" onclick="if(!isMasterMode) { playSound('click'); openModal('cloudModal'); }" class="text-[10px] flex items-center gap-1 cursor-pointer mt-0.5">
-            <i data-lucide="hard-drive" class="w-3 h-3 text-slate-400"></i> <span class="text-slate-400">Modalità Locale</span>
-          </p>
-        </div>
+  <!-- TOP BAR -->
+  <header class="bg-slate-900 border-b border-slate-800 px-3 py-2 flex flex-wrap justify-between items-center shrink-0 gap-2 z-10 relative">
+    <div class="flex items-center space-x-2 md:space-x-3">
+      <!-- LOGO CONDIVISO DAL DB -->
+      <div id="companyLogoContainer" class="relative group cursor-pointer bg-indigo-600 rounded-lg text-white shadow-lg flex items-center justify-center overflow-hidden shrink-0" style="width: 110px; height: 40px;" title="Logo Aziendale Condiviso">
+        <div id="logoDefaultIcon" class="flex items-center justify-center"><i data-lucide="layers" class="w-5 h-5"></i></div>
+        <img id="logoImageDisplay" src="" class="hidden w-full h-full object-contain p-1">
+        <input type="file" accept="image/png, image/jpeg" class="absolute inset-0 opacity-0 cursor-pointer hide-in-master" onchange="uploadCompanyLogo(event)" title="Carica Logo">
       </div>
 
-      <!-- CONTROLLO VELOCITA' MASTER VIEW (RESPONSIVE) -->
-      <div class="show-in-master hidden items-center gap-1.5 bg-slate-950 border border-indigo-500/40 px-2 py-1 rounded-lg shadow">
-        <i data-lucide="gauge" class="w-3.5 h-3.5 text-indigo-400"></i>
-        <span class="text-[11px] text-slate-300">Velocità:</span>
-        <input type="range" id="masterSpeedRange" min="0.02" max="0.25" value="0.08" step="0.01" oninput="updateMasterSpeed(this.value)" class="w-20 accent-indigo-500 cursor-pointer h-1 bg-slate-900 rounded-lg">
+      <button onclick="toggleMasterMode(); playSound('close');" class="master-back-btn hidden bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-lg text-xs font-extrabold items-center gap-1.5 shadow-lg border border-indigo-400 cursor-pointer">
+        <i data-lucide="arrow-left" class="w-4 h-4"></i> Torna a Programmazione
+      </button>
+
+      <div>
+        <h1 class="font-bold text-sm leading-tight text-white flex items-center gap-1.5">
+          Workflow SGA
+          <span class="show-in-master hidden bg-emerald-600/25 border border-emerald-500/50 text-emerald-400 px-1.5 py-0.5 rounded text-[9px] uppercase font-bold tracking-wider animate-pulse">Monitor</span>
+        </h1>
+        <p id="cloudStatus" onclick="if(!isMasterMode) { playSound('click'); openModal('cloudModal'); }" class="text-[10px] flex items-center gap-1 cursor-pointer mt-0.5">
+          <i data-lucide="hard-drive" class="w-3 h-3 text-slate-400"></i> <span class="text-slate-400">Modalità Locale</span>
+        </p>
       </div>
     </div>
     
-    <div class="flex items-center justify-between w-full md:w-auto space-x-2 flex-wrap gap-y-1.5">
-      <!-- WIDGET DATA E ORA INGRANDITO E PULITO -->
-      <div id="liveClockWidget" class="flex items-center gap-1.5 bg-slate-950 border border-slate-700 px-3 py-1 rounded-xl text-xs md:text-sm font-mono text-emerald-400 font-bold shadow-lg">
-        <i data-lucide="clock" class="w-4 h-4 text-indigo-400 animate-pulse"></i>
+    <div class="flex items-center space-x-2 flex-wrap">
+      <!-- CURSORE VELOCITA' MASTER VIEW (VICINO ALL'ORA) -->
+      <div class="show-in-master hidden items-center gap-1.5 bg-slate-950 border border-indigo-500/40 px-2.5 py-1 rounded-lg shadow">
+        <i data-lucide="gauge" class="w-4 h-4 text-indigo-400"></i>
+        <span class="text-xs text-slate-300 font-semibold">Velocità:</span>
+        <input type="range" id="masterSpeedRange" min="0.02" max="0.25" value="0.08" step="0.01" oninput="updateMasterSpeed(this.value)" class="w-24 accent-indigo-500 cursor-pointer h-1.5 bg-slate-900 rounded-lg">
+      </div>
+
+      <!-- WIDGET DATA E ORA INGRANDITO -->
+      <div id="liveClockWidget" class="flex items-center gap-2 bg-slate-950 border border-slate-700 px-3.5 py-1.5 rounded-xl text-sm md:text-base font-mono text-emerald-400 font-bold shadow-lg">
+        <i data-lucide="clock" class="w-4 h-4 md:w-5 md:h-5 text-indigo-400 animate-pulse"></i>
         <span id="headerClockTime" class="tracking-wider">--:--:--</span>
         <span class="text-slate-600">|</span>
         <span id="headerClockDate" class="text-slate-300">--/--/----</span>
       </div>
 
-      <div class="flex items-center space-x-1.5">
-        <button onclick="playSound('close'); logoutApp();" class="hide-in-master bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 cursor-pointer" title="Esci"><i data-lucide="log-out" class="w-3.5 h-3.5"></i></button>
-        <button onclick="playSound('click'); openSettingsModal();" class="hide-in-master bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 cursor-pointer" title="Impostazioni"><i data-lucide="sliders" class="w-3.5 h-3.5"></i></button>
-        <button onclick="playSound('success'); exportBackup();" class="hide-in-master bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 cursor-pointer" title="Backup"><i data-lucide="download-cloud" class="w-3.5 h-3.5"></i></button>
-        <label class="hide-in-master bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 cursor-pointer" title="Ripristina"><i data-lucide="upload-cloud" class="w-3.5 h-3.5"></i><input type="file" accept=".json" class="hidden" onchange="importBackup(event)"></label>
-        
-        <div class="hide-in-master w-px h-4 bg-slate-700 mx-0.5"></div>
+      <button onclick="playSound('close'); logoutApp();" class="hide-in-master bg-slate-800 hover:bg-slate-700 text-slate-300 px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 cursor-pointer" title="Esci"><i data-lucide="log-out" class="w-3.5 h-3.5"></i> <span class="hidden sm:inline">Esci</span></button>
+      <button onclick="playSound('click'); openSettingsModal();" class="hide-in-master bg-slate-800 hover:bg-slate-700 text-slate-300 px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 cursor-pointer" title="Impostazioni"><i data-lucide="sliders" class="w-3.5 h-3.5"></i> <span class="hidden sm:inline">Impostazioni</span></button>
+      <button onclick="playSound('success'); exportBackup();" class="hide-in-master bg-slate-800 hover:bg-slate-700 text-slate-300 px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 cursor-pointer" title="Backup"><i data-lucide="download-cloud" class="w-3.5 h-3.5"></i> <span class="hidden sm:inline">Backup</span></button>
+      <label class="hide-in-master bg-slate-800 hover:bg-slate-700 text-slate-300 px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 cursor-pointer" title="Ripristina"><i data-lucide="upload-cloud" class="w-3.5 h-3.5"></i> <span class="hidden sm:inline">Ripristina</span><input type="file" accept=".json" class="hidden" onchange="importBackup(event)"></label>
+      
+      <div class="hide-in-master w-px h-4 bg-slate-700 mx-0.5"></div>
 
-        <button onclick="playSound('click'); toggleMasterMode();" class="hide-in-master bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-emerald-900/50 px-2.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 cursor-pointer"><i data-lucide="monitor" class="w-3.5 h-3.5"></i> Master</button>
-        
-        <button onclick="playSound('click'); openModal('addCardModal');" class="hide-in-master bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 shadow cursor-pointer"><i data-lucide="plus" class="w-3.5 h-3.5"></i> Nuova</button>
-      </div>
+      <button onclick="playSound('click'); toggleMasterMode();" class="hide-in-master bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-emerald-900/50 px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 cursor-pointer"><i data-lucide="monitor" class="w-4 h-4"></i> Master View</button>
+      
+      <button onclick="playSound('click'); openModal('addCardModal');" class="hide-in-master bg-indigo-600 hover:bg-indigo-500 text-white px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow cursor-pointer"><i data-lucide="plus" class="w-4 h-4"></i> Nuova Commessa</button>
     </div>
   </header>
 
@@ -192,21 +185,8 @@
         </div>
 
         <div class="bg-slate-950 p-4 rounded-lg border border-slate-800 space-y-3">
-          <div class="flex justify-between items-center"><h4 class="text-xs font-bold text-emerald-400 uppercase tracking-wider">Zoom Master View</h4><span id="masterFontSizeVal" class="font-mono text-emerald-400 font-bold text-sm bg-slate-900 px-3 py-1 rounded border border-slate-800">24px</span></div>
-          <input type="range" id="masterFontRange" min="16" max="50" value="24" step="1" oninput="previewMasterFontSize(this.value)" class="w-full accent-indigo-500 cursor-pointer h-2 bg-slate-900 rounded-lg">
-        </div>
-
-        <div class="bg-slate-950 p-4 rounded-lg border border-slate-800 space-y-3">
-          <div class="flex justify-between items-center">
-            <h4 class="text-xs font-bold text-indigo-400 uppercase tracking-wider">Gestione Sveglie Alert</h4>
-            <button onclick="playSound('click'); addAlarmRule();" class="bg-indigo-600 text-white text-xs px-3 py-1.5 rounded font-semibold flex items-center gap-1 cursor-pointer"><i data-lucide="plus" class="w-3.5 h-3.5"></i> Aggiungi</button>
-          </div>
-          <div id="alarmsListContainer" class="space-y-3 max-h-60 overflow-y-auto pr-1"></div>
-        </div>
-
-        <div class="bg-slate-950 p-4 rounded-lg border border-slate-800 space-y-3">
-          <h4 class="text-xs font-bold text-indigo-400 uppercase tracking-wider">Colori Colonne</h4>
-          <div id="columnsColorSettingsList" class="space-y-2 max-h-44 overflow-y-auto pr-2"></div>
+          <div class="flex justify-between items-center"><h4 class="text-xs font-bold text-emerald-400 uppercase tracking-wider">Zoom Master View</h4><span id="masterFontSizeVal" class="font-mono text-emerald-400 font-bold text-sm bg-slate-900 px-3 py-1 rounded border border-slate-800">32px</span></div>
+          <input type="range" id="masterFontRange" min="16" max="60" value="32" step="1" oninput="previewMasterFontSize(this.value)" class="w-full accent-indigo-500 cursor-pointer h-2 bg-slate-900 rounded-lg">
         </div>
       </div>
       <div class="p-4 border-t border-slate-800 bg-slate-950 flex justify-between items-center">
@@ -229,11 +209,7 @@
           <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
             <div><label class="text-[10px] text-indigo-400 font-semibold uppercase block mb-1">Referente</label><input type="text" id="editClient" class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-1.5 text-slate-200 text-sm focus:outline-none"></div>
             <div><label class="text-[10px] text-indigo-400 font-semibold uppercase block mb-1">Consegna</label><input type="date" id="editDeliveryDate" class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-1.5 text-slate-200 text-sm focus:outline-none"></div>
-            <div><label class="text-[10px] text-indigo-400 font-semibold uppercase block mb-1">Tipo</label><select id="editJobType" onchange="checkEditCustomJobType(this.value)" class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-1.5 text-slate-200 text-sm focus:outline-none"><option value="Stampa Digitale / Banner">Stampa Digitale / Banner</option><option value="Abbigliamento / Ricamo">Abbigliamento / Ricamo</option><option value="Insegne & Vetrofanie">Insegne & Vetrofanie</option><option value="Etichette & Adesivi">Etichette & Adesivi</option><option value="Grafica / Progettazione">Grafica / Progettazione</option><option value="Altro">Altro</option><option value="custom">Personalizza...</option></select><input type="text" id="editCustomJobType" placeholder="Specifica..." class="hidden mt-2 w-full bg-slate-900 border border-indigo-500 rounded px-3 py-1.5 text-slate-200 text-xs"></div>
-          </div>
-          <div class="pt-2 border-t border-slate-900 flex items-center justify-between">
-            <div><label class="text-[10px] text-indigo-400 font-semibold uppercase">Colore Evidenziazione</label></div>
-            <div class="flex items-center gap-2"><input type="color" id="editCardColor" class="w-9 h-9 rounded bg-transparent cursor-pointer border border-slate-700"><button onclick="resetCardCustomColor()" class="text-xs bg-slate-900 hover:bg-slate-800 text-slate-300 px-2.5 py-1.5 rounded border border-slate-700 cursor-pointer">Default</button></div>
+            <div><label class="text-[10px] text-indigo-400 font-semibold uppercase block mb-1">Tipo</label><select id="editJobType" class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-1.5 text-slate-200 text-sm focus:outline-none"><option value="Stampa Digitale / Banner">Stampa Digitale / Banner</option><option value="Abbigliamento / Ricamo">Abbigliamento / Ricamo</option><option value="Insegne & Vetrofanie">Insegne & Vetrofanie</option><option value="Etichette & Adesivi">Etichette & Adesivi</option><option value="Grafica / Progettazione">Grafica / Progettazione</option><option value="Altro">Altro</option></select></div>
           </div>
           <button onclick="playSound('success'); saveCardEdits();" class="bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 text-xs px-3 py-1.5 rounded font-semibold cursor-pointer"><i data-lucide="save" class="w-3.5 h-3.5"></i> Aggiorna Anagrafica</button>
         </div>
@@ -251,8 +227,6 @@
           <div class="flex justify-between items-center mb-2"><label class="text-xs text-slate-400 font-semibold uppercase">Foto & Documenti PDF</label><label class="bg-slate-800 text-xs px-3 py-1.5 rounded-lg cursor-pointer text-slate-200"><i data-lucide="paperclip" class="w-3.5 h-3.5"></i> Allega<input type="file" accept="image/*,.pdf" multiple class="hidden" onchange="handleDocumentUpload(event)"></label></div>
           <div id="attachmentsContainer" class="grid grid-cols-2 md:grid-cols-4 gap-2 bg-slate-950 p-2 rounded-lg border border-slate-800 max-h-36 overflow-y-auto"></div>
         </div>
-
-        <div><label class="text-xs text-slate-400 font-semibold uppercase block mb-3">Storyboard Lavorazione</label><div id="storyboardTimeline" class="relative pl-6 space-y-3 before:absolute before:left-2 before:top-1.5 before:bottom-1.5 before:w-0.5 before:bg-slate-800"></div></div>
       </div>
       <div class="p-4 border-t border-slate-800 bg-slate-950 flex justify-between gap-3">
         <button onclick="playSound('delete'); deleteCurrentCard();" class="bg-red-950/40 text-red-400 border border-red-900/50 px-4 py-2 rounded-lg font-semibold text-xs cursor-pointer">Elimina</button>
@@ -272,17 +246,11 @@
         <div><label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Cliente / Titolo Progetto</label><input type="text" id="formTitle" required placeholder="Es. Rossi S.r.l." class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none"></div>
         <div class="grid grid-cols-2 gap-3">
           <div><label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Referente</label><input type="text" id="formClient" placeholder="Es. Mario" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none"></div>
-          <div><label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Tipo</label><select id="formJobType" onchange="checkNewCustomJobType(this.value)" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none"><option value="Stampa Digitale / Banner">Stampa Digitale / Banner</option><option value="Abbigliamento / Ricamo">Abbigliamento / Ricamo</option><option value="Insegne & Vetrofanie">Insegne & Vetrofanie</option><option value="Etichette & Adesivi">Etichette & Adesivi</option><option value="Grafica / Progettazione">Grafica / Progettazione</option><option value="Altro">Altro</option><option value="custom">Personalizza...</option></select><input type="text" id="formCustomJobType" placeholder="Specifica..." class="hidden mt-2 w-full bg-slate-950 border border-indigo-500 rounded-lg px-3 py-2 text-slate-200 text-xs"></div>
+          <div><label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Tipo</label><select id="formJobType" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none"><option value="Stampa Digitale / Banner">Stampa Digitale / Banner</option><option value="Abbigliamento / Ricamo">Abbigliamento / Ricamo</option><option value="Insegne & Vetrofanie">Insegne & Vetrofanie</option><option value="Etichette & Adesivi">Etichette & Adesivi</option><option value="Grafica / Progettazione">Grafica / Progettazione</option><option value="Altro">Altro</option></select></div>
         </div>
         <div class="grid grid-cols-2 gap-3">
           <div><label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Stato Iniziale</label><select id="formInitialStage" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none"><option value="prev-da-fare">Prev. da fare</option><option value="prev-inviato">Prev. inviato</option><option value="accettato-mod">Accettato/Modifica</option><option value="da-ordinare">Da ordinare</option><option value="ordinato">Ordinato</option><option value="magazzino">In magazzino</option><option value="da-lavorare">Da lavorare</option><option value="in-lavorazione">In lavorazione</option><option value="lavorato">Lavorato</option><option value="consegnato">Consegnato</option><option value="fatturato">Fatturato</option></select></div>
           <div><label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Consegna</label><input type="date" id="formDeliveryDate" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none"></div>
-        </div>
-        <div><label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Note</label><textarea id="formNotes" rows="2" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 resize-none focus:outline-none"></textarea></div>
-        <div class="bg-slate-950 p-3 rounded-lg border border-slate-800 space-y-2">
-          <label class="block text-xs font-bold uppercase text-indigo-400">Allega Preventivo PDF o Foto</label>
-          <label class="w-full bg-slate-900 border border-dashed border-slate-700 rounded-lg p-3 flex items-center justify-center gap-2 cursor-pointer text-xs text-slate-300"><i data-lucide="paperclip" class="w-4 h-4 text-indigo-400"></i><span id="formFileLabel">Seleziona file</span><input type="file" id="formFileInput" accept="image/*,.pdf" class="hidden" onchange="handleFormFileSelect(event)"></label>
-          <div id="formFilePreview" class="hidden text-[11px] text-emerald-400 font-mono text-center truncate"></div>
         </div>
         <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2.5 rounded-lg flex items-center justify-center gap-2 cursor-pointer">Inserisci</button>
       </form>
@@ -294,24 +262,7 @@
     <div class="bg-slate-900 border border-slate-800 rounded-xl w-full max-w-md p-5 shadow-2xl space-y-4">
       <div class="flex justify-between items-center"><h3 class="font-bold text-lg text-slate-100">Impostazioni Cloud</h3><button onclick="playSound('close'); closeModal('cloudModal');" class="text-slate-400 bg-slate-800 rounded-full p-1 cursor-pointer"><i data-lucide="x" class="w-4 h-4"></i></button></div>
       <div class="bg-slate-950 p-3 rounded-lg border border-slate-800 space-y-2"><input type="text" id="cfgApiKey" placeholder="Firebase API Key" class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-slate-200 font-mono text-xs"><input type="text" id="cfgProjectId" placeholder="Firebase Project ID" class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-slate-200 font-mono text-xs"></div>
-      <div class="bg-slate-950 p-3 rounded-lg border border-slate-800"><input type="text" id="cfgImgbbKey" placeholder="ImgBB API Key (Opzionale)" class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-slate-200 font-mono text-xs"></div>
       <div class="flex gap-2"><button onclick="playSound('success'); saveFirebaseConfig();" class="flex-1 bg-indigo-600 text-white font-bold py-2 rounded-lg cursor-pointer">Salva</button><button onclick="playSound('close'); resetFirebaseConfig();" class="bg-slate-800 text-slate-300 py-2 px-3 rounded-lg text-xs cursor-pointer">Scollega</button></div>
-    </div>
-  </div>
-
-  <!-- GALLERY -->
-  <div id="galleryModal" class="hidden fixed inset-0 bg-black/95 z-[60] flex flex-col items-center justify-center select-none">
-    <div class="absolute top-0 w-full p-4 flex justify-between items-center z-10 bg-gradient-to-b from-black/80 to-transparent">
-      <div id="galleryCounter" class="text-white font-mono text-sm font-bold bg-black/50 px-3 py-1 rounded-full"></div>
-      <div class="flex gap-4 items-center">
-        <button onclick="playSound('click'); rotateGalleryImage();" class="text-white p-2 bg-slate-800 rounded-full cursor-pointer"><i data-lucide="rotate-cw" class="w-5 h-5"></i></button>
-        <button onclick="playSound('close'); closeGallery();" class="text-white p-2 bg-slate-800 rounded-full cursor-pointer"><i data-lucide="x" class="w-5 h-5"></i></button>
-      </div>
-    </div>
-    <div class="relative w-full h-full flex items-center justify-center p-4">
-      <img id="galleryImage" src="" class="max-w-full max-h-[90vh] object-contain bg-white shadow-2xl">
-      <button onclick="playSound('click'); prevGalleryImage();" class="absolute left-4 top-1/2 -translate-y-1/2 text-white p-3 bg-slate-800/80 rounded-full cursor-pointer" id="btnPrevGallery"><i data-lucide="chevron-left" class="w-6 h-6"></i></button>
-      <button onclick="playSound('click'); nextGalleryImage();" class="absolute right-4 top-1/2 -translate-y-1/2 text-white p-3 bg-slate-800/80 rounded-full cursor-pointer" id="btnNextGallery"><i data-lucide="chevron-right" class="w-6 h-6"></i></button>
     </div>
   </div>
 
@@ -323,29 +274,25 @@
     let autoScrollDir = 1;
     let autoScrollPause = 0;
     let lastScrollTime = 0;
-    let arcadeTimer = null;
-    let sirenInterval = null;
     let masterScrollSpeed = 0.08;
 
-    const DEFAULT_COLUMNS_CONFIG = [
-      { id: "prev-da-fare", label: "Prev. da fare", color: "bg-orange-600/20 border-orange-500/50 text-orange-400", border: "border-l-4 border-l-orange-500", hexDefault: "#c2410c" },
-      { id: "prev-inviato", label: "Prev. inviato", color: "bg-amber-600/20 border-amber-500/50 text-amber-400", border: "border-l-4 border-l-amber-500", hexDefault: "#d97706" },
-      { id: "accettato-mod", label: "Accettato/Modifica", color: "bg-yellow-600/20 border-yellow-500/50 text-yellow-300", border: "border-l-4 border-l-yellow-500", hexDefault: "#ca8a04" },
-      { id: "da-ordinare", label: "Da ordinare", color: "bg-rose-600/20 border-rose-500/50 text-rose-400", border: "border-l-4 border-l-rose-500", hexDefault: "#e11d48" },
-      { id: "ordinato", label: "Ordinato", color: "bg-pink-600/20 border-pink-500/50 text-pink-400", border: "border-l-4 border-l-pink-500", hexDefault: "#db2777" },
-      { id: "magazzino", label: "In magazzino", color: "bg-fuchsia-600/20 border-fuchsia-500/50 text-fuchsia-400", border: "border-l-4 border-l-fuchsia-500", hexDefault: "#c026d3" },
-      { id: "da-lavorare", label: "Da lavorare", color: "bg-violet-600/20 border-violet-500/50 text-violet-400", border: "border-l-4 border-l-violet-500", hexDefault: "#7c3aed" },
-      { id: "in-lavorazione", label: "In lavorazione", color: "bg-cyan-600/20 border-cyan-500/50 text-cyan-400", border: "border-l-4 border-l-cyan-500", hexDefault: "#0891b2" },
-      { id: "lavorato", label: "Lavorato", color: "bg-emerald-600/20 border-emerald-500/50 text-emerald-400", border: "border-l-4 border-l-emerald-500", hexDefault: "#059669" },
-      { id: "consegnato", label: "Consegnato", color: "bg-teal-600/20 border-teal-500/50 text-teal-400", border: "border-l-4 border-l-teal-500", hexDefault: "#0d9488" },
-      { id: "fatturato", label: "Fatturato", color: "bg-blue-600/20 border-blue-500/50 text-blue-400", border: "border-l-4 border-l-blue-500", hexDefault: "#2563eb" }
+    const COLUMNS_CONFIG = [
+      { id: "prev-da-fare", label: "Prev. da fare", color: "bg-orange-600/20 border-orange-500/50 text-orange-400", border: "border-l-4 border-l-orange-500" },
+      { id: "prev-inviato", label: "Prev. inviato", color: "bg-amber-600/20 border-amber-500/50 text-amber-400", border: "border-l-4 border-l-amber-500" },
+      { id: "accettato-mod", label: "Accettato/Modifica", color: "bg-yellow-600/20 border-yellow-500/50 text-yellow-300", border: "border-l-4 border-l-yellow-500" },
+      { id: "da-ordinare", label: "Da ordinare", color: "bg-rose-600/20 border-rose-500/50 text-rose-400", border: "border-l-4 border-l-rose-500" },
+      { id: "ordinato", label: "Ordinato", color: "bg-pink-600/20 border-pink-500/50 text-pink-400", border: "border-l-4 border-l-pink-500" },
+      { id: "magazzino", label: "In magazzino", color: "bg-fuchsia-600/20 border-fuchsia-500/50 text-fuchsia-400", border: "border-l-4 border-l-fuchsia-500" },
+      { id: "da-lavorare", label: "Da lavorare", color: "bg-violet-600/20 border-violet-500/50 text-violet-400", border: "border-l-4 border-l-violet-500" },
+      { id: "in-lavorazione", label: "In lavorazione", color: "bg-cyan-600/20 border-cyan-500/50 text-cyan-400", border: "border-l-4 border-l-cyan-500" },
+      { id: "lavorato", label: "Lavorato", color: "bg-emerald-600/20 border-emerald-500/50 text-emerald-400", border: "border-l-4 border-l-emerald-500" },
+      { id: "consegnato", label: "Consegnato", color: "bg-teal-600/20 border-teal-500/50 text-teal-400", border: "border-l-4 border-l-teal-500" },
+      { id: "fatturato", label: "Fatturato", color: "bg-blue-600/20 border-blue-500/50 text-blue-400", border: "border-l-4 border-l-blue-500" }
     ];
 
-    let COLUMNS_CONFIG = JSON.parse(JSON.stringify(DEFAULT_COLUMNS_CONFIG));
-    let USER_ALARMS = []; 
-    let masterFontSizePx = 24; 
-    let appFontSizePx = 15;
-    let sharedCompanyLogo = "";
+    let state = { cards: [] };
+    let activeCardId = null;
+    let db = null; 
 
     function updateLiveClock() {
       const now = new Date();
@@ -401,11 +348,7 @@
       if (confirm("Vuoi uscire?")) { localStorage.removeItem('workflow_sga_auth'); location.reload(); }
     }
 
-    let state = { cards: [] };
-    let activeCardId = null;
-    let currentGalleryIndex = 0;
-    let db = null; 
-    let tempFormFile = null;
+    let sharedCompanyLogo = "";
 
     function loadCompanyLogo() {
       const defaultIcon = document.getElementById('logoDefaultIcon');
@@ -435,7 +378,7 @@
         localStorage.setItem('workflow_sga_company_logo', sharedCompanyLogo);
         loadCompanyLogo();
         if (db) db.collection('workflow_sga_settings').doc('config').set({ companyLogo: sharedCompanyLogo }, { merge: true }).catch(e => console.error(e));
-        alert("Logo caricato e condiviso con successo!");
+        alert("Logo caricato e condiviso con successo nel cloud!");
       };
       reader.readAsDataURL(file);
       event.target.value = '';
@@ -455,41 +398,33 @@
       if (localLogo) sharedCompanyLogo = localLogo;
 
       const savedMasterFont = localStorage.getItem('workflow_sga_master_fontsize_px');
-      if (savedMasterFont) masterFontSizePx = parseInt(savedMasterFont);
-      applyMasterFontSize(masterFontSizePx);
+      if (savedMasterFont) applyMasterFontSize(parseInt(savedMasterFont));
 
       const savedAppFont = localStorage.getItem('workflow_sga_app_fontsize_px');
-      if (savedAppFont) appFontSizePx = parseInt(savedAppFont);
-      applyAppFontSize(appFontSizePx);
+      if (savedAppFont) applyAppFontSize(parseInt(savedAppFont));
 
       loadCompanyLogo();
     }
 
     function applyMasterFontSize(pxVal) {
-      masterFontSizePx = pxVal;
       document.documentElement.style.setProperty('--master-font-size', pxVal + 'px');
-      const rangeEl = document.getElementById('masterFontRange');
-      const valEl = document.getElementById('masterFontSizeVal');
-      if (rangeEl) rangeEl.value = pxVal;
-      if (valEl) valEl.innerText = pxVal + 'px';
+      const r = document.getElementById('masterFontRange'); const v = document.getElementById('masterFontSizeVal');
+      if (r) r.value = pxVal; if (v) v.innerText = pxVal + 'px';
     }
     function previewMasterFontSize(pxVal) { applyMasterFontSize(parseInt(pxVal)); }
 
     function applyAppFontSize(pxVal) {
-      appFontSizePx = pxVal;
       document.documentElement.style.setProperty('--app-font-size', pxVal + 'px');
-      const rangeEl = document.getElementById('appFontRange');
-      const valEl = document.getElementById('appFontSizeVal');
-      if (rangeEl) rangeEl.value = pxVal;
-      if (valEl) valEl.innerText = pxVal + 'px';
+      const r = document.getElementById('appFontRange'); const v = document.getElementById('appFontSizeVal');
+      if (r) r.value = pxVal; if (v) v.innerText = pxVal + 'px';
     }
     function previewAppFontSize(pxVal) { applyAppFontSize(parseInt(pxVal)); }
 
     function updateMasterSpeed(val) { masterScrollSpeed = parseFloat(val); }
 
     function saveSettings() {
-      localStorage.setItem('workflow_sga_master_fontsize_px', masterFontSizePx);
-      localStorage.setItem('workflow_sga_app_fontsize_px', appFontSizePx);
+      localStorage.setItem('workflow_sga_master_fontsize_px', parseInt(document.documentElement.style.getPropertyValue('--master-font-size')) || 32);
+      localStorage.setItem('workflow_sga_app_fontsize_px', parseInt(document.documentElement.style.getPropertyValue('--app-font-size')) || 15);
       closeModal('settingsModal');
       renderBoard();
       alert("Impostazioni salvate!");
@@ -497,10 +432,9 @@
 
     function resetDefaultSettings() {
       if (confirm("Ripristinare i predefiniti?")) {
-        masterFontSizePx = 24; appFontSizePx = 15;
+        applyMasterFontSize(32); applyAppFontSize(15);
         localStorage.removeItem('workflow_sga_master_fontsize_px');
         localStorage.removeItem('workflow_sga_app_fontsize_px');
-        applyMasterFontSize(24); applyAppFontSize(15);
         closeModal('settingsModal'); renderBoard();
       }
     }
@@ -525,7 +459,6 @@
       }
     }
 
-    // SCORRIMENTO AUTOMATICO MASTER VIEW CORRETTO E FLUIDO
     function startAutoScroll() {
       stopAutoScroll();
       autoScrollDir = 1;
@@ -589,6 +522,7 @@
           }
           db = firebase.firestore();
           document.getElementById('cloudStatus').innerHTML = `<i data-lucide="wifi" class="w-3 h-3 text-emerald-500"></i> <span class="text-emerald-400 font-semibold">Cloud Attivo</span>`;
+          
           db.collection('workflow_sga_settings').doc('config').onSnapshot((doc) => {
             if (doc.exists && doc.data().companyLogo) {
               sharedCompanyLogo = doc.data().companyLogo;
@@ -596,6 +530,7 @@
               loadCompanyLogo();
             }
           });
+
           db.collection('workflow_sga_cards').onSnapshot((snapshot) => {
             snapshot.docChanges().forEach((change) => {
               const docData = change.doc.data();
@@ -616,9 +551,8 @@
     function saveFirebaseConfig() {
       const apiKey = document.getElementById('cfgApiKey').value.trim();
       const projectId = document.getElementById('cfgProjectId').value.trim();
-      const imgbbKey = document.getElementById('cfgImgbbKey').value.trim();
       if (!apiKey || !projectId) return alert("Inserisci API Key e Project ID");
-      localStorage.setItem('workflow_sga_firebase_config', JSON.stringify({ apiKey, projectId, imgbbKey }));
+      localStorage.setItem('workflow_sga_firebase_config', JSON.stringify({ apiKey, projectId }));
       location.reload();
     }
 
@@ -733,6 +667,72 @@
           ${card.client ? `<p class="truncate flex items-center gap-1.5 text-slate-400 text-xs"><i data-lucide="user" class="w-3.5 h-3.5"></i> ${card.client}</p>` : ''}
         </div>
       `;
+    }
+
+    function openDetail(id) {
+      if (isMasterMode) return;
+      const card = state.cards.find(c => c.id === id);
+      if (!card) return;
+      activeCardId = id;
+      document.getElementById('editTitle').value = card.title || '';
+      document.getElementById('editClient').value = card.client || '';
+      document.getElementById('editDeliveryDate').value = card.deliveryDate || '';
+      document.getElementById('editJobType').value = card.jobType || 'Altro';
+      renderArticlesTable(card);
+      renderAttachments(card);
+      openModal('detailModal');
+    }
+
+    function saveCardEdits() {
+      const card = state.cards.find(c => c.id === activeCardId);
+      if (!card) return;
+      card.title = document.getElementById('editTitle').value.trim();
+      card.client = document.getElementById('editClient').value.trim();
+      card.deliveryDate = document.getElementById('editDeliveryDate').value;
+      card.jobType = document.getElementById('editJobType').value;
+      saveLocal(); syncCardToCloud(card);
+      playSound('success'); alert("Aggiornato!");
+    }
+
+    function renderArticlesTable(card) {
+      const tbody = document.getElementById('articlesTableBody');
+      tbody.innerHTML = '';
+      if (!card.articles || card.articles.length === 0) card.articles = [{ code: '', desc: '', qty: 1, price: 0, tax: 22 }];
+      card.articles.forEach((art, idx) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td class="py-1.5 px-2"><input type="text" value="${art.code || ''}" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs"></td><td class="py-1.5 px-2"><input type="text" value="${art.desc || ''}" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs"></td>`;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function renderAttachments(card) {}
+    function addArticleRow() {}
+    function saveArticlesEdits() {}
+    function handleDocumentUpload(e) {}
+    function deleteCurrentCard() {
+      if (confirm("Eliminare?")) {
+        state.cards = state.cards.filter(c => c.id !== activeCardId);
+        saveLocal(); syncDeleteToCloud(activeCardId); closeModal('detailModal');
+      }
+    }
+    function printCard() {}
+
+    function createNewCard(e) {
+      e.preventDefault();
+      const title = document.getElementById('formTitle').value.trim();
+      if (!title) return;
+      const newCard = {
+        id: 'c' + Date.now().toString(36),
+        title, client: document.getElementById('formClient').value.trim(),
+        jobType: document.getElementById('formJobType').value,
+        deliveryDate: document.getElementById('formDeliveryDate').value,
+        stage: document.getElementById('formInitialStage').value,
+        order: Date.now(), createdAt: new Date().toISOString(), articles: [], photos: [], history: []
+      };
+      state.cards.unshift(newCard);
+      saveLocal(); syncCardToCloud(newCard);
+      document.getElementById('newCardForm').reset();
+      closeModal('addCardModal');
     }
 
     function allowDrop(ev) { ev.preventDefault(); }
