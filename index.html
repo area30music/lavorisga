@@ -2261,7 +2261,7 @@
     }
 
     // Costruisce il messaggio leggendo il template salvato
-    function getNotificationMessage(card) {
+  function getNotificationMessage(card) {
   let template = localStorage.getItem('workflow_sga_msg_template');
   if (!template) {
     template = `Buongiorno {SALUTO},\n\nquesto è il sistema di automazione di SGA Studio Grafico Associato.\n\nVolevamo comunicarle che l'ordine da lei effettuato ("{TITOLO}"){ARTICOLI}\n\nè pronto per il ritiro.\n\nCordiali saluti,\nSGA Studio Grafico Associato`;
@@ -2282,8 +2282,8 @@
   if (card.articles && card.articles.length > 0) {
     const validArticles = card.articles.filter(a => a.desc && a.desc.trim() !== "");
     if (validArticles.length > 0) {
-      // Formattazione aggiornata: trattino, quantità, spazio, descrizione
-      articlesList = " contenente:\n" + validArticles.map(a => `- ${a.qty || 1} ${a.desc.trim()}`).join('\n');
+      // Tolto "contenente:" e aggiunto "pezzi" dopo la quantità
+      articlesList = "\n" + validArticles.map(a => `- ${a.qty || 1} pezzi ${a.desc.trim()}`).join('\n');
     }
   }
 
