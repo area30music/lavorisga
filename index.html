@@ -2262,38 +2262,36 @@
 
     // Costruisce il messaggio leggendo il template salvato
     function getNotificationMessage(card) {
-      let template = localStorage.getItem('workflow_sga_msg_template');
-      if (!template) {
-        template = `Buongiorno {SALUTO},\n\nquesto è il sistema di automazione di SGA Studio Grafico Associato.\n\nVolevamo comunicarle che l'ordine da lei effettuato ("{TITOLO}"){ARTICOLI}\n\nè pronto per il ritiro.\n\nCordiali saluti,\nSGA Studio Grafico Associato`;
-      }
+  let template = localStorage.getItem('workflow_sga_msg_template');
+  if (!template) {
+    template = `Buongiorno {SALUTO},\n\nquesto è il sistema di automazione di SGA Studio Grafico Associato.\n\nVolevamo comunicarle che l'ordine da lei effettuato ("{TITOLO}"){ARTICOLI}\n\nè pronto per il ritiro.\n\nCordiali saluti,\nSGA Studio Grafico Associato`;
+  }
 
-      // Costruisce il saluto dinamicamente
-      let saluto = "";
-      if (card.referent && card.client) {
-        saluto = `${card.referent} della ditta ${card.client}`;
-      } else if (card.referent) {
-        saluto = `${card.referent}`;
-      } else if (card.client) {
-        saluto = `ditta ${card.client}`;
-      } else {
-        saluto = `Cliente`;
-      }
+  let saluto = "";
+  if (card.referent && card.client) {
+    saluto = `${card.referent} della ditta ${card.client}`;
+  } else if (card.referent) {
+    saluto = `${card.referent}`;
+  } else if (card.client) {
+    saluto = `ditta ${card.client}`;
+  } else {
+    saluto = `Cliente`;
+  }
 
-      // Costruisce l'elenco degli articoli
-      let articlesList = "";
-      if (card.articles && card.articles.length > 0) {
-        const validArticles = card.articles.filter(a => a.desc && a.desc.trim() !== "");
-        if (validArticles.length > 0) {
-          articlesList = " contenente:\n" + validArticles.map(a => `- ${a.qty || 1}x ${a.desc.trim()}`).join('\n');
-        }
-      }
-
-      // Sostituisce le variabili nel template
-      return template
-        .replace(/{SALUTO}/g, saluto)
-        .replace(/{TITOLO}/g, card.title || '')
-        .replace(/{ARTICOLI}/g, articlesList);
+  let articlesList = "";
+  if (card.articles && card.articles.length > 0) {
+    const validArticles = card.articles.filter(a => a.desc && a.desc.trim() !== "");
+    if (validArticles.length > 0) {
+      // Formattazione aggiornata: trattino, quantità, spazio, descrizione
+      articlesList = " contenente:\n" + validArticles.map(a => `- ${a.qty || 1} ${a.desc.trim()}`).join('\n');
     }
+  }
+
+  return template
+    .replace(/{SALUTO}/g, saluto)
+    .replace(/{TITOLO}/g, card.title || '')
+    .replace(/{ARTICOLI}/g, articlesList);
+}
 
     // GESTIONE MESSAGGIO WHATSAPP
     function sendWhatsAppNotification() {
