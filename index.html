@@ -37,7 +37,7 @@
       header { padding-left: 0.5rem !important; padding-right: 0.5rem !important; }
     }
 
-    /* STILI MASTER VIEW (CORRETTI) */
+    /* STILI MASTER VIEW */
     body.master-mode .hide-in-master { display: none !important; }
     body:not(.master-mode) .show-in-master { display: none !important; }
     body.master-mode .show-in-master { display: flex !important; }
@@ -75,10 +75,10 @@
 </head>
 <body class="bg-slate-950 text-slate-100 font-sans h-screen flex flex-col overflow-hidden">
 
-  <!-- ALERT VIDEOGAME POPUP (SCADENZE INGRANDITO) -->
+  <!-- ALERT VIDEOGAME POPUP (SCADENZE INGRANDITO CON BARRA TEMPO) -->
   <div id="arcadeAlertModal" class="hidden fixed inset-0 bg-black/85 backdrop-blur-md z-[150] flex items-center justify-center p-4">
-    <div class="arcade-alert-box rounded-3xl w-full max-w-2xl p-8 shadow-2xl relative space-y-6">
-      <button onclick="closeArcadeAlert()" class="absolute top-4 right-4 bg-red-600 hover:bg-red-500 text-white rounded-full p-2 shadow-lg active:scale-95 transition-all cursor-pointer z-10" title="Chiudi avviso">
+    <div class="arcade-alert-box rounded-3xl w-full max-w-2xl p-8 shadow-2xl relative space-y-6 pointer-events-auto">
+      <button type="button" onclick="closeArcadeAlert()" class="absolute top-4 right-4 bg-red-600 hover:bg-red-500 text-white rounded-full p-2 shadow-lg active:scale-95 transition-all cursor-pointer z-10" title="Chiudi avviso">
         <i data-lucide="x" class="w-6 h-6"></i>
       </button>
       
@@ -94,11 +94,16 @@
         <!-- Lista inserita via JS -->
       </div>
 
-      <div class="pt-2 text-center">
-        <button onclick="closeArcadeAlert()" class="bg-red-600 hover:bg-red-500 text-white font-black px-8 py-3.5 rounded-xl text-base uppercase tracking-wider shadow-xl shadow-red-900/50 active:scale-95 transition-transform border border-red-400 cursor-pointer">
+      <div class="pt-2 text-center space-y-3">
+        <button type="button" onclick="closeArcadeAlert()" class="bg-red-600 hover:bg-red-500 text-white font-black px-8 py-3.5 rounded-xl text-base uppercase tracking-wider shadow-xl shadow-red-900/50 active:scale-95 transition-transform border border-red-400 cursor-pointer">
           Ricevuto / Chiudi Avviso
         </button>
-        <p class="text-xs text-slate-400 mt-3 italic animate-pulse">Questo avviso si chiuderà automaticamente tra 1 minuto (o puoi chiuderlo prima)...</p>
+        <div>
+          <p class="text-xs text-slate-400 mb-1.5 italic">Questo avviso si chiuderà automaticamente tra 1 minuto...</p>
+          <div class="w-full bg-slate-900 h-2 rounded-full overflow-hidden border border-red-500/40 shadow-inner">
+            <div id="arcadeProgressBar" class="bg-red-500 h-full w-full"></div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -147,11 +152,9 @@
 
       <!-- CONTROLLI SCORRIMENTO MASTER VIEW (Play/Pausa e Velocità) -->
       <div class="show-in-master hidden items-center gap-2 ml-2">
-        <!-- Tasto Play/Pausa -->
         <button id="masterPlayPauseBtn" onclick="togglePlayPauseMaster(); playSound('click');" class="bg-slate-800 hover:bg-slate-700 text-white px-3 py-2 rounded-lg text-xs md:text-sm font-bold flex items-center gap-1.5 border border-slate-700 shadow-lg cursor-pointer transition-colors" title="Play/Pausa Scorrimento">
             <i data-lucide="pause" id="masterPlayPauseIcon" class="w-4 h-4 text-amber-400"></i> <span id="masterPlayPauseText">Pausa</span>
         </button>
-        <!-- Slider Velocità -->
         <div class="flex items-center gap-2 bg-slate-950 border border-indigo-500/40 px-3 py-1.5 rounded-xl shadow-lg h-[38px]">
           <i data-lucide="gauge" class="w-4 h-4 text-indigo-400"></i>
           <span class="text-xs text-slate-300 font-semibold hidden md:inline">Velocità:</span>
@@ -170,7 +173,6 @@
     </div>
     
     <div class="flex space-x-2 md:space-x-3 items-center flex-wrap">
-      <!-- WIDGET DATA E ORA -->
       <div id="liveClockWidget" class="flex items-center gap-2 bg-slate-950 border border-slate-700 px-3 md:px-4 py-1.5 rounded-xl text-sm md:text-base font-mono text-emerald-400 font-bold shadow-lg">
         <i data-lucide="clock" class="w-4 h-4 md:w-5 md:h-5 text-indigo-400 animate-pulse"></i>
         <span id="headerClockTime" class="tracking-wider">--:--:--</span>
@@ -194,7 +196,6 @@
       
       <div class="hide-in-master w-px h-5 bg-slate-700 mx-0.5"></div>
 
-      <!-- Pulsante Master View -->
       <button onclick="playSound('click'); toggleMasterMode();" class="hide-in-master bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-emerald-900/50 px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 active:scale-95 transition-transform" title="Master View">
         <i data-lucide="monitor" class="w-4 h-4"></i> Master View
       </button>
@@ -223,7 +224,6 @@
       </div>
 
       <div class="p-5 overflow-y-auto space-y-6 flex-1 text-sm">
-        <!-- Gestione Logo Aziendale Condiviso -->
         <div class="bg-slate-950 p-4 rounded-lg border border-slate-800 space-y-3">
           <h4 class="text-xs font-bold text-indigo-400 uppercase tracking-wider">Logo Aziendale Condiviso (Database)</h4>
           <p class="text-xs text-slate-400">Carica il logo in PNG trasparente: verrà salvato nel database Cloud e sarà visibile automaticamente su tutti i dispositivi (iPad, PC, ecc.).</p>
@@ -243,7 +243,6 @@
           </div>
         </div>
 
-        <!-- ZOOM SCHERMATA PROGRAMMAZIONE (INTERFACCIA LAVORO) -->
         <div class="bg-slate-950 p-4 rounded-lg border border-slate-800 space-y-3">
           <div class="flex justify-between items-center">
             <h4 class="text-xs font-bold text-indigo-400 uppercase tracking-wider flex items-center gap-1.5">
@@ -258,7 +257,6 @@
           </div>
         </div>
 
-        <!-- ZOOM MASTER VIEW IN PIXEL (PROIETTORE) -->
         <div class="bg-slate-950 p-4 rounded-lg border border-slate-800 space-y-3">
           <div class="flex justify-between items-center">
             <h4 class="text-xs font-bold text-indigo-400 uppercase tracking-wider flex items-center gap-1.5">
@@ -273,7 +271,6 @@
           </div>
         </div>
 
-        <!-- PROGRAMMAZIONE SVEGLIE TIPO iPHONE PER ALERT SCADENZE -->
         <div class="bg-slate-950 p-4 rounded-lg border border-slate-800 space-y-3">
           <div class="flex justify-between items-center">
             <div>
@@ -289,7 +286,6 @@
           <div id="alarmsListContainer" class="space-y-3 max-h-60 overflow-y-auto pr-1"></div>
         </div>
 
-        <!-- Personalizzazione Colori Colonne -->
         <div class="bg-slate-950 p-4 rounded-lg border border-slate-800 space-y-3">
           <h4 class="text-xs font-bold text-indigo-400 uppercase tracking-wider">Colori delle Fasi / Colonne</h4>
           <div id="columnsColorSettingsList" class="space-y-2 max-h-44 overflow-y-auto pr-2"></div>
@@ -321,7 +317,6 @@
       </div>
       
       <div class="p-3 md:p-5 overflow-y-auto space-y-5 flex-1 text-sm">
-        <!-- Modifica Anagrafica & Colore -->
         <div class="space-y-3 bg-slate-950 p-3.5 rounded-lg border border-slate-800">
           <div>
             <label class="text-[10px] text-indigo-400 font-semibold uppercase tracking-wider block mb-1">Cliente / Titolo Progetto</label>
@@ -367,7 +362,6 @@
           </button>
         </div>
 
-        <!-- TABELLA ARTICOLI & PREVENTIVO -->
         <div class="space-y-3 bg-slate-950 p-3.5 rounded-lg border border-slate-800">
           <div class="flex justify-between items-center">
             <label class="text-xs text-indigo-400 font-bold uppercase tracking-wider block">Dettagli Articoli & Preventivo</label>
@@ -417,7 +411,6 @@
           </div>
         </div>
 
-        <!-- Foto & Documenti PDF -->
         <div>
           <div class="flex justify-between items-center mb-2">
             <label class="text-xs text-slate-400 font-semibold uppercase tracking-wider block">Foto & Documenti PDF (Auto-compilazione da Aruba)</label>
@@ -430,14 +423,12 @@
           <div id="attachmentsContainer" class="grid grid-cols-2 md:grid-cols-4 gap-2 bg-slate-950 p-2 rounded-lg border border-slate-800 max-h-36 overflow-y-auto"></div>
         </div>
 
-        <!-- STORYBOARD -->
         <div>
           <label class="text-xs text-slate-400 font-semibold uppercase tracking-wider block mb-3">Storyboard Lavorazione</label>
           <div id="storyboardTimeline" class="relative pl-6 space-y-3 before:absolute before:left-2 before:top-1.5 before:bottom-1.5 before:w-0.5 before:bg-slate-800"></div>
         </div>
       </div>
 
-      <!-- Footer -->
       <div class="p-4 border-t border-slate-800 bg-slate-950 flex justify-between gap-3">
         <button onclick="playSound('delete'); deleteCurrentCard();" class="bg-red-950/40 hover:bg-red-900/60 text-red-400 border border-red-900/50 px-4 py-2 rounded-lg font-semibold flex items-center gap-2 active:scale-95 transition-all text-xs cursor-pointer">
           <i data-lucide="trash-2" class="w-4 h-4"></i> Elimina
@@ -494,14 +485,13 @@
             <select id="formInitialStage" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-indigo-500">
               <option value="prev-da-fare">Prev. da fare</option>
               <option value="prev-inviato">Prev. inviato</option>
-              <option value="accettato-mod">Accettato/Modifica</option>
               <option value="da-ordinare">Da ordinare</option>
               <option value="ordinato">Ordinato</option>
               <option value="magazzino">In magazzino</option>
               <option value="da-lavorare">Da lavorare</option>
               <option value="in-lavorazione">In lavorazione</option>
-              <option value="lavorato">Lavorato</option>
-              <option value="consegnato">Consegnato</option>
+              <option value="lavorato-da-bollettare">Lavorato da bollettare</option>
+              <option value="bollettato-da-consegnare">Bollettato da consegnare</option>
               <option value="fatturato">Fatturato</option>
             </select>
           </div>
@@ -611,14 +601,13 @@
     const DEFAULT_COLUMNS_CONFIG = [
       { id: "prev-da-fare", label: "Prev. da fare", color: "bg-orange-600/20 border-orange-500/50 text-orange-400", border: "border-l-4 border-l-orange-500", hexDefault: "#c2410c" },
       { id: "prev-inviato", label: "Prev. inviato", color: "bg-amber-600/20 border-amber-500/50 text-amber-400", border: "border-l-4 border-l-amber-500", hexDefault: "#d97706" },
-      { id: "accettato-mod", label: "Accettato/Modifica", color: "bg-yellow-600/20 border-yellow-500/50 text-yellow-300", border: "border-l-4 border-l-yellow-500", hexDefault: "#ca8a04" },
       { id: "da-ordinare", label: "Da ordinare", color: "bg-rose-600/20 border-rose-500/50 text-rose-400", border: "border-l-4 border-l-rose-500", hexDefault: "#e11d48" },
       { id: "ordinato", label: "Ordinato", color: "bg-pink-600/20 border-pink-500/50 text-pink-400", border: "border-l-4 border-l-pink-500", hexDefault: "#db2777" },
       { id: "magazzino", label: "In magazzino", color: "bg-fuchsia-600/20 border-fuchsia-500/50 text-fuchsia-400", border: "border-l-4 border-l-fuchsia-500", hexDefault: "#c026d3" },
       { id: "da-lavorare", label: "Da lavorare", color: "bg-violet-600/20 border-violet-500/50 text-violet-400", border: "border-l-4 border-l-violet-500", hexDefault: "#7c3aed" },
       { id: "in-lavorazione", label: "In lavorazione", color: "bg-cyan-600/20 border-cyan-500/50 text-cyan-400", border: "border-l-4 border-l-cyan-500", hexDefault: "#0891b2" },
-      { id: "lavorato", label: "Lavorato", color: "bg-emerald-600/20 border-emerald-500/50 text-emerald-400", border: "border-l-4 border-l-emerald-500", hexDefault: "#059669" },
-      { id: "consegnato", label: "Consegnato", color: "bg-teal-600/20 border-teal-500/50 text-teal-400", border: "border-l-4 border-l-teal-500", hexDefault: "#0d9488" },
+      { id: "lavorato-da-bollettare", label: "Lavorato da bollettare", color: "bg-emerald-600/20 border-emerald-500/50 text-emerald-400", border: "border-l-4 border-l-emerald-500", hexDefault: "#059669" },
+      { id: "bollettato-da-consegnare", label: "Bollettato da consegnare", color: "bg-teal-600/20 border-teal-500/50 text-teal-400", border: "border-l-4 border-l-teal-500", hexDefault: "#0d9488" },
       { id: "fatturato", label: "Fatturato", color: "bg-blue-600/20 border-blue-500/50 text-blue-400", border: "border-l-4 border-l-blue-500", hexDefault: "#2563eb" }
     ];
 
@@ -676,7 +665,7 @@
 
     function triggerAlarmAlert() {
       const urgentCards = state.cards.filter(card => {
-        if (card.stage === 'consegnato' || card.stage === 'fatturato') return false;
+        if (card.stage === 'bollettato-da-consegnare' || card.stage === 'fatturato') return false;
         if (!card.deliveryDate) return false;
         const delivery = new Date(card.deliveryDate);
         delivery.setHours(0,0,0,0);
@@ -686,7 +675,7 @@
         return diffDays <= 7;
       });
 
-      const cardsToDisplay = urgentCards.length > 0 ? urgentCards : state.cards.filter(card => card.stage !== 'consegnato' && card.stage !== 'fatturato');
+      const cardsToDisplay = urgentCards.length > 0 ? urgentCards : state.cards.filter(card => card.stage !== 'bollettato-da-consegnare' && card.stage !== 'fatturato');
       if (cardsToDisplay.length > 0) showArcadeAlert(cardsToDisplay);
     }
 
@@ -1084,6 +1073,17 @@
       });
       document.getElementById('arcadeAlertModal').classList.remove('hidden');
       lucide.createIcons();
+
+      const progressBar = document.getElementById('arcadeProgressBar');
+      if (progressBar) {
+        progressBar.style.transition = 'none';
+        progressBar.style.width = '100%';
+        setTimeout(() => {
+          progressBar.style.transition = 'width 60s linear';
+          progressBar.style.width = '0%';
+        }, 50);
+      }
+
       if (arcadeTimer) clearTimeout(arcadeTimer);
       arcadeTimer = setTimeout(() => { closeArcadeAlert(); }, 60000); 
     }
@@ -1093,6 +1093,11 @@
       if (sirenInterval) { clearInterval(sirenInterval); sirenInterval = null; }
       document.getElementById('arcadeAlertModal').classList.add('hidden');
       if (arcadeTimer) { clearTimeout(arcadeTimer); arcadeTimer = null; }
+      const progressBar = document.getElementById('arcadeProgressBar');
+      if (progressBar) {
+        progressBar.style.transition = 'none';
+        progressBar.style.width = '100%';
+      }
     }
 
     function togglePlayPauseMaster() {
@@ -1154,7 +1159,6 @@
         }
 
         if (board) {
-          // Scorrimento verticale indipendente per ogni colonna
           const activeCols = board.querySelectorAll('.board-column');
           activeCols.forEach(col => {
             const dropzone = col.querySelector('.card-dropzone');
@@ -1181,7 +1185,6 @@
             }
           });
 
-          // Scorrimento orizzontale generale
           if (board.scrollWidth > board.clientWidth) {
             if (autoScrollPause > 0) {
               autoScrollPause -= elapsed;
@@ -1574,7 +1577,7 @@
       const badgeStyle = getJobTypeClass(card.jobType);
       
       let isUrgent = false;
-      if (card.deliveryDate && card.stage !== 'consegnato' && card.stage !== 'fatturato') {
+      if (card.deliveryDate && card.stage !== 'bollettato-da-consegnare' && card.stage !== 'fatturato') {
         const delivery = new Date(card.deliveryDate); delivery.setHours(0,0,0,0);
         const today = new Date(); today.setHours(0,0,0,0);
         if (Math.ceil((delivery - today) / (1000 * 60 * 60 * 24)) <= 7) isUrgent = true;
