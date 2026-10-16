@@ -37,10 +37,10 @@
       header { padding-left: 0.5rem !important; padding-right: 0.5rem !important; }
     }
 
-    /* STILI MASTER VIEW */
+    /* STILI MASTER VIEW (CORRETTI) */
     body.master-mode .hide-in-master { display: none !important; }
     body:not(.master-mode) .show-in-master { display: none !important; }
-    body.master-mode .show-only-master { display: flex !important; }
+    body.master-mode .show-in-master { display: flex !important; }
     
     body.master-mode .board-column { 
       pointer-events: none; 
@@ -145,7 +145,7 @@
         <i data-lucide="arrow-left" class="w-5 h-5"></i> Torna a Programmazione
       </button>
 
-      <!-- NEW: CONTROLLI SCORRIMENTO MASTER VIEW (Play/Pausa e Velocità) -->
+      <!-- CONTROLLI SCORRIMENTO MASTER VIEW (Play/Pausa e Velocità) -->
       <div class="show-in-master hidden items-center gap-2 ml-2">
         <!-- Tasto Play/Pausa -->
         <button id="masterPlayPauseBtn" onclick="togglePlayPauseMaster(); playSound('click');" class="bg-slate-800 hover:bg-slate-700 text-white px-3 py-2 rounded-lg text-xs md:text-sm font-bold flex items-center gap-1.5 border border-slate-700 shadow-lg cursor-pointer transition-colors" title="Play/Pausa Scorrimento">
@@ -605,10 +605,8 @@
     let autoScrollDir = 1;
     let autoScrollPause = 0;
     let lastScrollTime = 0;
-    let isAutoScrollPaused = false; // FLAG PER PLAY/PAUSA DELLA MASTER VIEW
-    let arcadeTimer = null;
-    let sirenInterval = null;
-    let masterScrollSpeed = 0.08; // Velocità personalizzabile via slider
+    let isAutoScrollPaused = false;
+    let masterScrollSpeed = 0.08;
 
     const DEFAULT_COLUMNS_CONFIG = [
       { id: "prev-da-fare", label: "Prev. da fare", color: "bg-orange-600/20 border-orange-500/50 text-orange-400", border: "border-l-4 border-l-orange-500", hexDefault: "#c2410c" },
@@ -628,7 +626,7 @@
     let USER_ALARMS = []; 
     let masterFontSizePx = 24; 
     let appFontSizePx = 15;
-    let sharedCompanyLogo = ""; // Logo condiviso sincronizzato dal DB
+    let sharedCompanyLogo = "";
 
     const COLOR_OPTIONS = [
       { label: "Arancione", value: "bg-orange-600/20 border-orange-500/50 text-orange-400", border: "border-l-4 border-l-orange-500" },
@@ -816,7 +814,6 @@
     let db = null; 
     let tempFormFile = null;
 
-    // --- GESTIONE LOGO CONDIVISO NEL DATABASE ---
     function loadCompanyLogo() {
       const defaultIcon = document.getElementById('logoDefaultIcon');
       const logoImg = document.getElementById('logoImageDisplay');
@@ -854,7 +851,6 @@
         loadCompanyLogo();
         playSound('success');
         
-        // Sincronizza sul Cloud se connesso
         if (db) {
           db.collection('workflow_sga_settings').doc('config').set({ companyLogo: sharedCompanyLogo }, { merge: true }).catch(e => console.error(e));
         }
@@ -876,7 +872,6 @@
       }
     }
 
-    // --- ZOOM SETTINGS ---
     function loadUserSettings() {
       const localLogo = localStorage.getItem('workflow_sga_company_logo');
       if (localLogo) sharedCompanyLogo = localLogo;
@@ -1100,7 +1095,6 @@
       if (arcadeTimer) { clearTimeout(arcadeTimer); arcadeTimer = null; }
     }
 
-    // --- PLAY/PAUSA MASTER VIEW LOGIC ---
     function togglePlayPauseMaster() {
         isAutoScrollPaused = !isAutoScrollPaused;
         const icon = document.getElementById('masterPlayPauseIcon');
@@ -1115,7 +1109,6 @@
         lucide.createIcons();
     }
 
-    // --- MASTER VIEW CON SCORRIMENTO VERTICALE AUTOMATICO (PAUSA PER SCHEDE LUNGHE) ---
     function toggleMasterMode() {
       isMasterMode = !isMasterMode;
       const body = document.body;
@@ -1126,7 +1119,6 @@
         body.classList.add('master-mode');
         backBtns.forEach(el => { el.classList.remove('hidden'); el.style.display = 'flex'; });
         
-        // Reset pulsante Play/Pausa
         isAutoScrollPaused = false;
         const icon = document.getElementById('masterPlayPauseIcon');
         const text = document.getElementById('masterPlayPauseText');
@@ -1155,7 +1147,6 @@
         if (!lastScrollTime) lastScrollTime = timestamp;
         const elapsed = timestamp - lastScrollTime;
 
-        // Se lo scorrimento è in pausa dall'utente, aggiorno solo il tempo e skippo la logica di movimento
         if (isAutoScrollPaused) {
             lastScrollTime = timestamp;
             autoScrollId = requestAnimationFrame(step);
@@ -1163,20 +1154,34 @@
         }
 
         if (board) {
-          // Controllo scorrimento verticale automatico delle colonne lunghe
+          // Scorrimento verticale indipendente per ogni colonna
           const activeCols = board.querySelectorAll('.board-column');
           activeCols.forEach(col => {
             const dropzone = col.querySelector('.card-dropzone');
             if (dropzone && dropzone.scrollHeight > dropzone.clientHeight) {
-              // Se la colonna ha contenuto fuori schermo, facciamo scorrere la colonna in altezza lentamente
-              dropzone.scrollTop += (autoScrollDir * (masterScrollSpeed * 0.4));
-              if (dropzone.scrollTop >= (dropzone.scrollHeight - dropzone.clientHeight) || dropzone.scrollTop <= 0) {
-                autoScrollPause = 1500; // Pausa di lettura in cima/fondo
+              if (!dropzone.dataset.vDir) dropzone.dataset.vDir = 1;
+              if (!dropzone.dataset.vPause) dropzone.dataset.vPause = 0;
+
+              let vPause = parseFloat(dropzone.dataset.vPause);
+              if (vPause > 0) {
+                dropzone.dataset.vPause = vPause - elapsed;
+              } else {
+                let vDir = parseInt(dropzone.dataset.vDir);
+                const pxToScrollV = (elapsed * masterScrollSpeed * 0.6);
+                dropzone.scrollTop += (pxToScrollV * vDir);
+
+                if (vDir === 1 && dropzone.scrollTop >= (dropzone.scrollHeight - dropzone.clientHeight - 2)) {
+                  dropzone.dataset.vDir = -1;
+                  dropzone.dataset.vPause = 2000;
+                } else if (vDir === -1 && dropzone.scrollTop <= 0) {
+                  dropzone.dataset.vDir = 1;
+                  dropzone.dataset.vPause = 2000;
+                }
               }
             }
           });
 
-          // Scorrimento orizzontale della board principale
+          // Scorrimento orizzontale generale
           if (board.scrollWidth > board.clientWidth) {
             if (autoScrollPause > 0) {
               autoScrollPause -= elapsed;
@@ -1206,7 +1211,6 @@
       lastScrollTime = 0;
     }
 
-    // --- FIREBASE & SINCRONIZZAZIONE CONFIGURAZIONI ---
     function initFirebase() {
       const cfgStr = localStorage.getItem('workflow_sga_firebase_config');
       if (!cfgStr) { updateCloudStatus(false); return; }
@@ -1265,7 +1269,6 @@
     function listenToCloudUpdates() {
       if (!db) return;
 
-      // Sincronizzazione Logo e Impostazioni Globali
       db.collection('workflow_sga_settings').doc('config').onSnapshot((doc) => {
         if (doc.exists) {
           const data = doc.data();
@@ -1277,7 +1280,6 @@
         }
       });
 
-      // Sincronizzazione Commesse
       db.collection('workflow_sga_cards').onSnapshot((snapshot) => {
         if (snapshot.empty && state.cards.length > 0) {
           state.cards.forEach(card => syncCardToCloud(card));
