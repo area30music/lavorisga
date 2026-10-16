@@ -107,7 +107,7 @@
   <!-- WORKSPACE -->
   <main id="board" class="flex-1 overflow-x-auto overflow-y-hidden flex gap-4 p-3 md:p-4 items-start select-none relative scroll-smooth"></main>
 
-  <!-- MODAL: IMPOSTAZIONI -->
+  <!-- MODAL: IMPOSTAZIONI (SCHEDE) -->
   <div id="settingsModal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
     <div class="bg-slate-900 border border-slate-800 rounded-xl w-full max-w-3xl h-[85vh] flex flex-col overflow-hidden shadow-2xl">
       <div class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-850">
@@ -208,34 +208,90 @@
     <div class="bg-slate-900 border border-slate-800 rounded-xl w-full max-w-md p-5 shadow-2xl max-h-[92vh] overflow-y-auto">
       <div class="flex justify-between items-center mb-4"><h3 class="font-bold text-lg text-slate-100">Nuova Commessa</h3><button onclick="closeModal('addCardModal');" class="text-slate-400 bg-slate-800 rounded-full p-1 cursor-pointer"><i data-lucide="x" class="w-4 h-4"></i></button></div>
       <form id="newCardForm" class="space-y-4 text-sm" onsubmit="createNewCard(event)">
-        <div><label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Titolo Progetto</label><input type="text" id="formTitle" required class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200"></div>
+        <div><label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Cliente / Titolo Progetto</label><input type="text" id="formTitle" required class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200"></div>
         <div class="grid grid-cols-2 gap-3">
           <div><label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Cliente (CRM)</label><input type="text" id="formClient" list="clientList" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200"></div>
-          <div><label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Tipo</label><select id="formJobType" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200"><option>Stampa Digitale</option><option>Abbigliamento</option><option>Service / Audio</option><option>Altro</option></select></div>
+          <div>
+            <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Tipo Lavorazione</label>
+            <select id="formJobType" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200">
+              <option value="Stampa Digitale / Banner">Stampa Digitale / Banner</option>
+              <option value="Abbigliamento / Ricamo">Abbigliamento / Ricamo</option>
+              <option value="Insegne & Vetrofanie">Insegne & Vetrofanie</option>
+              <option value="Etichette & Adesivi">Etichette & Adesivi</option>
+              <option value="Grafica / Progettazione">Grafica / Progettazione</option>
+              <option value="Service / Audio">Service / Audio</option>
+              <option value="Service / Luci">Service / Luci</option>
+              <option value="Altro">Altro</option>
+            </select>
+          </div>
         </div>
         <div class="grid grid-cols-2 gap-3">
-          <div><label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Scadenza</label><input type="date" id="formDeliveryDate" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200"></div>
-          <div><label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Workspace</label><select id="formWorkspace" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200"><option value="grafica">Grafica</option><option value="eventi">Eventi</option></select></div>
+          <div><label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Data Consegna/Evento</label><input type="date" id="formDeliveryDate" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200"></div>
+          <div><label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Workspace Assegnato</label><select id="formWorkspace" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200"><option value="grafica">SGA Grafica</option><option value="eventi">Area 30 Eventi</option></select></div>
         </div>
         <div><label class="block text-xs font-semibold uppercase text-slate-400 mb-2">Macchinari Richiesti</label><div id="formTagsContainer" class="flex flex-wrap gap-2"></div></div>
+        <div><label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Note / Descrizione</label><textarea id="formNotes" rows="2" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 resize-none"></textarea></div>
         <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2.5 px-4 rounded-lg shadow-lg cursor-pointer">Inserisci in Workflow</button>
       </form>
     </div>
   </div>
 
-  <!-- MODAL: DETTAGLIO -->
+  <!-- MODAL: DETTAGLIO SCHEDA -->
   <div id="detailModal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-2 md:p-4">
-    <div class="bg-slate-900 border border-slate-800 rounded-xl w-full max-w-4xl max-h-[96vh] flex flex-col overflow-hidden shadow-2xl">
-      <div class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-850"><h2 class="text-lg font-bold">Dettaglio Commessa</h2><button onclick="closeModal('detailModal');" class="text-slate-400 bg-slate-800 rounded-full p-1"><i data-lucide="x" class="w-5 h-5"></i></button></div>
-      <div class="p-5 overflow-y-auto flex-1 space-y-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-xl w-full max-w-5xl max-h-[96vh] flex flex-col overflow-hidden shadow-2xl">
+      <div class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-850">
+        <div class="flex items-center gap-2"><span id="detailBadge" class="px-2 py-0.5 rounded text-xs font-bold text-white uppercase bg-indigo-600"></span><h2 class="text-lg font-bold text-white">Dettaglio Commessa</h2></div>
+        <button onclick="closeModal('detailModal');" class="text-slate-400 bg-slate-800 rounded-full p-1"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+      <div class="p-5 overflow-y-auto flex-1 space-y-4 text-sm">
         <div class="space-y-4 bg-slate-950 p-4 rounded-lg border border-slate-800">
-           <input type="text" id="editTitle" class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-1.5 text-slate-100 font-semibold text-base mb-2">
-           <div class="grid grid-cols-2 gap-3 mb-2"><input type="text" id="editClient" list="clientList" class="bg-slate-900 border border-slate-700 rounded px-3 py-1.5 text-slate-200 text-sm"><input type="date" id="editDeliveryDate" class="bg-slate-900 border border-slate-700 rounded px-3 py-1.5 text-slate-200 text-sm"></div>
-           <div class="pt-2"><label class="text-[10px] text-indigo-400 font-semibold uppercase tracking-wider block mb-2">Macchinari</label><div id="editTagsContainer" class="flex flex-wrap gap-2"></div></div>
-           <button onclick="saveCardEdits()" class="w-full bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 text-xs px-3 py-2 rounded font-semibold">Salva Modifiche</button>
+           <div><label class="text-[10px] text-indigo-400 font-semibold uppercase block mb-1">Titolo Progetto</label><input type="text" id="editTitle" class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-1.5 text-slate-100 font-semibold text-base"></div>
+           <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+             <div><label class="text-[10px] text-indigo-400 font-semibold uppercase block mb-1">Cliente (CRM)</label><input type="text" id="editClient" list="clientList" class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-1.5 text-slate-200 text-sm"></div>
+             <div><label class="text-[10px] text-indigo-400 font-semibold uppercase block mb-1">Data Consegna</label><input type="date" id="editDeliveryDate" class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-1.5 text-slate-200 text-sm"></div>
+             <div>
+               <label class="text-[10px] text-indigo-400 font-semibold uppercase block mb-1">Tipo Lavorazione</label>
+               <select id="editJobType" class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-1.5 text-slate-200 text-sm">
+                 <option value="Stampa Digitale / Banner">Stampa Digitale / Banner</option>
+                 <option value="Abbigliamento / Ricamo">Abbigliamento / Ricamo</option>
+                 <option value="Insegne & Vetrofanie">Insegne & Vetrofanie</option>
+                 <option value="Etichette & Adesivi">Etichette & Adesivi</option>
+                 <option value="Grafica / Progettazione">Grafica / Progettazione</option>
+                 <option value="Service / Audio">Service / Audio</option>
+                 <option value="Service / Luci">Service / Luci</option>
+                 <option value="Altro">Altro</option>
+               </select>
+             </div>
+           </div>
+           <div class="pt-2 border-t border-slate-800"><label class="text-[10px] text-indigo-400 font-semibold uppercase block mb-2">Macchinari / Reparti Coinvolti</label><div id="editTagsContainer" class="flex flex-wrap gap-2"></div></div>
+           <button onclick="saveCardEdits()" class="w-full bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-300 border border-indigo-500/30 text-xs px-3 py-2 rounded font-semibold">Salva Modifiche Anagrafica</button>
+        </div>
+
+        <!-- ARTICOLI & COSTI -->
+        <div class="space-y-3 bg-slate-950 p-4 rounded-lg border border-slate-800">
+          <div class="flex justify-between items-center"><label class="text-xs text-indigo-400 font-bold uppercase">Dettagli Articoli & Costi</label><button onclick="addArticleRow()" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs px-2.5 py-1 rounded shadow">Aggiungi Riga</button></div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs min-w-[700px]">
+              <thead><tr class="border-b border-slate-800 text-slate-400 uppercase text-[10px]"><th class="py-2 px-2 w-24">Codice</th><th class="py-2 px-2">Descrizione</th><th class="py-2 px-2 w-16 text-center">Q.tà</th><th class="py-2 px-2 w-20 text-right">Prz Un.</th><th class="py-2 px-2 w-16 text-center">IVA %</th><th class="py-2 px-2 w-20 text-right">Tot. Netto</th><th class="py-2 px-2 w-24 text-right">Tot. Ivato</th><th class="py-2 px-2 w-10"></th></tr></thead>
+              <tbody id="articlesTableBody" class="divide-y divide-slate-900"></tbody>
+            </table>
+          </div>
+          <div class="flex justify-between items-center pt-3 border-t border-slate-800">
+            <button onclick="saveArticlesEdits()" class="bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 text-xs px-3 py-1.5 rounded font-semibold">Salva Articoli</button>
+            <div class="flex gap-4 text-right"><div><span class="text-[10px] text-slate-400 uppercase block font-bold">Imponibile:</span><span id="grandSubtotalDisplay" class="text-xs font-semibold text-slate-300">€ 0,00</span></div><div><span class="text-[10px] text-slate-400 uppercase block font-bold">Totale Ivato:</span><span id="grandTotalDisplay" class="text-base font-extrabold text-emerald-400">€ 0,00</span></div></div>
+          </div>
+        </div>
+
+        <!-- TIMELINE -->
+        <div><label class="text-xs text-slate-400 font-semibold uppercase block mb-2">Storyboard Lavorazione</label><div id="storyboardTimeline" class="space-y-1 text-xs text-slate-400"></div></div>
+      </div>
+      <div class="p-4 border-t border-slate-800 bg-slate-950 flex justify-between">
+        <button onclick="deleteCurrentCard();" class="text-red-400 font-semibold text-xs bg-red-950/30 px-3 py-2 rounded border border-red-900/50">Elimina Commessa</button>
+        <div class="flex gap-2">
+          <button onclick="printWorkOrder()" class="bg-slate-800 hover:bg-slate-700 text-white px-3 py-2 rounded text-xs font-semibold shadow">Foglio Lavorazione</button>
+          <button onclick="closeModal('detailModal');" class="bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-2 rounded text-xs font-semibold">Chiudi</button>
         </div>
       </div>
-      <div class="p-4 border-t border-slate-800 bg-slate-950 flex justify-between"><button onclick="deleteCurrentCard();" class="text-red-400 font-semibold text-xs">Elimina</button><button onclick="closeModal('detailModal');" class="bg-indigo-600 text-white px-5 py-2 rounded text-xs font-semibold">Chiudi</button></div>
     </div>
   </div>
 
@@ -246,20 +302,27 @@
     let MACHINE_TAGS = ["Roland SG2-540", "Epson F1000 (DTF)", "Epson T7200", "Xerox PrimeLink", "Happy Japan (Ricamo)", "Midas Audio", "Avolites Luci", "LED Wall NovaStar"];
     let state = { cards: [] }; let activeCardId = null;
 
+    // LE 10 COLONNE ORIGINALI COMPLETE
     const COLUMNS_GRAFICA = [
       { id: "prev-da-fare", label: "Prev. da fare", color: "bg-orange-600/20 text-orange-400", border: "border-l-4 border-l-orange-500" },
+      { id: "prev-inviato", label: "Prev. inviato", color: "bg-amber-600/20 text-amber-400", border: "border-l-4 border-l-amber-500" },
+      { id: "da-ordinare", label: "Da ordinare", color: "bg-rose-600/20 text-rose-400", border: "border-l-4 border-l-rose-500" },
+      { id: "ordinato", label: "Ordinato", color: "bg-pink-600/20 text-pink-400", border: "border-l-4 border-l-pink-500" },
+      { id: "magazzino", label: "In magazzino", color: "bg-fuchsia-600/20 text-fuchsia-400", border: "border-l-4 border-l-fuchsia-500" },
       { id: "da-lavorare", label: "Da lavorare", color: "bg-violet-600/20 text-violet-400", border: "border-l-4 border-l-violet-500" },
       { id: "in-lavorazione", label: "In lavorazione", color: "bg-cyan-600/20 text-cyan-400", border: "border-l-4 border-l-cyan-500" },
+      { id: "lavorato-da-bollettare", label: "Lavorato", color: "bg-emerald-600/20 text-emerald-400", border: "border-l-4 border-l-emerald-500" },
       { id: "bollettato-da-consegnare", label: "Da consegnare", color: "bg-teal-600/20 text-teal-400", border: "border-l-4 border-l-teal-500" },
       { id: "fatturato", label: "Fatturato", color: "bg-blue-600/20 text-blue-400", border: "border-l-4 border-l-blue-500" }
     ];
 
     const COLUMNS_EVENTI = [
-      { id: "sopralluogo", label: "Sopralluogo", color: "bg-orange-600/20 text-orange-400", border: "border-l-4 border-l-orange-500" },
-      { id: "confermato", label: "Confermato", color: "bg-amber-600/20 text-amber-400", border: "border-l-4 border-l-amber-500" },
-      { id: "setup", label: "Setup", color: "bg-violet-600/20 text-violet-400", border: "border-l-4 border-l-violet-500" },
-      { id: "evento", label: "Evento", color: "bg-emerald-600/20 text-emerald-400", border: "border-l-4 border-l-emerald-500" },
-      { id: "smontaggio", label: "Smontaggio", color: "bg-rose-600/20 text-rose-400", border: "border-l-4 border-l-rose-500" }
+      { id: "sopralluogo", label: "Sopralluogo / Prev.", color: "bg-orange-600/20 text-orange-400", border: "border-l-4 border-l-orange-500" },
+      { id: "confermato", label: "Confermato / Prep.", color: "bg-amber-600/20 text-amber-400", border: "border-l-4 border-l-amber-500" },
+      { id: "setup", label: "Setup / Allestimento", color: "bg-violet-600/20 text-violet-400", border: "border-l-4 border-l-violet-500" },
+      { id: "evento", label: "Evento / Service", color: "bg-emerald-600/20 text-emerald-400", border: "border-l-4 border-l-emerald-500" },
+      { id: "smontaggio", label: "Smontaggio / Reso", color: "bg-rose-600/20 text-rose-400", border: "border-l-4 border-l-rose-500" },
+      { id: "fatturato-eventi", label: "Fatturato", color: "bg-blue-600/20 text-blue-400", border: "border-l-4 border-l-blue-500" }
     ];
 
     let COLUMNS_CONFIG = COLUMNS_GRAFICA;
@@ -330,14 +393,8 @@
       const val = input.value.trim();
       if(val && !CLIENT_DB.includes(val)) { CLIENT_DB.push(val); saveCRMAndTags(); renderClientSettings(); input.value = ''; }
     }
-
-    function editClientInDB(idx, newName) {
-      if(newName.trim()) { CLIENT_DB[idx] = newName.trim(); saveCRMAndTags(); renderClientSettings(); }
-    }
-
-    function removeClientFromDB(idx) {
-      if(confirm("Rimuovere cliente?")) { CLIENT_DB.splice(idx, 1); saveCRMAndTags(); renderClientSettings(); }
-    }
+    function editClientInDB(idx, newName) { if(newName.trim()) { CLIENT_DB[idx] = newName.trim(); saveCRMAndTags(); renderClientSettings(); } }
+    function removeClientFromDB(idx) { if(confirm("Rimuovere cliente?")) { CLIENT_DB.splice(idx, 1); saveCRMAndTags(); renderClientSettings(); } }
 
     function renderTagSettings() {
       const list = document.getElementById('settingsTagList');
@@ -357,10 +414,7 @@
       const val = input.value.trim();
       if(val && !MACHINE_TAGS.includes(val)) { MACHINE_TAGS.push(val); saveCRMAndTags(); renderTagSettings(); input.value = ''; }
     }
-
-    function removeTagFromDB(idx) {
-      if(confirm("Rimuovere tag?")) { MACHINE_TAGS.splice(idx, 1); saveCRMAndTags(); renderTagSettings(); }
-    }
+    function removeTagFromDB(idx) { if(confirm("Rimuovere tag?")) { MACHINE_TAGS.splice(idx, 1); saveCRMAndTags(); renderTagSettings(); } }
 
     function loadCRMAndTags() {
       try {
@@ -368,7 +422,7 @@
         const t = localStorage.getItem('workflow_sga_tags'); if(t) MACHINE_TAGS = JSON.parse(t);
         const datalist = document.getElementById('clientList');
         if(datalist) datalist.innerHTML = CLIENT_DB.sort().map(item => `<option value="${item}">`).join('');
-      } catch(e) { console.error(e); }
+      } catch(e) {}
     }
 
     function saveCRMAndTags() {
@@ -390,13 +444,36 @@
       });
     }
 
+    function getSelectedTags(prefix) {
+      let tags = [];
+      MACHINE_TAGS.forEach((tag, idx) => {
+        const cb = document.getElementById(`${prefix}_${idx}`);
+        if(cb && cb.checked) tags.push(tag);
+      });
+      return tags;
+    }
+
+    function setSelectedTags(prefix, tagsArray) {
+      if(!tagsArray) tagsArray = [];
+      MACHINE_TAGS.forEach((tag, idx) => {
+        const cb = document.getElementById(`${prefix}_${idx}`);
+        if(cb) cb.checked = tagsArray.includes(tag);
+      });
+    }
+
     function loadState() {
       try {
         const saved = localStorage.getItem('workflow_sga_state');
         if (saved) {
           const parsed = JSON.parse(saved);
           if (parsed && Array.isArray(parsed.cards)) {
-            state.cards = parsed.cards;
+            state.cards = parsed.cards.map(c => {
+              if(!c.workspace) c.workspace = 'grafica';
+              if(!c.tags) c.tags = [];
+              if(!c.articles) c.articles = [];
+              if(!c.history) c.history = [];
+              return c;
+            });
           }
         }
       } catch(e) {
@@ -462,10 +539,14 @@
     }
 
     function createCardHTML(card) {
+      let tagsHTML = (card.tags && card.tags.length > 0) ? `<div class="flex flex-wrap gap-1 mt-1.5">${card.tags.map(t => `<span class="bg-indigo-900/50 text-indigo-300 border border-indigo-800/50 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider">${t}</span>`).join('')}</div>` : '';
       return `
         <div draggable="true" ondragstart="event.dataTransfer.setData('text', '${card.id}')" data-id="${card.id}" onclick="openDetail('${card.id}')" class="bg-slate-900 border border-slate-800 hover:border-indigo-500/50 p-3.5 rounded-lg shadow-md cursor-pointer space-y-1">
+          <div class="flex justify-between text-[10px] text-slate-400"><span>${card.jobType || ''}</span></div>
           <h4 class="font-bold text-sm text-slate-100 truncate">${card.title || 'Senza titolo'}</h4>
-          ${card.client ? `<p class="text-slate-400 text-xs truncate">${card.client}</p>` : ''}
+          ${card.client ? `<p class="text-slate-400 text-xs truncate flex items-center gap-1"><i data-lucide="user" class="w-3 h-3"></i> ${card.client}</p>` : ''}
+          ${card.deliveryDate ? `<p class="text-xs font-bold text-red-400 mt-1">Scadenza: ${new Date(card.deliveryDate).toLocaleDateString('it-IT')}</p>` : ''}
+          ${tagsHTML}
         </div>
       `;
     }
@@ -477,6 +558,7 @@
       const card = state.cards.find(c => c.id === cardId);
       if (card && card.stage !== targetCol) {
         card.stage = targetCol;
+        card.order = Date.now();
         saveLocal();
       }
     }
@@ -496,10 +578,12 @@
         deliveryDate: document.getElementById('formDeliveryDate').value,
         jobType: document.getElementById('formJobType').value,
         workspace: ws,
-        tags: [],
+        tags: getSelectedTags('formTag'),
+        articles: [],
         stage: initialStage,
         order: Date.now(),
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
+        history: [{ stage: initialStage, label: "Creazione", timestamp: new Date().toISOString() }]
       };
       
       state.cards.unshift(newCard);
@@ -515,21 +599,101 @@
       document.getElementById('editTitle').value = card.title || '';
       document.getElementById('editClient').value = card.client || '';
       document.getElementById('editDeliveryDate').value = card.deliveryDate || '';
+      document.getElementById('editJobType').value = card.jobType || '';
+      
+      buildTagsCheckboxes('editTagsContainer', true);
+      setSelectedTags('editTag', card.tags);
+      
+      const conf = card.workspace === 'eventi' ? COLUMNS_EVENTI : COLUMNS_GRAFICA;
+      const stObj = conf.find(col => col.id === card.stage);
+      document.getElementById('detailBadge').innerText = stObj ? stObj.label : 'In Lavorazione';
+      
+      renderArticlesTable(card);
+      
+      const tl = document.getElementById('storyboardTimeline');
+      tl.innerHTML = (card.history || []).map(h => `<div class="border-b border-slate-900 pb-1"><b>${h.label}</b> - ${new Date(h.timestamp).toLocaleString('it-IT')}</div>`).join('');
+      
       openModal('detailModal');
     }
 
     function saveCardEdits() {
       const card = state.cards.find(c => c.id === activeCardId);
       if(!card) return;
+      const client = document.getElementById('editClient').value.trim();
+      if(client && !CLIENT_DB.includes(client)) { CLIENT_DB.push(client); saveCRMAndTags(); }
+      
       card.title = document.getElementById('editTitle').value.trim();
-      card.client = document.getElementById('editClient').value.trim();
+      card.client = client;
       card.deliveryDate = document.getElementById('editDeliveryDate').value;
+      card.jobType = document.getElementById('editJobType').value;
+      card.tags = getSelectedTags('editTag');
       saveLocal();
-      closeModal('detailModal');
+      alert("Anagrafica aggiornata!");
+    }
+
+    function renderArticlesTable(card) {
+      const tb = document.getElementById('articlesTableBody');
+      if(!tb) return;
+      tb.innerHTML = '';
+      if(!card.articles || card.articles.length === 0) card.articles = [{code:'', desc:'', qty:1, price:0, tax:22}];
+      
+      card.articles.forEach((a, i) => {
+        let p = parseFloat(a.price)||0, q = parseFloat(a.qty)||0, tax = parseFloat(a.tax)||22;
+        let sub = p*q, rowTot = sub*(1+tax/100);
+        tb.innerHTML += `
+          <tr>
+            <td><input type="text" value="${a.code||''}" data-f="code" data-i="${i}" onchange="upArt(this)" class="w-full bg-slate-900 border border-slate-700 px-1 py-1 text-xs text-white"></td>
+            <td><input type="text" value="${a.desc||''}" data-f="desc" data-i="${i}" onchange="upArt(this)" class="w-full bg-slate-900 border border-slate-700 px-1 py-1 text-xs text-white"></td>
+            <td><input type="number" value="${q}" data-f="qty" data-i="${i}" onchange="upArt(this)" class="w-full bg-slate-900 border border-slate-700 px-1 py-1 text-xs text-white text-center"></td>
+            <td><input type="number" value="${p}" data-f="price" data-i="${i}" onchange="upArt(this)" class="w-full bg-slate-900 border border-slate-700 px-1 py-1 text-xs text-white text-right"></td>
+            <td><input type="number" value="${tax}" data-f="tax" data-i="${i}" onchange="upArt(this)" class="w-full bg-slate-900 border border-slate-700 px-1 py-1 text-xs text-white text-center"></td>
+            <td class="text-right text-slate-400">€${sub.toFixed(2)}</td>
+            <td class="text-right font-bold">€${rowTot.toFixed(2)}</td>
+            <td class="text-center"><button onclick="rmArt(${i})" class="text-red-400"><i data-lucide="trash-2" class="w-4 h-4"></i></button></td>
+          </tr>`;
+      });
+      calcGrandTotals(card);
+      lucide.createIcons();
+    }
+
+    function upArt(el) {
+      const c = state.cards.find(cd => cd.id === activeCardId);
+      if(c && c.articles[el.dataset.i]) { c.articles[el.dataset.i][el.dataset.f] = el.value; renderArticlesTable(c); }
+    }
+
+    function addArticleRow() {
+      const c = state.cards.find(cd => cd.id === activeCardId);
+      if(c) { c.articles.push({code:'', desc:'', qty:1, price:0, tax:22}); renderArticlesTable(c); }
+    }
+
+    function rmArt(i) {
+      const c = state.cards.find(cd => cd.id === activeCardId);
+      if(c) { c.articles.splice(i,1); renderArticlesTable(c); }
+    }
+
+    function saveArticlesEdits() { saveLocal(); alert('Articoli salvati'); }
+
+    function calcGrandTotals(c) {
+      let sub=0, tax=0;
+      (c.articles||[]).forEach(a => { let p=parseFloat(a.price)||0, q=parseFloat(a.qty)||0, tx=parseFloat(a.tax)||22; let s=p*q, t=s*(tx/100); sub+=s; tax+=t; });
+      const subEl = document.getElementById('grandSubtotalDisplay');
+      const totEl = document.getElementById('grandTotalDisplay');
+      if(subEl) subEl.innerText = `€ ${sub.toFixed(2)}`;
+      if(totEl) totEl.innerText = `€ ${(sub+tax).toFixed(2)}`;
+    }
+
+    function printWorkOrder() {
+      const c = state.cards.find(cd => cd.id === activeCardId); if (!c) return;
+      const pw = window.open('', '_blank');
+      let arts = ''; (c.articles||[]).forEach(a => { arts += `<tr><td style="padding:8px; border-bottom:1px solid #ccc;">${a.code||'-'}</td><td style="padding:8px; border-bottom:1px solid #ccc;">${a.desc||'-'}</td><td style="padding:8px; border-bottom:1px solid #ccc; text-align:center;">${a.qty||'-'}</td></tr>`; });
+      pw.document.write(`<html><head><style>body{font-family:sans-serif; padding:20px} table{width:100%; border-collapse:collapse} th{text-align:left; background:#eee; padding:8px}</style></head>
+        <body><h2>Foglio Lavorazione: ${c.title}</h2><p><b>Cliente:</b> ${c.client||'N/D'} | <b>Scadenza:</b> ${c.deliveryDate||'N/A'}</p><p><b>Macchine:</b> ${(c.tags||[]).join(', ')}</p>
+        <table><tr><th>Cod.</th><th>Descrizione</th><th>Q.tà</th></tr>${arts}</table><script>window.print();<\/script></body></html>`);
+      pw.document.close();
     }
 
     function deleteCurrentCard() {
-      if(confirm("Eliminare questa commessa?")) {
+      if(confirm("Eliminare definitivamente questa commessa?")) {
         state.cards = state.cards.filter(c => c.id !== activeCardId);
         saveLocal();
         closeModal('detailModal');
@@ -567,6 +731,7 @@
           const d = new Date(c.deliveryDate); d.setHours(0,0,0,0);
           if(Math.ceil((d - today)/(1000*60*60*24)) <= 7) urgent++;
         }
+        (c.articles||[]).forEach(a => { rev += (parseFloat(a.price)||0) * (parseFloat(a.qty)||0); });
       });
       document.getElementById('statActiveCards').innerText = active;
       document.getElementById('statTotalRevenue').innerText = `€ ${rev.toFixed(2)}`;
@@ -576,7 +741,8 @@
 
     function changeAppFontSize(val) {
       document.documentElement.style.setProperty('--app-font-size', val + 'px');
-      document.getElementById('appFontSizeDisplay').innerText = val + 'px';
+      const d = document.getElementById('appFontSizeDisplay');
+      if(d) d.innerText = val + 'px';
     }
 
     function updateLiveClock() {
