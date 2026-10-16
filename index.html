@@ -42,7 +42,6 @@
     body.master-mode #board::-webkit-scrollbar { display: none; }
     body.master-mode .card-dropzone::-webkit-scrollbar { display: none; }
 
-    /* Orologio Gigante in Master View */
     body.master-mode #liveClockWidget { font-size: 2rem !important; padding: 0.75rem 1.5rem; }
     body.master-mode .master-title { font-size: 1.4em !important; line-height: 1.2; white-space: normal; }
     body.master-mode .master-badge { font-size: 0.8em !important; padding: 0.4em 0.8em !important; }
@@ -63,6 +62,22 @@
   </style>
 </head>
 <body class="bg-slate-950 text-slate-100 font-sans h-screen flex flex-col overflow-hidden">
+
+  <!-- ALERT POPUP SCADENZE -->
+  <div id="arcadeAlertModal" class="hidden fixed inset-0 bg-black/85 backdrop-blur-md z-[150] flex items-center justify-center p-4">
+    <div class="arcade-alert-box rounded-3xl w-full max-w-2xl p-8 shadow-2xl relative space-y-6">
+      <button onclick="closeArcadeAlert()" class="absolute top-4 right-4 bg-red-600 hover:bg-red-500 text-white rounded-full p-2 shadow-lg cursor-pointer z-10"><i data-lucide="x" class="w-6 h-6"></i></button>
+      <div class="text-center space-y-2">
+        <div class="inline-flex items-center justify-center bg-red-600/30 p-4 rounded-full border-2 border-red-500 mb-1 animate-bounce"><i data-lucide="alert-triangle" class="w-10 h-10 text-red-500"></i></div>
+        <h2 class="text-3xl font-black text-red-500 arcade-text uppercase">⚠️ ATTENZIONE: SCADENZE IMMINENTI! ⚠️</h2>
+        <p class="text-sm text-yellow-400 font-bold uppercase tracking-widest">Le seguenti commesse richiedono azione immediata</p>
+      </div>
+      <div id="arcadeAlertList" class="space-y-3 max-h-80 overflow-y-auto pr-2"></div>
+      <div class="pt-2 text-center">
+        <button onclick="closeArcadeAlert()" class="bg-red-600 hover:bg-red-500 text-white font-black px-8 py-3.5 rounded-xl text-base uppercase tracking-wider shadow-xl shadow-red-900/50 cursor-pointer">Ricevuto / Chiudi</button>
+      </div>
+    </div>
+  </div>
 
   <!-- LOGIN -->
   <div id="loginScreen" class="fixed inset-0 bg-slate-950 z-[100] flex items-center justify-center p-4">
@@ -85,7 +100,6 @@
   <!-- TOP BAR -->
   <header class="bg-slate-900 border-b border-slate-800 px-3 py-2.5 flex flex-wrap justify-between items-center shrink-0 gap-3 z-10 relative">
     <div class="flex items-center space-x-3">
-      <!-- LOGO -->
       <div id="companyLogoContainer" class="relative group cursor-pointer bg-indigo-600 rounded-lg text-white shadow flex items-center justify-center overflow-hidden shrink-0" style="width: 100px; height: 38px;" title="Logo Aziendale">
         <div id="logoDefaultIcon"><i data-lucide="layers" class="w-5 h-5"></i></div>
         <img id="logoImageDisplay" src="" class="hidden w-full h-full object-contain p-1">
@@ -108,7 +122,7 @@
     </div>
     
     <div class="flex items-center gap-2 md:gap-3 flex-wrap justify-end">
-      <!-- CURSORE VELOCITA' E OROLOGIO -->
+      <!-- CURSORE VELOCITA E OROLOGIO -->
       <div class="show-in-master hidden items-center gap-2 bg-slate-950 border border-indigo-500/40 px-3 py-2 rounded-xl shadow">
         <i data-lucide="gauge" class="w-5 h-5 text-indigo-400"></i>
         <span class="text-sm text-slate-300 font-bold">Velocità:</span>
@@ -122,7 +136,6 @@
         <span id="headerClockDate" class="text-slate-300">--/--/----</span>
       </div>
 
-      <!-- TASTI CON TESTO RIDOTTO PER IPAD -->
       <div class="flex gap-1.5 hide-in-master">
         <button onclick="playSound('close'); logoutApp();" class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-1.5 rounded-lg flex items-center gap-1.5 cursor-pointer transition-colors shadow-sm"><i data-lucide="log-out" class="w-4 h-4"></i> <span class="text-[10px] md:text-xs font-bold top-buttons-text uppercase tracking-wide">Esci</span></button>
         <button onclick="playSound('click'); openSettingsModal();" class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-1.5 rounded-lg flex items-center gap-1.5 cursor-pointer transition-colors shadow-sm"><i data-lucide="sliders" class="w-4 h-4"></i> <span class="text-[10px] md:text-xs font-bold top-buttons-text uppercase tracking-wide">Impostazioni</span></button>
@@ -168,6 +181,14 @@
           <div class="flex justify-between items-center"><h4 class="text-xs font-bold text-emerald-400 uppercase tracking-wider">Zoom Master View</h4><span id="masterFontSizeVal" class="font-mono text-emerald-400 font-bold text-sm bg-slate-900 px-3 py-1 rounded border border-slate-800">30px</span></div>
           <input type="range" id="masterFontRange" min="16" max="60" value="30" step="1" oninput="previewMasterFontSize(this.value)" class="w-full accent-indigo-500 cursor-pointer h-2 bg-slate-900 rounded-lg">
         </div>
+
+        <div class="bg-slate-950 p-4 rounded-lg border border-slate-800 space-y-3">
+          <div class="flex justify-between items-center">
+            <h4 class="text-xs font-bold text-indigo-400 uppercase tracking-wider flex items-center gap-1.5"><i data-lucide="alarm-clock" class="w-4 h-4"></i> Gestione Sveglie Alert</h4>
+            <button onclick="playSound('click'); addAlarmRule();" class="bg-indigo-600 text-white text-xs px-3 py-1.5 rounded font-semibold flex items-center gap-1 cursor-pointer"><i data-lucide="plus" class="w-3.5 h-3.5"></i> Aggiungi</button>
+          </div>
+          <div id="alarmsListContainer" class="space-y-3 max-h-60 overflow-y-auto pr-1"></div>
+        </div>
       </div>
       <div class="p-4 border-t border-slate-800 bg-slate-950 flex justify-between items-center">
         <button onclick="playSound('click'); resetDefaultSettings();" class="text-xs text-slate-400 hover:text-red-400 underline cursor-pointer">Ripristina</button>
@@ -176,7 +197,7 @@
     </div>
   </div>
 
-  <!-- MODAL DETTAGLIO COMMESSA (RIPRISTINATO COMPLETAMENTE) -->
+  <!-- MODAL DETTAGLIO COMMESSA -->
   <div id="detailModal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-2 md:p-4">
     <div class="bg-slate-900 border border-slate-800 rounded-xl w-full max-w-6xl max-h-[96vh] flex flex-col overflow-hidden shadow-2xl">
       <div class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-850">
@@ -279,6 +300,9 @@
     let autoScrollPause = 0;
     let lastScrollTime = 0;
     let masterScrollSpeed = 0.08;
+    let USER_ALARMS = [];
+    let arcadeTimer = null;
+    let sirenInterval = null;
 
     const COLUMNS_CONFIG = [
       { id: "prev-da-fare", label: "Prev. da fare", color: "bg-orange-600/20 border-orange-500/50 text-orange-400", border: "border-l-4 border-l-orange-500", hexDefault: "#c2410c" },
@@ -299,6 +323,71 @@
     let db = null; 
     let currentGalleryIndex = 0;
 
+    let lastTriggeredMinute = "";
+    function checkScheduledAlarms(now) {
+      if (!USER_ALARMS || USER_ALARMS.length === 0) return;
+      const currentDay = now.getDay(); 
+      const currentHours = String(now.getHours()).padStart(2, '0');
+      const currentMinutes = String(now.getMinutes()).padStart(2, '0');
+      const currentTimeStr = `${currentHours}:${currentMinutes}`;
+
+      if (now.getSeconds() === 0 && lastTriggeredMinute !== currentTimeStr) {
+        USER_ALARMS.forEach(alarm => {
+          if (alarm.active && Array.isArray(alarm.days) && alarm.days.includes(currentDay) && alarm.time === currentTimeStr) {
+            lastTriggeredMinute = currentTimeStr;
+            triggerAlarmAlert();
+          }
+        });
+      }
+    }
+
+    function triggerAlarmAlert() {
+      const urgentCards = state.cards.filter(card => {
+        if (card.stage === 'consegnato' || card.stage === 'fatturato') return false;
+        if (!card.deliveryDate) return false;
+        const delivery = new Date(card.deliveryDate); delivery.setHours(0,0,0,0);
+        const today = new Date(); today.setHours(0,0,0,0);
+        return Math.ceil((delivery - today) / (1000 * 60 * 60 * 24)) <= 7;
+      });
+      const cardsToDisplay = urgentCards.length > 0 ? urgentCards : state.cards.filter(card => card.stage !== 'consegnato' && card.stage !== 'fatturato');
+      if (cardsToDisplay.length > 0) showArcadeAlert(cardsToDisplay);
+    }
+
+    function showArcadeAlert(cards) {
+      playSound('alert');
+      const listEl = document.getElementById('arcadeAlertList'); listEl.innerHTML = '';
+      cards.forEach(card => {
+        const stageObj = COLUMNS_CONFIG.find(c => c.id === card.stage);
+        const stageName = stageObj ? stageObj.label : card.stage;
+        let timeText = ''; let badgeColor = 'bg-orange-600 text-white';
+        
+        if (card.deliveryDate) {
+          const delivery = new Date(card.deliveryDate); delivery.setHours(0,0,0,0);
+          const today = new Date(); today.setHours(0,0,0,0);
+          const diffDays = Math.ceil((delivery - today) / (1000 * 60 * 60 * 24));
+          if (diffDays < 0) { timeText = `SCADUTA da ${Math.abs(diffDays)} gg!`; badgeColor = 'bg-red-600 text-white animate-pulse'; }
+          else if (diffDays === 0) { timeText = 'Scade OGGI!'; badgeColor = 'bg-red-600 text-white animate-pulse'; }
+          else if (diffDays <= 3) { timeText = `Tra ${diffDays} gg (URGENTE)`; badgeColor = 'bg-amber-600 text-white'; }
+          else { timeText = `Tra ${diffDays} gg`; badgeColor = 'bg-yellow-600 text-slate-950 font-bold'; }
+        } else { timeText = 'In Lavorazione'; badgeColor = 'bg-indigo-600 text-white'; }
+
+        const item = document.createElement('div');
+        item.className = "bg-black/70 border-2 border-red-500/60 p-4 rounded-xl flex justify-between items-center gap-4 shadow-lg";
+        item.innerHTML = `<div class="overflow-hidden space-y-1"><h4 class="font-black text-lg text-white truncate">${card.title}</h4><p class="text-sm text-slate-300">Cliente: <span class="text-indigo-300">${card.client || 'N/D'}</span> | Stato: <span class="text-yellow-300">${stageName}</span></p></div><div class="shrink-0 text-right space-y-1"><span class="text-xs px-3 py-1.5 rounded-lg font-mono uppercase tracking-wider ${badgeColor}">${timeText}</span></div>`;
+        listEl.appendChild(item);
+      });
+      document.getElementById('arcadeAlertModal').classList.remove('hidden');
+      if (arcadeTimer) clearTimeout(arcadeTimer);
+      arcadeTimer = setTimeout(() => { closeArcadeAlert(); }, 60000); 
+    }
+
+    function closeArcadeAlert() {
+      playSound('close');
+      if (sirenInterval) { clearInterval(sirenInterval); sirenInterval = null; }
+      document.getElementById('arcadeAlertModal').classList.add('hidden');
+      if (arcadeTimer) { clearTimeout(arcadeTimer); arcadeTimer = null; }
+    }
+
     function updateLiveClock() {
       const now = new Date();
       const timeStr = now.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
@@ -308,6 +397,7 @@
       const dateEl = document.getElementById('headerClockDate');
       if (timeEl) timeEl.innerText = timeStr;
       if (dateEl) dateEl.innerText = dateStr;
+      checkScheduledAlarms(now);
     }
     setInterval(updateLiveClock, 1000);
 
@@ -321,11 +411,24 @@
       try {
         initAudio(); if (!audioCtx) return;
         const now = audioCtx.currentTime;
-        const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
-        osc.frequency.setValueAtTime(type === 'success' ? 523 : 440, now);
-        gain.gain.setValueAtTime(0.1, now); gain.gain.linearRampToValueAtTime(0.01, now + 0.1);
-        osc.connect(gain); gain.connect(audioCtx.destination);
-        osc.start(now); osc.stop(now + 0.1);
+        if (type === 'alert') {
+          if (sirenInterval) clearInterval(sirenInterval);
+          let startTime = Date.now();
+          sirenInterval = setInterval(() => {
+            if (Date.now() - startTime > 2500) { clearInterval(sirenInterval); sirenInterval = null; return; }
+            try {
+              const sNow = audioCtx.currentTime; const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
+              osc.type = 'sine'; osc.frequency.setValueAtTime(350, sNow); osc.frequency.linearRampToValueAtTime(880, sNow + 0.35); osc.frequency.linearRampToValueAtTime(350, sNow + 0.7);
+              gain.gain.setValueAtTime(0.25, sNow); gain.gain.linearRampToValueAtTime(0.01, sNow + 0.7);
+              osc.connect(gain); gain.connect(audioCtx.destination); osc.start(sNow); osc.stop(sNow + 0.7);
+            } catch(e){}
+          }, 700);
+        } else {
+          const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
+          osc.frequency.setValueAtTime(type === 'success' ? 523 : 440, now);
+          gain.gain.setValueAtTime(0.1, now); gain.gain.linearRampToValueAtTime(0.01, now + 0.1);
+          osc.connect(gain); gain.connect(audioCtx.destination); osc.start(now); osc.stop(now + 0.1);
+        }
       } catch (e) {}
     }
 
@@ -394,6 +497,15 @@
       if (savedMasterFont) applyMasterFontSize(parseInt(savedMasterFont));
       const savedAppFont = localStorage.getItem('workflow_sga_app_fontsize_px');
       if (savedAppFont) applyAppFontSize(parseInt(savedAppFont));
+      
+      const savedAlarms = localStorage.getItem('workflow_sga_alarms');
+      if (savedAlarms) {
+        try { 
+          USER_ALARMS = JSON.parse(savedAlarms); 
+          USER_ALARMS = USER_ALARMS.map(a => { if (!Array.isArray(a.days)) a.days = [1,2,3,4,5]; return a; });
+        } catch(e){ USER_ALARMS = []; }
+      }
+
       loadCompanyLogo();
     }
 
@@ -413,7 +525,57 @@
 
     function updateMasterSpeed(val) { masterScrollSpeed = parseFloat(val); }
 
+    function addAlarmRule() { USER_ALARMS.push({ id: 'a' + Date.now(), time: "09:00", active: true, days: [1, 2, 3, 4, 5] }); renderAlarmsList(); }
+    function removeAlarmRule(id) { USER_ALARMS = USER_ALARMS.filter(a => a.id !== id); renderAlarmsList(); }
+    function updateAlarmTime(id, val) { const alarm = USER_ALARMS.find(a => a.id === id); if (alarm) alarm.time = val; }
+    function toggleAlarmActive(id, val) { const alarm = USER_ALARMS.find(a => a.id === id); if (alarm) alarm.active = val; }
+    function toggleAlarmDay(id, dayVal) {
+      playSound('click'); const alarm = USER_ALARMS.find(a => a.id === id);
+      if (alarm) {
+        if (!Array.isArray(alarm.days)) alarm.days = [];
+        const index = alarm.days.indexOf(dayVal);
+        if (index >= 0) alarm.days.splice(index, 1); else alarm.days.push(dayVal);
+        renderAlarmsList();
+      }
+    }
+
+    function renderAlarmsList() {
+      const container = document.getElementById('alarmsListContainer'); if (!container) return; container.innerHTML = '';
+      if (USER_ALARMS.length === 0) { container.innerHTML = `<p class="text-xs text-slate-500 italic py-3 text-center">Nessuna sveglia impostata.</p>`; return; }
+      const daysDef = [{val:1,label:"L"},{val:2,label:"M"},{val:3,label:"M"},{val:4,label:"G"},{val:5,label:"V"},{val:6,label:"S"},{val:0,label:"D"}];
+
+      USER_ALARMS.forEach(alarm => {
+        const card = document.createElement('div'); card.className = "bg-slate-900 p-3 rounded-lg border border-slate-800 space-y-3";
+        let daysBtnsHtml = daysDef.map(d => {
+          const isSelected = Array.isArray(alarm.days) && alarm.days.includes(d.val);
+          const btnClass = isSelected ? "w-7 h-7 rounded-full bg-indigo-600 text-white font-bold text-xs flex items-center justify-center shadow cursor-pointer transition-all" : "w-7 h-7 rounded-full bg-slate-950 text-slate-400 font-semibold text-xs flex items-center justify-center border border-slate-800 hover:border-slate-700 cursor-pointer transition-all";
+          return `<button type="button" onclick="toggleAlarmDay('${alarm.id}', ${d.val})" class="${btnClass}">${d.label}</button>`;
+        }).join('');
+
+        card.innerHTML = `
+          <div class="flex items-center justify-between gap-3">
+            <div class="flex items-center gap-3">
+              <input type="time" value="${alarm.time || '09:00'}" onchange="updateAlarmTime('${alarm.id}', this.value)" class="bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-base text-emerald-400 font-mono font-bold focus:outline-none focus:border-indigo-500">
+              <label class="flex items-center cursor-pointer select-none text-xs text-slate-300 gap-1.5"><input type="checkbox" ${alarm.active ? 'checked' : ''} onchange="toggleAlarmActive('${alarm.id}', this.checked)" class="w-4 h-4 rounded bg-slate-950 border-slate-700 text-indigo-600 cursor-pointer"><span>Attiva</span></label>
+            </div>
+            <button onclick="playSound('delete'); removeAlarmRule('${alarm.id}')" class="text-red-400 hover:text-red-300 p-1.5 rounded-lg bg-red-950/30 hover:bg-red-950/60 transition-colors cursor-pointer"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+          </div>
+          <div class="flex items-center justify-between pt-1 border-t border-slate-800/60 flex-wrap gap-2"><span class="text-[10px] text-slate-400 uppercase font-semibold">Giorni attivo:</span><div class="flex gap-1.5">${daysBtnsHtml}</div></div>
+        `;
+        container.appendChild(card);
+      });
+      lucide.createIcons();
+    }
+
+    function openSettingsModal() {
+      renderAlarmsList();
+      applyMasterFontSize(parseInt(document.documentElement.style.getPropertyValue('--master-font-size')) || 30);
+      applyAppFontSize(parseInt(document.documentElement.style.getPropertyValue('--app-font-size')) || 15);
+      openModal('settingsModal');
+    }
+
     function saveSettings() {
+      localStorage.setItem('workflow_sga_alarms', JSON.stringify(USER_ALARMS));
       localStorage.setItem('workflow_sga_master_fontsize_px', parseInt(document.documentElement.style.getPropertyValue('--master-font-size')) || 30);
       localStorage.setItem('workflow_sga_app_fontsize_px', parseInt(document.documentElement.style.getPropertyValue('--app-font-size')) || 15);
       closeModal('settingsModal'); renderBoard(); alert("Impostazioni salvate!");
@@ -421,7 +583,8 @@
 
     function resetDefaultSettings() {
       if (confirm("Ripristinare i predefiniti?")) {
-        applyMasterFontSize(30); applyAppFontSize(15);
+        applyMasterFontSize(30); applyAppFontSize(15); USER_ALARMS = [];
+        localStorage.removeItem('workflow_sga_alarms');
         localStorage.removeItem('workflow_sga_master_fontsize_px'); localStorage.removeItem('workflow_sga_app_fontsize_px');
         closeModal('settingsModal'); renderBoard();
       }
@@ -588,6 +751,13 @@
       if (!card) return '';
       const badgeStyle = getJobTypeClass(card.jobType);
       
+      let isUrgent = false;
+      if (card.deliveryDate && card.stage !== 'consegnato' && card.stage !== 'fatturato') {
+        const delivery = new Date(card.deliveryDate); delivery.setHours(0,0,0,0);
+        const today = new Date(); today.setHours(0,0,0,0);
+        if (Math.ceil((delivery - today) / (1000 * 60 * 60 * 24)) <= 7) isUrgent = true;
+      }
+
       let customCardStyle = '', customTextStyle = '', customSubTextStyle = 'text-slate-400', baseCardClass = 'bg-slate-900 border border-slate-800';
       if (card.customColor && card.customColor !== '') {
         const contrastColor = getContrastTextColor(card.customColor);
@@ -600,9 +770,10 @@
       const dateObj = card.createdAt ? new Date(card.createdAt) : new Date();
       const createdAtStr = dateObj.toLocaleDateString('it-IT', {day: 'numeric', month: 'short'});
 
+      // Data di consegna resa SEMPRE visibile, con stile dinamico per urgenze
       const deliveryHTML = card.deliveryDate 
-        ? `<div class="mt-2 text-emerald-400 font-bold show-only-master master-badge hidden items-center gap-2">
-             <i data-lucide="calendar" class="w-5 h-5"></i> Consegna: ${new Date(card.deliveryDate).toLocaleDateString('it-IT')}
+        ? `<div class="flex items-center gap-1.5 mt-2 mb-1 text-xs md:text-sm font-bold ${isUrgent && !card.customColor ? 'text-red-400 bg-red-950/40 border border-red-900/60 animate-pulse' : 'text-slate-300 border border-slate-700 bg-slate-800/50'} px-2.5 py-1.5 rounded w-fit" style="${card.customColor ? `background: rgba(0,0,0,0.15); ${customTextStyle}` : ''}">
+             <i data-lucide="calendar" class="w-4 h-4"></i> Consegna: ${new Date(card.deliveryDate).toLocaleDateString('it-IT')}
            </div>` : '';
 
       const thumbnailHTML = card.photos && card.photos.length > 0 
@@ -618,7 +789,7 @@
       return `
         <div draggable="true" ondragstart="handleDragStart(event)" id="card-${card.id}" data-id="${card.id}" onclick="${isMasterMode ? '' : `playSound('click'); openDetail('${card.id}')`}"
              style="${customCardStyle}"
-             class="${baseCardClass} hover:border-indigo-500/50 p-4 rounded-xl shadow-lg cursor-pointer transition-all active:scale-95 flex flex-col group relative">
+             class="${baseCardClass} hover:border-indigo-500/50 p-4 rounded-xl shadow-lg cursor-pointer transition-all active:scale-95 flex flex-col group relative ${isUrgent && !card.customColor ? 'card-urgent' : ''}">
              
           <div class="flex justify-between items-start mb-2">
             <span class="px-2 py-0.5 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider master-badge ${badgeStyle}">${card.jobType || 'Generico'}</span>
