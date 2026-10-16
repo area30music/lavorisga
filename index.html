@@ -102,7 +102,7 @@
     </div>
   </div>
 
-  <!-- MODAL: NOTIFICA CLIENTE PRONTO (WHATSAPP / EMAIL) -->
+  <!-- MODAL: NOTIFICA CLIENTE PRONTO -->
   <div id="clientNotifyModal" class="hidden fixed inset-0 bg-slate-950/85 backdrop-blur-md z-[150] flex items-center justify-center p-4">
     <div class="bg-slate-900 border border-emerald-500/50 rounded-2xl w-full max-w-md p-6 shadow-2xl space-y-5">
       <div class="flex items-center justify-between">
@@ -181,12 +181,10 @@
         <input type="file" accept="image/png, image/jpeg" class="absolute inset-0 opacity-0 cursor-pointer hide-in-master" onchange="uploadCompanyLogo(event)" title="Carica Logo Aziendale">
       </div>
 
-      <!-- Tasto Torna Indietro in Master View -->
       <button onclick="toggleMasterMode(); playSound('close');" class="master-back-btn hidden bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-2 rounded-lg text-xs md:text-sm font-extrabold items-center gap-2 active:scale-95 transition-transform shadow-lg shadow-indigo-900/40 border border-indigo-400 cursor-pointer" title="Torna a Programmazione">
         <i data-lucide="arrow-left" class="w-5 h-5"></i> Torna a Programmazione
       </button>
 
-      <!-- CONTROLLI SCORRIMENTO MASTER VIEW -->
       <div class="show-in-master hidden items-center gap-2 ml-2">
         <button id="masterPlayPauseBtn" onclick="togglePlayPauseMaster(); playSound('click');" class="bg-slate-800 hover:bg-slate-700 text-white px-3 py-2 rounded-lg text-xs md:text-sm font-bold flex items-center gap-1.5 border border-slate-700 shadow-lg cursor-pointer transition-colors" title="Play/Pausa Scorrimento">
             <i data-lucide="pause" id="masterPlayPauseIcon" class="w-4 h-4 text-amber-400"></i> <span id="masterPlayPauseText">Pausa</span>
@@ -269,7 +267,6 @@
 
       <div class="p-5 overflow-y-auto space-y-4 flex-1 text-sm">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <!-- Card Gestione Clienti CRM -->
           <div onclick="playSound('click'); openSubSettings('crm');" class="bg-slate-950 hover:bg-slate-850 border border-slate-800 hover:border-indigo-500/50 p-4 rounded-xl cursor-pointer transition-all flex items-start gap-3.5 group">
             <div class="bg-indigo-600/20 text-indigo-400 p-3 rounded-lg border border-indigo-500/30 group-hover:scale-105 transition-transform">
               <i data-lucide="users" class="w-6 h-6"></i>
@@ -279,8 +276,6 @@
               <p class="text-xs text-slate-400 mt-0.5">Database clienti, aziende, email e WhatsApp.</p>
             </div>
           </div>
-
-          <!-- Card Gestione Macchinari -->
           <div onclick="playSound('click'); openSubSettings('machines');" class="bg-slate-950 hover:bg-slate-850 border border-slate-800 hover:border-indigo-500/50 p-4 rounded-xl cursor-pointer transition-all flex items-start gap-3.5 group">
             <div class="bg-cyan-600/20 text-cyan-400 p-3 rounded-lg border border-cyan-500/30 group-hover:scale-105 transition-transform">
               <i data-lucide="cpu" class="w-6 h-6"></i>
@@ -290,8 +285,6 @@
               <p class="text-xs text-slate-400 mt-0.5">Aggiungi o rimuovi stampanti, plotter e attrezzature.</p>
             </div>
           </div>
-
-          <!-- Card Connessione Cloud -->
           <div onclick="playSound('click'); closeModal('settingsModal'); openModal('cloudModal');" class="bg-slate-950 hover:bg-slate-850 border border-slate-800 hover:border-indigo-500/50 p-4 rounded-xl cursor-pointer transition-all flex items-start gap-3.5 group">
             <div class="bg-emerald-600/20 text-emerald-400 p-3 rounded-lg border border-emerald-500/30 group-hover:scale-105 transition-transform">
               <i data-lucide="cloud" class="w-6 h-6"></i>
@@ -301,8 +294,6 @@
               <p class="text-xs text-slate-400 mt-0.5">Configura e verifica lo stato del database Firebase e ImgBB.</p>
             </div>
           </div>
-
-          <!-- Card Logo Aziendale -->
           <div onclick="playSound('click'); openSubSettings('logo');" class="bg-slate-950 hover:bg-slate-850 border border-slate-800 hover:border-indigo-500/50 p-4 rounded-xl cursor-pointer transition-all flex items-start gap-3.5 group">
             <div class="bg-blue-600/20 text-blue-400 p-3 rounded-lg border border-blue-500/30 group-hover:scale-105 transition-transform">
               <i data-lucide="image" class="w-6 h-6"></i>
@@ -312,8 +303,6 @@
               <p class="text-xs text-slate-400 mt-0.5">Carica o sostituisci il logo condiviso nella top bar.</p>
             </div>
           </div>
-
-          <!-- Card Sveglie & Alert -->
           <div onclick="playSound('click'); openSubSettings('alarms');" class="bg-slate-950 hover:bg-slate-850 border border-slate-800 hover:border-indigo-500/50 p-4 rounded-xl cursor-pointer transition-all flex items-start gap-3.5 group">
             <div class="bg-rose-600/20 text-rose-400 p-3 rounded-lg border border-rose-500/30 group-hover:scale-105 transition-transform">
               <i data-lucide="alarm-clock" class="w-6 h-6"></i>
@@ -323,8 +312,6 @@
               <p class="text-xs text-slate-400 mt-0.5">Imposta orari e giorni per gli alert scadenze.</p>
             </div>
           </div>
-
-          <!-- Card Colori Colonne -->
           <div onclick="playSound('click'); openSubSettings('colors');" class="bg-slate-950 hover:bg-slate-850 border border-slate-800 hover:border-indigo-500/50 p-4 rounded-xl cursor-pointer transition-all flex items-start gap-3.5 group">
             <div class="bg-amber-600/20 text-amber-400 p-3 rounded-lg border border-amber-500/30 group-hover:scale-105 transition-transform">
               <i data-lucide="palette" class="w-6 h-6"></i>
@@ -334,8 +321,6 @@
               <p class="text-xs text-slate-400 mt-0.5">Personalizza le tonalità cromatiche delle fasi di lavoro.</p>
             </div>
           </div>
-
-          <!-- Card Zoom e Caratteri -->
           <div onclick="playSound('click'); openSubSettings('zoom');" class="bg-slate-950 hover:bg-slate-850 border border-slate-800 hover:border-indigo-500/50 p-4 rounded-xl cursor-pointer transition-all flex items-start gap-3.5 group">
             <div class="bg-violet-600/20 text-violet-400 p-3 rounded-lg border border-violet-500/30 group-hover:scale-105 transition-transform">
               <i data-lucide="type" class="w-6 h-6"></i>
@@ -391,8 +376,18 @@
       
       <div class="p-3 md:p-5 overflow-y-auto space-y-5 flex-1 text-sm">
         <div class="space-y-3 bg-slate-950 p-3.5 rounded-lg border border-slate-800">
+          
           <div>
-            <label class="text-[10px] text-indigo-400 font-semibold uppercase tracking-wider block mb-1">Cliente / Titolo Progetto</label>
+            <div class="flex justify-between items-end gap-2 mb-1">
+              <label class="text-[10px] text-indigo-400 font-semibold uppercase tracking-wider block">Cliente / Titolo Progetto</label>
+              <!-- SELETTORE CLIENTI CRM -->
+              <div class="flex items-center gap-1.5 w-1/2 md:w-1/3">
+                <i data-lucide="users" class="w-3.5 h-3.5 text-slate-400"></i>
+                <select id="editClientSelector" onchange="autofillClientFromSelect(this.value, 'edit')" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-[11px] text-slate-300 focus:outline-none focus:border-indigo-500 cursor-pointer">
+                  <option value="">-- Seleziona dal CRM --</option>
+                </select>
+              </div>
+            </div>
             <div class="relative">
               <input type="text" id="editTitle" autocomplete="off" oninput="handleClientInput(this.value, 'editClientSuggestions', 'editReferent', 'editEmail', 'editWhatsapp')" class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-1.5 text-slate-100 font-semibold text-base focus:outline-none focus:border-indigo-500">
               <div id="editClientSuggestions" class="hidden absolute left-0 right-0 top-full mt-1 bg-slate-900 border border-slate-700 rounded-lg shadow-xl z-30 max-h-40 overflow-y-auto"></div>
@@ -549,8 +544,18 @@
         </button>
       </div>
       <form id="newCardForm" class="space-y-4 text-sm" onsubmit="createNewCard(event)">
+        
         <div class="relative">
-          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Cliente / Titolo Progetto</label>
+          <div class="flex justify-between items-end gap-2 mb-1">
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400">Cliente / Titolo Progetto</label>
+            <!-- SELETTORE CLIENTI CRM -->
+            <div class="flex items-center gap-1.5 w-1/2 md:w-1/3">
+              <i data-lucide="users" class="w-3.5 h-3.5 text-slate-400"></i>
+              <select id="formClientSelector" onchange="autofillClientFromSelect(this.value, 'form')" class="w-full bg-slate-950 border border-slate-800 rounded px-2 py-1 text-[11px] text-slate-300 focus:outline-none focus:border-indigo-500 cursor-pointer">
+                <option value="">-- Seleziona dal CRM --</option>
+              </select>
+            </div>
+          </div>
           <input type="text" id="formTitle" required autocomplete="off" placeholder="Es. Rossi S.r.l." oninput="handleClientInput(this.value, 'formClientSuggestions', 'formReferent', 'formEmail', 'formWhatsapp')" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-indigo-500">
           <div id="formClientSuggestions" class="hidden absolute left-0 right-0 top-full mt-1 bg-slate-900 border border-slate-700 rounded-lg shadow-xl z-30 max-h-40 overflow-y-auto"></div>
         </div>
@@ -710,7 +715,7 @@
     let isAutoScrollPaused = false;
     let masterScrollSpeed = 0.08;
     
-    window.editingClientIndex = -1; // Variabile globale per editare il CRM
+    window.editingClientIndex = -1;
     
     let arcadeTimer = null;
     let sirenInterval = null;
@@ -1041,6 +1046,7 @@
       loadCompanyLogo();
       populateMachinesDropdowns();
       populateGlobalFilterDropdown();
+      populateClientSelectors(); // Popola le tendine clienti
     }
 
     function applyMasterFontSize(pxVal) {
@@ -1071,20 +1077,69 @@
       masterScrollSpeed = parseFloat(val);
     }
 
+    // GESTIONE DUPLICATI E SALVATAGGIO SILENZIOSO (DA FORM COMMESSA)
     function registerClientAdvanced(name, referent, email, whatsapp) {
       if (!name || !name.trim()) return;
       const cleanName = name.trim();
       const cleanRef = referent ? referent.trim() : '';
       
-      const existing = CLIENTS_DB.find(c => c.name.toLowerCase() === cleanName.toLowerCase() && c.referent.toLowerCase() === cleanRef.toLowerCase());
+      const existing = CLIENTS_DB.find(c => c.name.toLowerCase() === cleanName.toLowerCase() && (c.referent || '').toLowerCase() === cleanRef.toLowerCase());
+      
       if (existing) {
-        if (email) existing.email = email.trim();
-        if (whatsapp) existing.whatsapp = whatsapp.trim();
+        // Se esiste già esattamente questa accoppiata (Azienda + Referente), aggiorniamo solo i campi vuoti
+        if (email && !existing.email) existing.email = email.trim();
+        if (whatsapp && !existing.whatsapp) existing.whatsapp = whatsapp.trim();
       } else {
+        // Altrimenti lo inseriamo come nuovo record
         CLIENTS_DB.push({ name: cleanName, referent: cleanRef, email: email ? email.trim() : '', whatsapp: whatsapp ? whatsapp.trim() : '' });
       }
+      
       CLIENTS_DB.sort((a,b) => a.name.localeCompare(b.name));
       localStorage.setItem('workflow_sga_clients_db', JSON.stringify(CLIENTS_DB));
+      populateClientSelectors();
+    }
+
+    // GESTIONE SELETTORI TENDINA CRM
+    function populateClientSelectors() {
+      const editSelector = document.getElementById('editClientSelector');
+      const formSelector = document.getElementById('formClientSelector');
+      
+      let optionsHtml = `<option value="">-- Seleziona dal CRM --</option>`;
+      CLIENTS_DB.forEach((c, idx) => {
+        let label = c.name;
+        if (c.referent) label += ` (${c.referent})`;
+        optionsHtml += `<option value="${idx}">${label}</option>`;
+      });
+
+      if (editSelector) {
+        editSelector.innerHTML = optionsHtml;
+        editSelector.value = ''; // Reset
+      }
+      if (formSelector) {
+        formSelector.innerHTML = optionsHtml;
+        formSelector.value = ''; // Reset
+      }
+    }
+
+    function autofillClientFromSelect(clientIndex, prefix) {
+      if (clientIndex === "") return;
+      playSound('click');
+      const c = CLIENTS_DB[parseInt(clientIndex)];
+      if (!c) return;
+
+      const titleEl = document.getElementById(prefix + 'Title');
+      const refEl = document.getElementById(prefix + 'Referent');
+      const emailEl = document.getElementById(prefix + 'Email');
+      const waEl = document.getElementById(prefix + 'Whatsapp');
+
+      if (titleEl) titleEl.value = c.name || '';
+      if (refEl) refEl.value = c.referent || '';
+      if (emailEl) emailEl.value = c.email || '';
+      if (waEl) waEl.value = c.whatsapp || '';
+      
+      // Nascondi suggerimenti se aperti
+      const sugContainer = document.getElementById(prefix + 'ClientSuggestions');
+      if (sugContainer) sugContainer.classList.add('hidden');
     }
 
     function handleClientInput(query, containerId, refInputId, emailInputId, waInputId) {
@@ -1323,11 +1378,24 @@
       const wa = document.getElementById('crmModalWa').value.trim();
       if (!name) return alert("Inserisci almeno il nome del cliente/azienda.");
 
+      // CONTROLLO DUPLICATI RIGOROSO (Azienda + Referente identici)
+      const isDuplicate = CLIENTS_DB.findIndex((c, idx) => 
+        c.name.toLowerCase() === name.toLowerCase() && 
+        (c.referent || '').toLowerCase() === ref.toLowerCase() && 
+        idx !== window.editingClientIndex // Ignora quello che stiamo attualmente modificando
+      );
+
+      if (isDuplicate >= 0) {
+        playSound('alert');
+        return alert(`ATTENZIONE: Esiste già il referente "${ref || 'Nessuno'}" per l'azienda "${name}".\nModifica la voce esistente per non creare duplicati.`);
+      }
+
       if (window.editingClientIndex >= 0) {
         CLIENTS_DB[window.editingClientIndex] = { name, referent: ref, email, whatsapp: wa };
         CLIENTS_DB.sort((a,b) => a.name.localeCompare(b.name));
         localStorage.setItem('workflow_sga_clients_db', JSON.stringify(CLIENTS_DB));
         window.editingClientIndex = -1;
+        populateClientSelectors();
       } else {
         registerClientAdvanced(name, ref, email, wa);
       }
@@ -1340,6 +1408,7 @@
       if (confirm("Vuoi rimuovere questo cliente dall'archivio?")) {
         CLIENTS_DB.splice(idx, 1);
         localStorage.setItem('workflow_sga_clients_db', JSON.stringify(CLIENTS_DB));
+        populateClientSelectors(); 
         openSubSettings('crm');
         playSound('delete');
       }
@@ -2182,7 +2251,7 @@
       event.preventDefault();
       playSound('success');
       const title = document.getElementById('formTitle').value.trim();
-      const client = title; // Utilizziamo il titolo/cliente come riferimento unificato per il CRM
+      const client = title;
       const referent = document.getElementById('formReferent') ? document.getElementById('formReferent').value.trim() : '';
       const email = document.getElementById('formEmail') ? document.getElementById('formEmail').value.trim() : '';
       const whatsapp = document.getElementById('formWhatsapp') ? document.getElementById('formWhatsapp').value.trim() : '';
@@ -2247,6 +2316,7 @@
       populateGlobalFilterDropdown();
 
       document.getElementById('newCardForm').reset();
+      document.getElementById('formClientSelector').value = '';
       document.getElementById('formCustomJobType').classList.add('hidden');
       document.getElementById('formFilePreview').classList.add('hidden');
       tempFormFile = null;
@@ -2257,7 +2327,7 @@
       const card = state.cards.find(c => c.id === activeCardId);
       if (!card) return;
       card.title = document.getElementById('editTitle').value.trim();
-      card.client = card.title; // Manteniamo la sincronia con il CRM basata sul titolo
+      card.client = card.title;
       card.referent = document.getElementById('editReferent').value.trim();
       card.email = document.getElementById('editEmail').value.trim();
       card.whatsapp = document.getElementById('editWhatsapp').value.trim();
@@ -2272,7 +2342,7 @@
       const defaultColor = colorInput.dataset.defaultColor ? colorInput.dataset.defaultColor.toLowerCase() : "";
       
       if (selectedColor === defaultColor) {
-        card.customColor = ""; // Se il colore non è stato variato rispetto al default colonna, non lo salva come personalizzato
+        card.customColor = "";
       } else {
         card.customColor = colorInput.value;
       }
@@ -2394,6 +2464,7 @@
       badge.textContent = currentStageObj ? currentStageObj.label : 'N/A';
       badge.className = `px-2 py-0.5 rounded text-[11px] font-bold text-white uppercase ${currentStageObj ? currentStageObj.color.split(' ')[0] : 'bg-slate-700'}`;
       
+      document.getElementById('editClientSelector').value = '';
       document.getElementById('editTitle').value = card.title || '';
       document.getElementById('editReferent').value = card.referent || '';
       document.getElementById('editEmail').value = card.email || '';
@@ -2407,7 +2478,7 @@
       const defaultColor = colDef ? colDef.hexDefault : '#4f46e5';
       const colorInput = document.getElementById('editCardColor');
       colorInput.value = card.customColor || defaultColor;
-      colorInput.dataset.defaultColor = defaultColor; // Salva il default per confrontarlo al salvataggio
+      colorInput.dataset.defaultColor = defaultColor; 
       
       renderArticlesTable(card);
       renderAttachments(card);
