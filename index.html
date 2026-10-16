@@ -88,16 +88,16 @@
         <i data-lucide="search" class="absolute left-3 w-4 h-4 text-slate-500"></i>
         <input type="text" id="searchInput" oninput="handleSearch(this.value)" placeholder="Cerca commessa..." class="w-full h-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-3 text-xs md:text-sm text-slate-200 focus:outline-none focus:border-indigo-500 transition-colors">
       </div>
-      <button onclick="toggleMasterMode(); playSound('close');" class="master-back-btn hidden bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-2 rounded-lg text-xs md:text-sm font-extrabold items-center gap-2 shadow-lg border border-indigo-400 cursor-pointer"><i data-lucide="arrow-left" class="w-5 h-5"></i> Torna a Programmazione</button>
+      <button onclick="toggleMasterMode();" class="master-back-btn hidden bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-2 rounded-lg text-xs md:text-sm font-extrabold items-center gap-2 shadow-lg border border-indigo-400 cursor-pointer"><i data-lucide="arrow-left" class="w-5 h-5"></i> Torna a Programmazione</button>
     </div>
     
     <div class="flex space-x-2 md:space-x-3 items-center flex-wrap mt-2 md:mt-0">
       <div id="liveClockWidget" class="flex items-center gap-2 bg-slate-950 border border-slate-700 px-3 md:px-4 py-1.5 rounded-xl text-sm md:text-base font-mono text-emerald-400 font-bold shadow-lg"><i data-lucide="clock" class="w-4 h-4 text-indigo-400 animate-pulse"></i><span id="headerClockTime">--:--:--</span></div>
-      <button onclick="playSound('click'); openStatsModal();" class="hide-in-master bg-slate-800 hover:bg-slate-700 text-slate-300 p-2 rounded-lg cursor-pointer" title="Statistiche & Report"><i data-lucide="bar-chart-2" class="w-4 h-4"></i></button>
-      <button onclick="playSound('click'); openSettingsModal();" class="hide-in-master bg-slate-800 hover:bg-slate-700 text-slate-300 p-2 rounded-lg cursor-pointer" title="Impostazioni"><i data-lucide="sliders" class="w-4 h-4"></i></button>
+      <button onclick="openStatsModal();" class="hide-in-master bg-slate-800 hover:bg-slate-700 text-slate-300 p-2 rounded-lg cursor-pointer" title="Statistiche & Report"><i data-lucide="bar-chart-2" class="w-4 h-4"></i></button>
+      <button onclick="openSettingsModal();" class="hide-in-master bg-slate-800 hover:bg-slate-700 text-slate-300 p-2 rounded-lg cursor-pointer" title="Impostazioni"><i data-lucide="sliders" class="w-4 h-4"></i></button>
       <div class="hide-in-master w-px h-5 bg-slate-700 mx-0.5"></div>
-      <button onclick="playSound('click'); toggleMasterMode();" class="hide-in-master bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-emerald-900/50 px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer"><i data-lucide="monitor" class="w-4 h-4"></i> Master View</button>
-      <button onclick="playSound('click'); openModal('addCardModal');" class="hide-in-master bg-indigo-600 hover:bg-indigo-500 text-white px-3.5 py-1.5 rounded-lg text-xs md:text-sm font-semibold flex items-center gap-1.5 shadow-lg cursor-pointer"><i data-lucide="plus" class="w-4 h-4"></i> Nuova Commessa</button>
+      <button onclick="toggleMasterMode();" class="hide-in-master bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-emerald-900/50 px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer"><i data-lucide="monitor" class="w-4 h-4"></i> Master View</button>
+      <button onclick="openModal('addCardModal');" class="hide-in-master bg-indigo-600 hover:bg-indigo-500 text-white px-3.5 py-1.5 rounded-lg text-xs md:text-sm font-semibold flex items-center gap-1.5 shadow-lg cursor-pointer"><i data-lucide="plus" class="w-4 h-4"></i> Nuova Commessa</button>
     </div>
   </header>
 
@@ -107,11 +107,9 @@
   <!-- WORKSPACE -->
   <main id="board" class="flex-1 overflow-x-auto overflow-y-hidden flex gap-4 p-3 md:p-4 items-start select-none relative scroll-smooth"></main>
 
-  <!-- MODAL: IMPOSTAZIONI (RIFATTO A SCHEDE) -->
+  <!-- MODAL: IMPOSTAZIONI -->
   <div id="settingsModal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
     <div class="bg-slate-900 border border-slate-800 rounded-xl w-full max-w-3xl h-[85vh] flex flex-col overflow-hidden shadow-2xl">
-      
-      <!-- HEADER IMPOSTAZIONI -->
       <div class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-850">
         <div class="flex items-center gap-3">
           <button id="btnSettingsBack" onclick="backToSettingsMenu()" class="hidden bg-slate-800 hover:bg-slate-700 text-slate-300 p-1.5 rounded-lg transition-colors cursor-pointer"><i data-lucide="arrow-left" class="w-5 h-5"></i></button>
@@ -121,41 +119,26 @@
       </div>
       
       <div class="flex-1 overflow-y-auto bg-slate-900/50 p-4 relative">
-        
-        <!-- MENU PRINCIPALE (GRIGLIA) -->
         <div id="settingsMainMenu" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          
           <div onclick="openSettingView('viewCRM', 'Gestione Clienti (Micro-CRM)')" class="bg-slate-950 border border-slate-800 p-4 rounded-xl hover:border-indigo-500 cursor-pointer flex items-center gap-4 transition-colors group">
             <div class="bg-indigo-900/40 p-3 rounded-lg text-indigo-400 group-hover:bg-indigo-600 group-hover:text-white transition-colors"><i data-lucide="users" class="w-6 h-6"></i></div>
             <div><h4 class="font-bold text-slate-200">Gestione Clienti (CRM)</h4><p class="text-xs text-slate-500 mt-0.5">Aggiungi o modifica anagrafiche</p></div>
           </div>
-
           <div onclick="openSettingView('viewTags', 'Gestione Macchinari / Tag')" class="bg-slate-950 border border-slate-800 p-4 rounded-xl hover:border-indigo-500 cursor-pointer flex items-center gap-4 transition-colors group">
             <div class="bg-orange-900/40 p-3 rounded-lg text-orange-400 group-hover:bg-orange-600 group-hover:text-white transition-colors"><i data-lucide="tag" class="w-6 h-6"></i></div>
             <div><h4 class="font-bold text-slate-200">Macchinari / Tag</h4><p class="text-xs text-slate-500 mt-0.5">Aggiungi attrezzature e reparti</p></div>
           </div>
-
           <div onclick="openSettingView('viewLogo', 'Personalizzazione Logo')" class="bg-slate-950 border border-slate-800 p-4 rounded-xl hover:border-indigo-500 cursor-pointer flex items-center gap-4 transition-colors group">
             <div class="bg-emerald-900/40 p-3 rounded-lg text-emerald-400 group-hover:bg-emerald-600 group-hover:text-white transition-colors"><i data-lucide="image" class="w-6 h-6"></i></div>
             <div><h4 class="font-bold text-slate-200">Logo Aziendale</h4><p class="text-xs text-slate-500 mt-0.5">Carica il logo per la top bar</p></div>
           </div>
-
-          <div onclick="openSettingView('viewAlarms', 'Gestione Sveglie / Alert')" class="bg-slate-950 border border-slate-800 p-4 rounded-xl hover:border-indigo-500 cursor-pointer flex items-center gap-4 transition-colors group">
-            <div class="bg-red-900/40 p-3 rounded-lg text-red-400 group-hover:bg-red-600 group-hover:text-white transition-colors"><i data-lucide="bell-ring" class="w-6 h-6"></i></div>
-            <div><h4 class="font-bold text-slate-200">Sveglie e Scadenze</h4><p class="text-xs text-slate-500 mt-0.5">Configura alert a schermo intero</p></div>
-          </div>
-
           <div onclick="openSettingView('viewZoom', 'Visualizzazione e Zoom')" class="bg-slate-950 border border-slate-800 p-4 rounded-xl hover:border-indigo-500 cursor-pointer flex items-center gap-4 transition-colors group md:col-span-2">
             <div class="bg-cyan-900/40 p-3 rounded-lg text-cyan-400 group-hover:bg-cyan-600 group-hover:text-white transition-colors"><i data-lucide="monitor" class="w-6 h-6"></i></div>
-            <div><h4 class="font-bold text-slate-200">Visualizzazione e Zoom</h4><p class="text-xs text-slate-500 mt-0.5">Regola grandezza testi per monitor e master view</p></div>
+            <div><h4 class="font-bold text-slate-200">Visualizzazione e Zoom</h4><p class="text-xs text-slate-500 mt-0.5">Regola grandezza testi</p></div>
           </div>
-
         </div>
 
-        <!-- CONTENITORI DETTAGLIO (Nascosti di default) -->
         <div id="settingsViewsContainer" class="hidden h-full">
-          
-          <!-- VISTA: CRM -->
           <div id="viewCRM" class="setting-view hidden h-full flex flex-col">
             <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 flex-1 flex flex-col">
               <div class="flex gap-2 mb-4">
@@ -167,7 +150,6 @@
             </div>
           </div>
 
-          <!-- VISTA: MACCHINARI -->
           <div id="viewTags" class="setting-view hidden h-full flex flex-col">
             <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 flex-1 flex flex-col">
               <div class="flex gap-2 mb-4">
@@ -179,10 +161,9 @@
             </div>
           </div>
 
-          <!-- VISTA: LOGO -->
           <div id="viewLogo" class="setting-view hidden">
             <div class="bg-slate-950 p-5 rounded-xl border border-slate-800 space-y-4">
-              <p class="text-sm text-slate-400">Carica un logo in formato PNG o JPEG. Apparirà in alto a sinistra nella barra principale dell'applicazione.</p>
+              <p class="text-sm text-slate-400">Carica un logo in formato PNG o JPEG per la barra principale.</p>
               <div class="flex items-center gap-4">
                 <label class="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold px-4 py-2.5 rounded-lg cursor-pointer flex items-center gap-2 shadow"><i data-lucide="upload" class="w-4 h-4"></i> Carica Immagine <input type="file" accept="image/png, image/jpeg" class="hidden" onchange="uploadCompanyLogo(event)"></label>
                 <button onclick="removeCompanyLogo()" class="bg-slate-800 hover:bg-slate-700 text-red-400 font-semibold px-4 py-2.5 rounded-lg cursor-pointer transition-colors border border-slate-700">Rimuovi Logo</button>
@@ -190,111 +171,79 @@
             </div>
           </div>
 
-          <!-- VISTA: SVEGLIE -->
-          <div id="viewAlarms" class="setting-view hidden h-full flex flex-col">
-            <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 flex-1 flex flex-col">
-              <div class="flex justify-between items-center mb-4">
-                <p class="text-sm text-slate-400">Imposta avvisi visivi per le scadenze urgenti a orari prestabiliti.</p>
-                <button onclick="addAlarmRule();" class="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-semibold cursor-pointer shadow">Nuova Sveglia</button>
-              </div>
-              <div id="alarmsListContainer" class="space-y-3 overflow-y-auto flex-1 pr-2"></div>
-            </div>
-          </div>
-
-          <!-- VISTA: ZOOM -->
           <div id="viewZoom" class="setting-view hidden space-y-4">
              <div class="bg-slate-950 p-5 rounded-xl border border-slate-800 space-y-4">
                 <h4 class="text-xs font-bold text-indigo-400 uppercase tracking-wider">Zoom Carattere Programmazione</h4>
-                <p class="text-xs text-slate-400">Regola la dimensione in pixel dei caratteri per la schermata principale.</p>
                 <div class="flex gap-4 items-center">
                   <input type="range" min="12" max="22" value="15" class="w-full accent-indigo-500 h-2 bg-slate-900 rounded-lg cursor-pointer" oninput="changeAppFontSize(this.value)">
                   <span id="appFontSizeDisplay" class="bg-slate-900 px-3 py-1 rounded text-sm font-bold text-white border border-slate-700 w-16 text-center">15px</span>
                 </div>
              </div>
-             <div class="bg-slate-950 p-5 rounded-xl border border-slate-800 space-y-4">
-                <h4 class="text-xs font-bold text-indigo-400 uppercase tracking-wider">Zoom Carattere Master View</h4>
-                <p class="text-xs text-slate-400">Regola la dimensione in pixel per la visualizzazione estesa su proiettore.</p>
-                <div class="flex gap-4 items-center">
-                  <input type="range" min="18" max="40" value="24" class="w-full accent-indigo-500 h-2 bg-slate-900 rounded-lg cursor-pointer" oninput="changeMasterFontSize(this.value)">
-                  <span id="masterFontSizeDisplay" class="bg-slate-900 px-3 py-1 rounded text-sm font-bold text-white border border-slate-700 w-16 text-center">24px</span>
-                </div>
-             </div>
           </div>
-
         </div>
       </div>
       
       <div class="p-4 border-t border-slate-800 bg-slate-950 flex justify-end">
-        <button onclick="saveSettings(); closeModal('settingsModal');" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-6 py-2.5 rounded-lg text-sm cursor-pointer shadow-lg active:scale-95 transition-all">Salva e Chiudi</button>
+        <button onclick="closeModal('settingsModal');" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-6 py-2.5 rounded-lg text-sm cursor-pointer shadow-lg">Chiudi</button>
       </div>
     </div>
   </div>
 
-  <!-- [Restanti Modali Invariati: DetailModal, AddCardModal, StatsModal] -->
+  <!-- MODAL: STATISTICHE -->
   <div id="statsModal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-    <!-- Contenuto Stats -->
     <div class="bg-slate-900 border border-slate-800 rounded-xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden shadow-2xl">
-      <div class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-850"><h3 class="font-bold text-lg text-slate-100 flex items-center gap-2"><i data-lucide="bar-chart-2" class="w-5 h-5 text-indigo-400"></i> Cruscotto Statistiche</h3><button onclick="closeModal('statsModal');" class="text-slate-400 hover:text-slate-200 bg-slate-800 rounded-full p-1 cursor-pointer"><i data-lucide="x" class="w-4 h-4"></i></button></div>
+      <div class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-850"><h3 class="font-bold text-lg text-slate-100 flex items-center gap-2"><i data-lucide="bar-chart-2" class="w-5 h-5 text-indigo-400"></i> Cruscotto Statistiche</h3><button onclick="closeModal('statsModal');" class="text-slate-400 bg-slate-800 rounded-full p-1 cursor-pointer"><i data-lucide="x" class="w-4 h-4"></i></button></div>
       <div class="p-5 overflow-y-auto flex-1 space-y-6">
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div class="bg-slate-950 border border-slate-800 p-4 rounded-xl text-center space-y-1"><p class="text-xs text-slate-400 font-bold uppercase tracking-wider">Commesse Attive</p><p id="statActiveCards" class="text-3xl font-black text-indigo-400">0</p></div>
-          <div class="bg-slate-950 border border-slate-800 p-4 rounded-xl text-center space-y-1"><p class="text-xs text-slate-400 font-bold uppercase tracking-wider">Valore Previsto</p><p id="statTotalRevenue" class="text-3xl font-black text-emerald-400">€ 0,00</p></div>
-          <div class="bg-slate-950 border border-slate-800 p-4 rounded-xl text-center space-y-1"><p class="text-xs text-slate-400 font-bold uppercase tracking-wider">Scadenze Ugenti</p><p id="statUrgentCards" class="text-3xl font-black text-red-400">0</p></div>
-        </div>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div class="bg-slate-950 border border-slate-800 p-4 rounded-xl"><h4 class="text-xs font-bold text-indigo-400 uppercase tracking-wider mb-3">Lavori per Workspace</h4><div id="statWorkspaceBreakdown" class="space-y-3"></div></div>
-          <div class="bg-slate-950 border border-slate-800 p-4 rounded-xl"><h4 class="text-xs font-bold text-indigo-400 uppercase tracking-wider mb-3">Macchinari più utilizzati</h4><div id="statTagsBreakdown" class="space-y-3"></div></div>
+          <div class="bg-slate-950 border border-slate-800 p-4 rounded-xl text-center"><p class="text-xs text-slate-400 font-bold uppercase">Commesse Attive</p><p id="statActiveCards" class="text-3xl font-black text-indigo-400">0</p></div>
+          <div class="bg-slate-950 border border-slate-800 p-4 rounded-xl text-center"><p class="text-xs text-slate-400 font-bold uppercase">Valore Previsto</p><p id="statTotalRevenue" class="text-3xl font-black text-emerald-400">€ 0,00</p></div>
+          <div class="bg-slate-950 border border-slate-800 p-4 rounded-xl text-center"><p class="text-xs text-slate-400 font-bold uppercase">Scadenze Urgenti</p><p id="statUrgentCards" class="text-3xl font-black text-red-400">0</p></div>
         </div>
       </div>
     </div>
   </div>
 
+  <!-- MODAL: NUOVA COMMESSA -->
   <div id="addCardModal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-    <!-- Contenuto Nuova Commessa -->
     <div class="bg-slate-900 border border-slate-800 rounded-xl w-full max-w-md p-5 shadow-2xl max-h-[92vh] overflow-y-auto">
-      <div class="flex justify-between items-center mb-4"><h3 class="font-bold text-lg text-slate-100">Nuova Commessa</h3><button onclick="closeModal('addCardModal');" class="text-slate-400 hover:text-slate-200 bg-slate-800 rounded-full p-1 cursor-pointer"><i data-lucide="x" class="w-4 h-4"></i></button></div>
+      <div class="flex justify-between items-center mb-4"><h3 class="font-bold text-lg text-slate-100">Nuova Commessa</h3><button onclick="closeModal('addCardModal');" class="text-slate-400 bg-slate-800 rounded-full p-1 cursor-pointer"><i data-lucide="x" class="w-4 h-4"></i></button></div>
       <form id="newCardForm" class="space-y-4 text-sm" onsubmit="createNewCard(event)">
-        <div><label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Cliente / Titolo Progetto</label><input type="text" id="formTitle" required class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-indigo-500"></div>
+        <div><label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Titolo Progetto</label><input type="text" id="formTitle" required class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200"></div>
         <div class="grid grid-cols-2 gap-3">
-          <div><label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Cliente (CRM)</label><input type="text" id="formClient" list="clientList" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-indigo-500"></div>
-          <div>
-            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Tipo</label>
-            <select id="formJobType" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-indigo-500"><option>Stampa Digitale</option><option>Abbigliamento</option><option>Service / Audio</option><option>Altro</option></select>
-          </div>
+          <div><label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Cliente (CRM)</label><input type="text" id="formClient" list="clientList" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200"></div>
+          <div><label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Tipo</label><select id="formJobType" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200"><option>Stampa Digitale</option><option>Abbigliamento</option><option>Service / Audio</option><option>Altro</option></select></div>
         </div>
         <div class="grid grid-cols-2 gap-3">
-          <div><label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Scadenza</label><input type="date" id="formDeliveryDate" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200"></div>
-          <div><label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Workspace</label><select id="formWorkspace" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200"><option value="grafica">Grafica</option><option value="eventi">Eventi</option></select></div>
+          <div><label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Scadenza</label><input type="date" id="formDeliveryDate" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200"></div>
+          <div><label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Workspace</label><select id="formWorkspace" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200"><option value="grafica">Grafica</option><option value="eventi">Eventi</option></select></div>
         </div>
-        <div><label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Macchinari Richiesti</label><div id="formTagsContainer" class="flex flex-wrap gap-2"></div></div>
+        <div><label class="block text-xs font-semibold uppercase text-slate-400 mb-2">Macchinari Richiesti</label><div id="formTagsContainer" class="flex flex-wrap gap-2"></div></div>
         <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2.5 px-4 rounded-lg shadow-lg cursor-pointer">Inserisci in Workflow</button>
       </form>
     </div>
   </div>
 
+  <!-- MODAL: DETTAGLIO -->
   <div id="detailModal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-2 md:p-4">
-    <!-- Contenuto Dettaglio -->
     <div class="bg-slate-900 border border-slate-800 rounded-xl w-full max-w-4xl max-h-[96vh] flex flex-col overflow-hidden shadow-2xl">
-      <div class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-850"><h2 class="text-lg font-bold">Dettaglio</h2><button onclick="closeModal('detailModal');" class="text-slate-400 bg-slate-800 rounded-full p-1"><i data-lucide="x" class="w-5 h-5"></i></button></div>
-      <div class="p-5 overflow-y-auto flex-1">
+      <div class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-850"><h2 class="text-lg font-bold">Dettaglio Commessa</h2><button onclick="closeModal('detailModal');" class="text-slate-400 bg-slate-800 rounded-full p-1"><i data-lucide="x" class="w-5 h-5"></i></button></div>
+      <div class="p-5 overflow-y-auto flex-1 space-y-4">
         <div class="space-y-4 bg-slate-950 p-4 rounded-lg border border-slate-800">
            <input type="text" id="editTitle" class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-1.5 text-slate-100 font-semibold text-base mb-2">
            <div class="grid grid-cols-2 gap-3 mb-2"><input type="text" id="editClient" list="clientList" class="bg-slate-900 border border-slate-700 rounded px-3 py-1.5 text-slate-200 text-sm"><input type="date" id="editDeliveryDate" class="bg-slate-900 border border-slate-700 rounded px-3 py-1.5 text-slate-200 text-sm"></div>
            <div class="pt-2"><label class="text-[10px] text-indigo-400 font-semibold uppercase tracking-wider block mb-2">Macchinari</label><div id="editTagsContainer" class="flex flex-wrap gap-2"></div></div>
-           <button onclick="saveCardEdits()" class="w-full bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 text-xs px-3 py-2 rounded">Salva Modifiche</button>
+           <button onclick="saveCardEdits()" class="w-full bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 text-xs px-3 py-2 rounded font-semibold">Salva Modifiche</button>
         </div>
       </div>
-      <div class="p-4 border-t border-slate-800 bg-slate-950 flex justify-between"><button onclick="deleteCurrentCard();" class="text-red-400">Elimina</button><button onclick="closeModal('detailModal');" class="bg-indigo-600 text-white px-5 py-2 rounded">Chiudi</button></div>
+      <div class="p-4 border-t border-slate-800 bg-slate-950 flex justify-between"><button onclick="deleteCurrentCard();" class="text-red-400 font-semibold text-xs">Elimina</button><button onclick="closeModal('detailModal');" class="bg-indigo-600 text-white px-5 py-2 rounded text-xs font-semibold">Chiudi</button></div>
     </div>
   </div>
 
   <script>
-    // --- VARIABLES E CORE LOGIC ---
     const SHARED_PASSWORD = "sga2026";
     let isMasterMode = false; let activeWorkspace = 'grafica'; let searchQuery = '';
     let CLIENT_DB = [];
     let MACHINE_TAGS = ["Roland SG2-540", "Epson F1000 (DTF)", "Epson T7200", "Xerox PrimeLink", "Happy Japan (Ricamo)", "Midas Audio", "Avolites Luci", "LED Wall NovaStar"];
-    
     let state = { cards: [] }; let activeCardId = null;
 
     const COLUMNS_GRAFICA = [
@@ -304,26 +253,53 @@
       { id: "bollettato-da-consegnare", label: "Da consegnare", color: "bg-teal-600/20 text-teal-400", border: "border-l-4 border-l-teal-500" },
       { id: "fatturato", label: "Fatturato", color: "bg-blue-600/20 text-blue-400", border: "border-l-4 border-l-blue-500" }
     ];
+
+    const COLUMNS_EVENTI = [
+      { id: "sopralluogo", label: "Sopralluogo", color: "bg-orange-600/20 text-orange-400", border: "border-l-4 border-l-orange-500" },
+      { id: "confermato", label: "Confermato", color: "bg-amber-600/20 text-amber-400", border: "border-l-4 border-l-amber-500" },
+      { id: "setup", label: "Setup", color: "bg-violet-600/20 text-violet-400", border: "border-l-4 border-l-violet-500" },
+      { id: "evento", label: "Evento", color: "bg-emerald-600/20 text-emerald-400", border: "border-l-4 border-l-emerald-500" },
+      { id: "smontaggio", label: "Smontaggio", color: "bg-rose-600/20 text-rose-400", border: "border-l-4 border-l-rose-500" }
+    ];
+
     let COLUMNS_CONFIG = COLUMNS_GRAFICA;
 
-    // --- NUOVA LOGICA IMPOSTAZIONI A SCHEDE ---
+    function handleLogin(event) {
+      event.preventDefault();
+      const pwd = document.getElementById('loginPassword').value.trim();
+      if (pwd === SHARED_PASSWORD) {
+        localStorage.setItem('workflow_sga_auth', 'true');
+        document.getElementById('loginScreen').classList.add('hidden');
+        init();
+      } else {
+        document.getElementById('loginError').classList.remove('hidden');
+      }
+    }
+
+    function checkAuth() {
+      const isAuth = localStorage.getItem('workflow_sga_auth');
+      if (isAuth === 'true') {
+        document.getElementById('loginScreen').classList.add('hidden');
+        init();
+      } else {
+        document.getElementById('loginScreen').classList.remove('hidden');
+        lucide.createIcons();
+      }
+    }
+
     function openSettingsModal() {
       renderClientSettings();
       renderTagSettings();
-      backToSettingsMenu(); // Resetta sempre alla griglia principale all'apertura
+      backToSettingsMenu();
       openModal('settingsModal');
     }
 
     function openSettingView(viewId, title) {
       document.getElementById('settingsMainMenu').classList.add('hidden');
       document.getElementById('settingsViewsContainer').classList.remove('hidden');
-      
-      // Nascondi tutte le schede
       document.querySelectorAll('.setting-view').forEach(el => el.classList.add('hidden'));
-      // Mostra quella richiesta
-      document.getElementById(viewId).classList.remove('hidden');
-      
-      // Aggiorna header
+      const target = document.getElementById(viewId);
+      if(target) target.classList.remove('hidden');
       document.getElementById('settingsModalTitle').innerText = title;
       document.getElementById('btnSettingsBack').classList.remove('hidden');
     }
@@ -331,85 +307,152 @@
     function backToSettingsMenu() {
       document.getElementById('settingsMainMenu').classList.remove('hidden');
       document.getElementById('settingsViewsContainer').classList.add('hidden');
-      
       document.getElementById('settingsModalTitle').innerHTML = '<i data-lucide="sliders" class="w-5 h-5 text-indigo-400 hidden md:block"></i> Impostazioni Generali';
       document.getElementById('btnSettingsBack').classList.add('hidden');
       lucide.createIcons();
     }
 
-    // --- LOGICA GESTIONE DATI (CRM, TAG) ---
     function renderClientSettings() {
       const list = document.getElementById('settingsClientList');
+      if(!list) return;
       list.innerHTML = CLIENT_DB.sort().map((c, i) => `
         <div class="flex items-center justify-between bg-slate-900 border border-slate-700 p-2 rounded-lg">
           <input type="text" value="${c}" onchange="editClientInDB(${i}, this.value)" class="bg-transparent border-none text-slate-300 text-sm w-full focus:outline-none">
-          <button onclick="removeClientFromDB(${i})" class="text-red-400 hover:text-red-300 bg-red-950/30 p-1.5 rounded ml-2 transition-colors"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+          <button onclick="removeClientFromDB(${i})" class="text-red-400 hover:text-red-300 bg-red-950/30 p-1.5 rounded ml-2"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
         </div>
       `).join('');
       lucide.createIcons();
     }
 
     function addClientToDB() {
-      const val = document.getElementById('newClientInput').value.trim();
-      if(val && !CLIENT_DB.includes(val)) { CLIENT_DB.push(val); saveCRMAndTags(); renderClientSettings(); document.getElementById('newClientInput').value = ''; }
+      const input = document.getElementById('newClientInput');
+      if(!input) return;
+      const val = input.value.trim();
+      if(val && !CLIENT_DB.includes(val)) { CLIENT_DB.push(val); saveCRMAndTags(); renderClientSettings(); input.value = ''; }
     }
-    function editClientInDB(idx, newName) { if(newName.trim()) { CLIENT_DB[idx] = newName.trim(); saveCRMAndTags(); renderClientSettings(); } }
-    function removeClientFromDB(idx) { if(confirm("Rimuovere cliente?")) { CLIENT_DB.splice(idx, 1); saveCRMAndTags(); renderClientSettings(); } }
+
+    function editClientInDB(idx, newName) {
+      if(newName.trim()) { CLIENT_DB[idx] = newName.trim(); saveCRMAndTags(); renderClientSettings(); }
+    }
+
+    function removeClientFromDB(idx) {
+      if(confirm("Rimuovere cliente?")) { CLIENT_DB.splice(idx, 1); saveCRMAndTags(); renderClientSettings(); }
+    }
 
     function renderTagSettings() {
       const list = document.getElementById('settingsTagList');
+      if(!list) return;
       list.innerHTML = MACHINE_TAGS.map((t, i) => `
-        <div class="flex items-center gap-2 bg-slate-900 border border-slate-700 px-3 py-1.5 rounded-lg text-xs font-bold text-slate-300 shadow-sm">
+        <div class="flex items-center gap-2 bg-slate-900 border border-slate-700 px-3 py-1.5 rounded-lg text-xs font-bold text-slate-300">
           <span class="uppercase tracking-wider">${t}</span>
           <button onclick="removeTagFromDB(${i})" class="text-red-400 hover:text-red-300"><i data-lucide="x" class="w-4 h-4"></i></button>
         </div>
       `).join('');
       lucide.createIcons();
     }
+
     function addTagToDB() {
-      const val = document.getElementById('newTagInput').value.trim();
-      if(val && !MACHINE_TAGS.includes(val)) { MACHINE_TAGS.push(val); saveCRMAndTags(); renderTagSettings(); document.getElementById('newTagInput').value = ''; }
+      const input = document.getElementById('newTagInput');
+      if(!input) return;
+      const val = input.value.trim();
+      if(val && !MACHINE_TAGS.includes(val)) { MACHINE_TAGS.push(val); saveCRMAndTags(); renderTagSettings(); input.value = ''; }
     }
-    function removeTagFromDB(idx) { if(confirm("Rimuovere tag?")) { MACHINE_TAGS.splice(idx, 1); saveCRMAndTags(); renderTagSettings(); } }
+
+    function removeTagFromDB(idx) {
+      if(confirm("Rimuovere tag?")) { MACHINE_TAGS.splice(idx, 1); saveCRMAndTags(); renderTagSettings(); }
+    }
 
     function loadCRMAndTags() {
-      try { const c = localStorage.getItem('workflow_sga_clients'); if(c) CLIENT_DB = JSON.parse(c); } catch(e){}
-      try { const t = localStorage.getItem('workflow_sga_tags'); if(t) MACHINE_TAGS = JSON.parse(t); } catch(e){}
-      const datalist = document.getElementById('clientList'); datalist.innerHTML = CLIENT_DB.sort().map(c => `<option value="${c}">`).join('');
+      try {
+        const c = localStorage.getItem('workflow_sga_clients'); if(c) CLIENT_DB = JSON.parse(c);
+        const t = localStorage.getItem('workflow_sga_tags'); if(t) MACHINE_TAGS = JSON.parse(t);
+        const datalist = document.getElementById('clientList');
+        if(datalist) datalist.innerHTML = CLIENT_DB.sort().map(item => `<option value="${item}">`).join('');
+      } catch(e) { console.error(e); }
     }
+
     function saveCRMAndTags() {
-      localStorage.setItem('workflow_sga_clients', JSON.stringify(CLIENT_DB));
-      localStorage.setItem('workflow_sga_tags', JSON.stringify(MACHINE_TAGS));
-      const datalist = document.getElementById('clientList'); datalist.innerHTML = CLIENT_DB.sort().map(c => `<option value="${c}">`).join('');
+      try {
+        localStorage.setItem('workflow_sga_clients', JSON.stringify(CLIENT_DB));
+        localStorage.setItem('workflow_sga_tags', JSON.stringify(MACHINE_TAGS));
+        const datalist = document.getElementById('clientList');
+        if(datalist) datalist.innerHTML = CLIENT_DB.sort().map(item => `<option value="${item}">`).join('');
+      } catch(e) {}
     }
 
     function buildTagsCheckboxes(containerId, isEdit = false) {
-      const container = document.getElementById(containerId); container.innerHTML = '';
+      const container = document.getElementById(containerId);
+      if(!container) return;
+      container.innerHTML = '';
       MACHINE_TAGS.forEach((tag, idx) => {
         const id = isEdit ? `editTag_${idx}` : `formTag_${idx}`;
         container.innerHTML += `<label class="cursor-pointer select-none"><input type="checkbox" value="${tag}" id="${id}" class="tag-checkbox hidden"><div class="px-2.5 py-1 text-[10px] font-bold rounded border border-slate-700 bg-slate-900 text-slate-400 uppercase">${tag}</div></label>`;
       });
     }
 
-    function changeAppFontSize(val) { document.documentElement.style.setProperty('--app-font-size', val + 'px'); document.getElementById('appFontSizeDisplay').innerText = val + 'px'; }
-    function changeMasterFontSize(val) { document.documentElement.style.setProperty('--master-font-size', val + 'px'); document.getElementById('masterFontSizeDisplay').innerText = val + 'px'; }
-    function saveSettings() { /* Save visual preferences and specific settings if needed */ alert('Impostazioni salvate con successo.'); }
+    function loadState() {
+      try {
+        const saved = localStorage.getItem('workflow_sga_state');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (parsed && Array.isArray(parsed.cards)) {
+            state.cards = parsed.cards;
+          }
+        }
+      } catch(e) {
+        state = { cards: [] };
+      }
+    }
 
-    // --- CORE WORKFLOW ---
+    function saveLocal() {
+      try {
+        localStorage.setItem('workflow_sga_state', JSON.stringify(state));
+      } catch(e) {}
+      renderBoard();
+    }
+
+    function switchWorkspace(ws) {
+      activeWorkspace = ws;
+      COLUMNS_CONFIG = ws === 'grafica' ? COLUMNS_GRAFICA : COLUMNS_EVENTI;
+      const btnG = document.getElementById('btnWsGrafica');
+      const btnE = document.getElementById('btnWsEventi');
+      if(btnG && btnE) {
+        if(ws === 'grafica') {
+          btnG.className = "px-3 py-1 text-xs md:text-sm font-bold rounded-lg transition-colors bg-indigo-600 text-white flex items-center gap-1.5 shadow";
+          btnE.className = "px-3 py-1 text-xs md:text-sm font-bold rounded-lg transition-colors text-slate-400 hover:text-slate-200 flex items-center gap-1.5";
+        } else {
+          btnE.className = "px-3 py-1 text-xs md:text-sm font-bold rounded-lg transition-colors bg-indigo-600 text-white flex items-center gap-1.5 shadow";
+          btnG.className = "px-3 py-1 text-xs md:text-sm font-bold rounded-lg transition-colors text-slate-400 hover:text-slate-200 flex items-center gap-1.5";
+        }
+      }
+      renderBoard();
+    }
+
+    function handleSearch(val) {
+      searchQuery = val.toLowerCase().trim();
+      renderBoard();
+    }
+
     function renderBoard() {
-      const board = document.getElementById('board'); if (!board) return; board.innerHTML = '';
-      let visibleCards = state.cards.filter(c => c.workspace === activeWorkspace);
-      if (searchQuery) visibleCards = visibleCards.filter(c => (c.title && c.title.toLowerCase().includes(searchQuery)));
+      const board = document.getElementById('board');
+      if (!board) return;
+      board.innerHTML = '';
+      
+      let visibleCards = state.cards.filter(c => c && c.workspace === activeWorkspace);
+      if (searchQuery) {
+        visibleCards = visibleCards.filter(c => (c.title && c.title.toLowerCase().includes(searchQuery)) || (c.client && c.client.toLowerCase().includes(searchQuery)));
+      }
       
       COLUMNS_CONFIG.forEach(col => {
         const colCards = visibleCards.filter(c => c.stage === col.id).sort((a,b) => (a.order || 0) - (b.order || 0));
         const colEl = document.createElement('div');
-        colEl.className = `board-column flex flex-col h-full bg-slate-900/60 rounded-xl border border-slate-800 shrink-0`;
+        colEl.className = `board-column flex flex-col h-full bg-slate-900/60 rounded-xl border border-slate-800 shrink-0 overflow-hidden`;
         colEl.innerHTML = `
           <div class="p-3 border-b border-slate-800 ${col.color} ${col.border} flex justify-between items-center bg-opacity-30">
             <h3 class="font-bold uppercase tracking-wide truncate text-xs md:text-sm">${col.label}</h3>
+            <span class="font-semibold bg-slate-950/60 px-2 py-0.5 rounded-full text-xs">${colCards.length}</span>
           </div>
-          <div class="flex-1 overflow-y-auto p-2 space-y-2 card-dropzone" data-col="${col.id}" ondragover="ev=>ev.preventDefault()" ondrop="handleDrop(event)">
+          <div class="flex-1 overflow-y-auto p-2 space-y-2 card-dropzone" data-col="${col.id}" ondragover="event.preventDefault()" ondrop="handleDrop(event)">
             ${colCards.map(card => createCardHTML(card)).join('')}
           </div>
         `;
@@ -417,17 +460,140 @@
       });
       lucide.createIcons();
     }
-    
+
     function createCardHTML(card) {
-      return `<div draggable="true" data-id="${card.id}" onclick="openDetail('${card.id}')" class="bg-slate-900 border border-slate-800 p-3.5 rounded-lg shadow-md cursor-pointer"><h4 class="font-bold text-sm text-slate-100">${card.title}</h4>${card.client ? `<p class="text-slate-400 text-xs mt-1">${card.client}</p>` : ''}</div>`;
+      return `
+        <div draggable="true" ondragstart="event.dataTransfer.setData('text', '${card.id}')" data-id="${card.id}" onclick="openDetail('${card.id}')" class="bg-slate-900 border border-slate-800 hover:border-indigo-500/50 p-3.5 rounded-lg shadow-md cursor-pointer space-y-1">
+          <h4 class="font-bold text-sm text-slate-100 truncate">${card.title || 'Senza titolo'}</h4>
+          ${card.client ? `<p class="text-slate-400 text-xs truncate">${card.client}</p>` : ''}
+        </div>
+      `;
     }
 
-    function switchWorkspace(ws) { activeWorkspace = ws; renderBoard(); }
-    function openModal(id) { document.getElementById(id).classList.remove('hidden'); }
-    function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
-    
-    function init() { loadCRMAndTags(); renderBoard(); }
-    window.onload = () => { document.getElementById('loginScreen').classList.add('hidden'); init(); };
+    function handleDrop(event) {
+      event.preventDefault();
+      const cardId = event.dataTransfer.getData("text");
+      const targetCol = event.currentTarget.dataset.col;
+      const card = state.cards.find(c => c.id === cardId);
+      if (card && card.stage !== targetCol) {
+        card.stage = targetCol;
+        saveLocal();
+      }
+    }
+
+    function createNewCard(event) {
+      event.preventDefault();
+      const client = document.getElementById('formClient').value.trim();
+      if(client && !CLIENT_DB.includes(client)) { CLIENT_DB.push(client); saveCRMAndTags(); }
+      
+      const ws = document.getElementById('formWorkspace').value || activeWorkspace;
+      const initialStage = ws === 'grafica' ? 'prev-da-fare' : 'sopralluogo';
+      
+      const newCard = {
+        id: 'c' + Date.now(),
+        title: document.getElementById('formTitle').value.trim(),
+        client: client,
+        deliveryDate: document.getElementById('formDeliveryDate').value,
+        jobType: document.getElementById('formJobType').value,
+        workspace: ws,
+        tags: [],
+        stage: initialStage,
+        order: Date.now(),
+        createdAt: new Date().toISOString()
+      };
+      
+      state.cards.unshift(newCard);
+      saveLocal();
+      document.getElementById('newCardForm').reset();
+      closeModal('addCardModal');
+    }
+
+    function openDetail(id) {
+      activeCardId = id;
+      const card = state.cards.find(c => c.id === id);
+      if(!card) return;
+      document.getElementById('editTitle').value = card.title || '';
+      document.getElementById('editClient').value = card.client || '';
+      document.getElementById('editDeliveryDate').value = card.deliveryDate || '';
+      openModal('detailModal');
+    }
+
+    function saveCardEdits() {
+      const card = state.cards.find(c => c.id === activeCardId);
+      if(!card) return;
+      card.title = document.getElementById('editTitle').value.trim();
+      card.client = document.getElementById('editClient').value.trim();
+      card.deliveryDate = document.getElementById('editDeliveryDate').value;
+      saveLocal();
+      closeModal('detailModal');
+    }
+
+    function deleteCurrentCard() {
+      if(confirm("Eliminare questa commessa?")) {
+        state.cards = state.cards.filter(c => c.id !== activeCardId);
+        saveLocal();
+        closeModal('detailModal');
+      }
+    }
+
+    function openModal(id) {
+      const m = document.getElementById(id);
+      if(m) {
+        m.classList.remove('hidden');
+        if(id === 'addCardModal') {
+          buildTagsCheckboxes('formTagsContainer', false);
+          document.getElementById('formWorkspace').value = activeWorkspace;
+        }
+      }
+    }
+
+    function closeModal(id) {
+      const m = document.getElementById(id);
+      if(m) m.classList.add('hidden');
+    }
+
+    function toggleMasterMode() {
+      isMasterMode = !isMasterMode;
+      document.body.classList.toggle('master-mode');
+      renderBoard();
+    }
+
+    function openStatsModal() {
+      let active = 0; let rev = 0; let urgent = 0;
+      const today = new Date(); today.setHours(0,0,0,0);
+      state.cards.forEach(c => {
+        if(!['fatturato','fatturato-eventi'].includes(c.stage)) active++;
+        if(c.deliveryDate) {
+          const d = new Date(c.deliveryDate); d.setHours(0,0,0,0);
+          if(Math.ceil((d - today)/(1000*60*60*24)) <= 7) urgent++;
+        }
+      });
+      document.getElementById('statActiveCards').innerText = active;
+      document.getElementById('statTotalRevenue').innerText = `€ ${rev.toFixed(2)}`;
+      document.getElementById('statUrgentCards').innerText = urgent;
+      openModal('statsModal');
+    }
+
+    function changeAppFontSize(val) {
+      document.documentElement.style.setProperty('--app-font-size', val + 'px');
+      document.getElementById('appFontSizeDisplay').innerText = val + 'px';
+    }
+
+    function updateLiveClock() {
+      const now = new Date();
+      const el = document.getElementById('headerClockTime');
+      if(el) el.innerText = now.toLocaleTimeString('it-IT');
+    }
+
+    function init() {
+      loadCRMAndTags();
+      loadState();
+      switchWorkspace('grafica');
+      setInterval(updateLiveClock, 1000);
+      updateLiveClock();
+    }
+
+    window.onload = checkAuth;
   </script>
 </body>
 </html>
