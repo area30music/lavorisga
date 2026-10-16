@@ -2177,6 +2177,15 @@
         });
       }
 
+      let photosHtml = '';
+      if (card.photos && card.photos.length > 0) {
+        photosHtml = `<div style="margin-top: 25px; page-break-inside: avoid;"><h3 style="font-size: 14px; border-bottom: 1px solid #cbd5e1; padding-bottom: 4px; margin-bottom: 10px;">Allegati & Grafica</h3><div style="display: flex; flex-wrap: wrap; gap: 10px;">`;
+        card.photos.forEach(p => {
+          photosHtml += `<div style="width: 180px; height: 180px; border: 1px solid #cbd5e1; padding: 4px; display: flex; align-items: center; justify-content: center; background: #fff; page-break-inside: avoid;"><img src="${p.image}" style="max-width: 100%; max-height: 100%; object-fit: contain; transform: rotate(${p.rotation || 0}deg);"></div>`;
+        });
+        photosHtml += `</div></div>`;
+      }
+
       printWindow.document.write(`
         <html><head><title>Commessa #${card.id.slice(-4).toUpperCase()}</title><style>
           body { font-family: Arial, sans-serif; padding: 20px; color: #0f172a; }
@@ -2188,6 +2197,7 @@
           <p><b>Cliente:</b> ${card.client || 'N/D'} | <b>Consegna:</b> ${deliveryStr}</p>
           <table><thead><tr><th>Codice</th><th>Descrizione</th><th style="text-align:center;">Q.tà</th><th style="text-align:right;">Prezzo Un.</th><th style="text-align:center;">IVA</th><th style="text-align:right;">Totale</th></tr></thead><tbody>${articlesRowsHtml}</tbody></table>
           <p style="text-align: right; margin-top: 15px; font-size: 14px;"><b>Totale Ordine Ivato: € ${grandTotalTaxed.toFixed(2)}</b></p>
+          ${photosHtml}
           <script>window.onload = function(){ window.print(); };<\/script>
         </body></html>
       `);
