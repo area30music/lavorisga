@@ -2174,14 +2174,14 @@
           grandSubtotal += sub; grandTax += taxAmt; grandTotalTaxed += rowTotalTaxed;
 
           articlesRowsHtml += `<tr>
-            <td style="padding: 4px; font-family: monospace; font-size: 10px; border-bottom: 1px solid #000;">${art.code || ''}</td>
-            <td style="padding: 4px; font-size: 10px; border-bottom: 1px solid #000;">${art.desc || ''}</td>
-            <td style="padding: 4px; text-align: center; font-size: 10px; border-bottom: 1px solid #000;">${art.qty !== undefined ? art.qty : ''}</td>
-            <td style="padding: 4px; text-align: right; font-size: 10px; border-bottom: 1px solid #000;">${art.price !== undefined ? '€ ' + parseFloat(art.price).toFixed(2) : ''}</td>
-            <td style="padding: 4px; text-align: center; font-size: 10px; border-bottom: 1px solid #000;">${taxRate}%</td>
-            <td style="padding: 4px; text-align: right; font-size: 10px; border-bottom: 1px solid #000;">€ ${sub.toFixed(2)}</td>
-            <td style="padding: 4px; text-align: right; font-size: 10px; border-bottom: 1px solid #000;">€ ${unitTaxPrice.toFixed(2)}</td>
-            <td style="padding: 4px; text-align: right; font-size: 10px; font-weight: bold; border-bottom: 1px solid #000;">€ ${rowTotalTaxed.toFixed(2)}</td>
+            <td style="padding: 5px; font-family: monospace; font-size: 10px; border-bottom: 1px solid #000;">${art.code || ''}</td>
+            <td style="padding: 5px; font-size: 10px; border-bottom: 1px solid #000;">${art.desc || ''}</td>
+            <td style="padding: 5px; text-align: center; font-size: 10px; border-bottom: 1px solid #000;">${art.qty !== undefined ? art.qty : ''}</td>
+            <td style="padding: 5px; text-align: right; font-size: 10px; border-bottom: 1px solid #000;">${art.price !== undefined ? '€ ' + parseFloat(art.price).toFixed(2) : ''}</td>
+            <td style="padding: 5px; text-align: center; font-size: 10px; border-bottom: 1px solid #000;">${taxRate}%</td>
+            <td style="padding: 5px; text-align: right; font-size: 10px; border-bottom: 1px solid #000;">€ ${sub.toFixed(2)}</td>
+            <td style="padding: 5px; text-align: right; font-size: 10px; border-bottom: 1px solid #000;">€ ${unitTaxPrice.toFixed(2)}</td>
+            <td style="padding: 5px; text-align: right; font-size: 10px; font-weight: bold; border-bottom: 1px solid #000;">€ ${rowTotalTaxed.toFixed(2)}</td>
           </tr>`;
         });
       }
@@ -2189,7 +2189,7 @@
       let historyHtml = '';
       if (card.history && card.history.length > 0) {
         card.history.forEach((h, idx) => {
-          historyHtml += `<div style="margin-bottom: 2px;">Passaggio #${idx+1}: <b>${h.label}</b><br><span style="color: #475569; font-size: 9px;">Data: ${new Date(h.timestamp).toLocaleString('it-IT')}</span></div>`;
+          historyHtml += `<div style="margin-bottom: 3px;">Passaggio #${idx+1}: <b>${h.label}</b><br><span style="color: #555; font-size: 9px;">Data: ${new Date(h.timestamp).toLocaleString('it-IT')}</span></div>`;
         });
       }
 
@@ -2201,60 +2201,69 @@
       }
 
       const stageLabel = COLUMNS_CONFIG.find(c => c.id === card.stage)?.label || card.stage;
-      const logoHtml = sharedCompanyLogo ? `<img src="${sharedCompanyLogo}" style="height: 32px; object-fit: contain; margin-right: 10px; vertical-align: middle;">` : '';
+      const logoHtml = sharedCompanyLogo ? `<img src="${sharedCompanyLogo}" style="height: 38px; object-fit: contain; margin-right: 12px; vertical-align: middle;">` : '';
 
       printWindow.document.write(`
         <html><head><title>Commessa #${card.id.slice(-4).toUpperCase()}</title><style>
           body { font-family: Arial, sans-serif; padding: 15px; color: #000; margin: 0; background: #fff; }
           .page { page-break-after: always; min-height: 94vh; display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box; }
           .page:last-child { page-break-after: avoid; }
-          .header-main { display: flex; align-items: center; border-bottom: 2px solid #000; padding-bottom: 6px; margin-bottom: 8px; }
-          .header-title { font-size: 16px; font-weight: bold; text-transform: uppercase; line-height: 1.1; }
-          .sub-title { font-size: 12px; font-weight: bold; text-transform: uppercase; margin-bottom: 8px; }
-          .info-table { width: 100%; border-collapse: collapse; margin-bottom: 8px; font-size: 10px; }
-          .info-table td { padding: 4px 6px; border: 1px solid #000; vertical-align: top; }
-          .info-table td b { display: block; font-size: 9px; text-transform: uppercase; color: #334155; margin-bottom: 1px; }
-          table { width: 100%; border-collapse: collapse; margin-top: 4px; margin-bottom: 8px; }
-          th { background: #f1f5f9; padding: 4px; font-size: 9px; text-transform: uppercase; text-align: left; border-top: 1px solid #000; border-bottom: 1px solid #000; color: #000; }
-          .storyboard { margin-top: 6px; font-size: 10px; border-top: 1px solid #000; padding-top: 4px; }
-          .storyboard h3 { font-size: 10px; text-transform: uppercase; margin: 0 0 3px 0; font-weight: bold; }
-          .totals { text-align: right; margin-top: 6px; font-size: 11px; font-weight: bold; border-top: 1px solid #000; padding-top: 4px; }
+          .header-box { border: 2px solid #000; padding: 10px 12px; margin-bottom: 10px; display: flex; align-items: center; background: #fff; }
+          .header-title { font-size: 15px; font-weight: bold; text-transform: uppercase; line-height: 1.2; letter-spacing: 0.5px; }
+          .sub-bar { border: 1.5px solid #000; padding: 6px 10px; font-size: 11px; font-weight: bold; text-transform: uppercase; margin-bottom: 10px; background: #f8fafc; }
+          .grid-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+          .field-box { border: 1px solid #000; padding: 6px 8px; background: #fff; }
+          .field-box .label { font-size: 9px; font-weight: bold; text-transform: uppercase; color: #334155; margin-bottom: 2px; }
+          .field-box .value { font-size: 11px; font-weight: bold; color: #000; }
+          table { width: 100%; border-collapse: collapse; margin-top: 6px; margin-bottom: 10px; }
+          th { background: #e2e8f0; padding: 6px 4px; font-size: 9px; text-transform: uppercase; text-align: left; border: 1px solid #000; color: #000; }
+          .storyboard { margin-top: 8px; font-size: 10px; border: 1px solid #000; padding: 8px; background: #fff; }
+          .storyboard h3 { font-size: 10px; text-transform: uppercase; margin: 0 0 4px 0; font-weight: bold; }
+          .totals { text-align: right; margin-top: 8px; font-size: 11px; font-weight: bold; border-top: 2px solid #000; padding-top: 6px; }
           .attachment-page { page-break-before: always; height: 100vh; display: flex; align-items: center; justify-content: center; text-align: center; }
           .attachment-page img { max-width: 100%; max-height: 96vh; object-fit: contain; }
         </style></head><body>
           <div class="page">
             <div>
-              <div class="header-main">
+              <div class="header-box">
                 ${logoHtml}
                 <div class="header-title">SGA STUDIO GRAFICO ASSOCIATO</div>
               </div>
-              <div class="sub-title">SCHEDA COMMESSA &nbsp;&nbsp;|&nbsp;&nbsp; STATO: ${stageLabel.toUpperCase()}</div>
+              <div class="sub-bar">SCHEDA COMMESSA &nbsp;&nbsp;|&nbsp;&nbsp; STATO: ${stageLabel.toUpperCase()}</div>
               
-              <table class="info-table">
-                <tr>
-                  <td style="width: 50%;"><b>Cliente / Titolo</b>${card.title || 'N/D'}</td>
-                  <td style="width: 50%;"><b>Referente / Contatto</b>${card.client || 'N/D'}</td>
-                </tr>
-                <tr>
-                  <td><b>Tipo Lavorazione</b>${card.jobType || 'N/D'}</td>
-                  <td><b>Data di Consegna</b>${deliveryStr}</td>
-                </tr>
-              </table>
+              <div class="grid-fields">
+                <div class="field-box">
+                  <div class="label">Cliente / Titolo</div>
+                  <div class="value">${card.title || 'N/D'}</div>
+                </div>
+                <div class="field-box">
+                  <div class="label">Referente / Contatto</div>
+                  <div class="value">${card.client || 'N/D'}</div>
+                </div>
+                <div class="field-box">
+                  <div class="label">Tipo Lavorazione</div>
+                  <div class="value">${card.jobType || 'N/D'}</div>
+                </div>
+                <div class="field-box">
+                  <div class="label">Data di Consegna</div>
+                  <div class="value">${deliveryStr}</div>
+                </div>
+              </div>
 
-              <div style="font-size: 9px; color: #000; margin-bottom: 4px; font-weight: bold;">Rif. Ordine: #${card.id.slice(-4).toUpperCase()} &nbsp;&nbsp;|&nbsp;&nbsp; Data: ${card.createdAt ? new Date(card.createdAt).toLocaleDateString('it-IT') : ''}</div>
+              <div style="font-size: 9px; color: #000; margin-bottom: 6px; font-weight: bold;">Rif. Ordine: #${card.id.slice(-4).toUpperCase()} &nbsp;&nbsp;|&nbsp;&nbsp; Data: ${card.createdAt ? new Date(card.createdAt).toLocaleDateString('it-IT') : ''}</div>
 
-              <div style="font-size: 10px; font-weight: bold; text-transform: uppercase; margin-top: 6px; margin-bottom: 2px;">Articoli & Specifiche Lavorazione</div>
+              <div style="font-size: 10px; font-weight: bold; text-transform: uppercase; margin-top: 8px; margin-bottom: 2px;">Articoli & Specifiche Lavorazione</div>
               <table>
                 <thead>
                   <tr>
-                    <th style="width: 15%;">CODICE</th>
-                    <th style="width: 33%;">DESCRIZIONE</th>
-                    <th style="width: 6%; text-align:center;">Q.TÀ</th>
-                    <th style="width: 10%; text-align:right;">PREZZO UN.</th>
-                    <th style="width: 6%; text-align:center;">IVA</th>
-                    <th style="width: 10%; text-align:right;">TOT. NETTO</th>
-                    <th style="width: 10%; text-align:right;">PR. IVATO</th>
-                    <th style="width: 10%; text-align:right;">TOT. IVATO</th>
+                    <th style="width: 15%; border: 1px solid #000;">CODICE</th>
+                    <th style="width: 33%; border: 1px solid #000;">DESCRIZIONE</th>
+                    <th style="width: 6%; text-align:center; border: 1px solid #000;">Q.TÀ</th>
+                    <th style="width: 10%; text-align:right; border: 1px solid #000;">PREZZO UN.</th>
+                    <th style="width: 6%; text-align:center; border: 1px solid #000;">IVA</th>
+                    <th style="width: 10%; text-align:right; border: 1px solid #000;">TOT. NETTO</th>
+                    <th style="width: 10%; text-align:right; border: 1px solid #000;">PR. IVATO</th>
+                    <th style="width: 10%; text-align:right; border: 1px solid #000;">TOT. IVATO</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -2270,7 +2279,7 @@
               </div>
               <div class="totals">
                 Imponibile: € ${grandSubtotal.toFixed(2)} &nbsp;&nbsp;|&nbsp;&nbsp; Totale IVA: € ${grandTax.toFixed(2)}<br>
-                <span style="font-size: 12px;">Totale Ordine Ivato: € ${grandTotalTaxed.toFixed(2)}</span>
+                <span style="font-size: 12px; color: #047857;">Totale Ordine Ivato: € ${grandTotalTaxed.toFixed(2)}</span>
               </div>
             </div>
           </div>
