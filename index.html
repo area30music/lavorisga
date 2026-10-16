@@ -255,7 +255,7 @@
 
   <!-- MODAL: MENU PRINCIPALE IMPOSTAZIONI A CARD -->
   <div id="settingsModal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-    <div class="bg-slate-900 border border-slate-800 rounded-xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden shadow-2xl">
+    <div class="bg-slate-900 border border-slate-800 rounded-xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden shadow-2xl">
       <div class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-850">
         <h3 class="font-bold text-base text-slate-100 flex items-center gap-2">
           <i data-lucide="sliders" class="w-5 h-5 text-indigo-400"></i> Impostazioni Generali
@@ -266,7 +266,7 @@
       </div>
 
       <div class="p-5 overflow-y-auto space-y-4 flex-1 text-sm">
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4">
           <div onclick="playSound('click'); openSubSettings('crm');" class="bg-slate-950 hover:bg-slate-850 border border-slate-800 hover:border-indigo-500/50 p-4 rounded-xl cursor-pointer transition-all flex items-start gap-3.5 group">
             <div class="bg-indigo-600/20 text-indigo-400 p-3 rounded-lg border border-indigo-500/30 group-hover:scale-105 transition-transform">
               <i data-lucide="users" class="w-6 h-6"></i>
@@ -276,7 +276,16 @@
               <p class="text-xs text-slate-400 mt-0.5">Database clienti, aziende, email e WhatsApp.</p>
             </div>
           </div>
-          <div onclick="playSound('click'); openSubSettings('machines');" class="bg-slate-950 hover:bg-slate-850 border border-slate-800 hover:border-indigo-500/50 p-4 rounded-xl cursor-pointer transition-all flex items-start gap-3.5 group">
+          <div onclick="playSound('click'); openSubSettings('messages');" class="bg-slate-950 hover:bg-slate-850 border border-slate-800 hover:border-pink-500/50 p-4 rounded-xl cursor-pointer transition-all flex items-start gap-3.5 group">
+            <div class="bg-pink-600/20 text-pink-400 p-3 rounded-lg border border-pink-500/30 group-hover:scale-105 transition-transform">
+              <i data-lucide="message-square" class="w-6 h-6"></i>
+            </div>
+            <div>
+              <h4 class="font-bold text-slate-200 text-sm">Testo Notifiche</h4>
+              <p class="text-xs text-slate-400 mt-0.5">Personalizza messaggi WhatsApp ed Email.</p>
+            </div>
+          </div>
+          <div onclick="playSound('click'); openSubSettings('machines');" class="bg-slate-950 hover:bg-slate-850 border border-slate-800 hover:border-cyan-500/50 p-4 rounded-xl cursor-pointer transition-all flex items-start gap-3.5 group">
             <div class="bg-cyan-600/20 text-cyan-400 p-3 rounded-lg border border-cyan-500/30 group-hover:scale-105 transition-transform">
               <i data-lucide="cpu" class="w-6 h-6"></i>
             </div>
@@ -285,16 +294,16 @@
               <p class="text-xs text-slate-400 mt-0.5">Aggiungi o rimuovi stampanti, plotter e attrezzature.</p>
             </div>
           </div>
-          <div onclick="playSound('click'); closeModal('settingsModal'); openModal('cloudModal');" class="bg-slate-950 hover:bg-slate-850 border border-slate-800 hover:border-indigo-500/50 p-4 rounded-xl cursor-pointer transition-all flex items-start gap-3.5 group">
+          <div onclick="playSound('click'); closeModal('settingsModal'); openModal('cloudModal');" class="bg-slate-950 hover:bg-slate-850 border border-slate-800 hover:border-emerald-500/50 p-4 rounded-xl cursor-pointer transition-all flex items-start gap-3.5 group">
             <div class="bg-emerald-600/20 text-emerald-400 p-3 rounded-lg border border-emerald-500/30 group-hover:scale-105 transition-transform">
               <i data-lucide="cloud" class="w-6 h-6"></i>
             </div>
             <div>
               <h4 class="font-bold text-slate-200 text-sm">Collegamento Cloud</h4>
-              <p class="text-xs text-slate-400 mt-0.5">Configura e verifica lo stato del database Firebase e ImgBB.</p>
+              <p class="text-xs text-slate-400 mt-0.5">Configura e verifica lo stato del database Firebase.</p>
             </div>
           </div>
-          <div onclick="playSound('click'); openSubSettings('logo');" class="bg-slate-950 hover:bg-slate-850 border border-slate-800 hover:border-indigo-500/50 p-4 rounded-xl cursor-pointer transition-all flex items-start gap-3.5 group">
+          <div onclick="playSound('click'); openSubSettings('logo');" class="bg-slate-950 hover:bg-slate-850 border border-slate-800 hover:border-blue-500/50 p-4 rounded-xl cursor-pointer transition-all flex items-start gap-3.5 group">
             <div class="bg-blue-600/20 text-blue-400 p-3 rounded-lg border border-blue-500/30 group-hover:scale-105 transition-transform">
               <i data-lucide="image" class="w-6 h-6"></i>
             </div>
@@ -303,7 +312,7 @@
               <p class="text-xs text-slate-400 mt-0.5">Carica o sostituisci il logo condiviso nella top bar.</p>
             </div>
           </div>
-          <div onclick="playSound('click'); openSubSettings('alarms');" class="bg-slate-950 hover:bg-slate-850 border border-slate-800 hover:border-indigo-500/50 p-4 rounded-xl cursor-pointer transition-all flex items-start gap-3.5 group">
+          <div onclick="playSound('click'); openSubSettings('alarms');" class="bg-slate-950 hover:bg-slate-850 border border-slate-800 hover:border-rose-500/50 p-4 rounded-xl cursor-pointer transition-all flex items-start gap-3.5 group">
             <div class="bg-rose-600/20 text-rose-400 p-3 rounded-lg border border-rose-500/30 group-hover:scale-105 transition-transform">
               <i data-lucide="alarm-clock" class="w-6 h-6"></i>
             </div>
@@ -312,7 +321,7 @@
               <p class="text-xs text-slate-400 mt-0.5">Imposta orari e giorni per gli alert scadenze.</p>
             </div>
           </div>
-          <div onclick="playSound('click'); openSubSettings('colors');" class="bg-slate-950 hover:bg-slate-850 border border-slate-800 hover:border-indigo-500/50 p-4 rounded-xl cursor-pointer transition-all flex items-start gap-3.5 group">
+          <div onclick="playSound('click'); openSubSettings('colors');" class="bg-slate-950 hover:bg-slate-850 border border-slate-800 hover:border-amber-500/50 p-4 rounded-xl cursor-pointer transition-all flex items-start gap-3.5 group">
             <div class="bg-amber-600/20 text-amber-400 p-3 rounded-lg border border-amber-500/30 group-hover:scale-105 transition-transform">
               <i data-lucide="palette" class="w-6 h-6"></i>
             </div>
@@ -321,7 +330,7 @@
               <p class="text-xs text-slate-400 mt-0.5">Personalizza le tonalità cromatiche delle fasi di lavoro.</p>
             </div>
           </div>
-          <div onclick="playSound('click'); openSubSettings('zoom');" class="bg-slate-950 hover:bg-slate-850 border border-slate-800 hover:border-indigo-500/50 p-4 rounded-xl cursor-pointer transition-all flex items-start gap-3.5 group">
+          <div onclick="playSound('click'); openSubSettings('zoom');" class="bg-slate-950 hover:bg-slate-850 border border-slate-800 hover:border-violet-500/50 p-4 rounded-xl cursor-pointer transition-all flex items-start gap-3.5 group">
             <div class="bg-violet-600/20 text-violet-400 p-3 rounded-lg border border-violet-500/30 group-hover:scale-105 transition-transform">
               <i data-lucide="type" class="w-6 h-6"></i>
             </div>
@@ -1046,7 +1055,7 @@
       loadCompanyLogo();
       populateMachinesDropdowns();
       populateGlobalFilterDropdown();
-      populateClientSelectors(); // Popola le tendine clienti
+      populateClientSelectors();
     }
 
     function applyMasterFontSize(pxVal) {
@@ -1094,18 +1103,16 @@
       const existing = CLIENTS_DB.find(c => c.name.toLowerCase() === cleanName.toLowerCase() && (c.referent || '').toLowerCase() === cleanRef.toLowerCase());
       
       if (existing) {
-        // Se esiste già esattamente questa accoppiata (Azienda + Referente), aggiorniamo solo i campi vuoti
         if (email && !existing.email) existing.email = email.trim();
         if (whatsapp && !existing.whatsapp) existing.whatsapp = whatsapp.trim();
       } else {
-        // Altrimenti lo inseriamo come nuovo record
         CLIENTS_DB.push({ name: cleanName, referent: cleanRef, email: email ? email.trim() : '', whatsapp: whatsapp ? whatsapp.trim() : '' });
       }
       
       CLIENTS_DB.sort((a,b) => a.name.localeCompare(b.name));
       localStorage.setItem('workflow_sga_clients_db', JSON.stringify(CLIENTS_DB));
       populateClientSelectors();
-      syncClientsToCloud(); // Aggiorna sul Cloud
+      syncClientsToCloud();
     }
 
     // GESTIONE SELETTORI TENDINA CRM
@@ -1122,11 +1129,11 @@
 
       if (editSelector) {
         editSelector.innerHTML = optionsHtml;
-        editSelector.value = ''; // Reset
+        editSelector.value = '';
       }
       if (formSelector) {
         formSelector.innerHTML = optionsHtml;
-        formSelector.value = ''; // Reset
+        formSelector.value = '';
       }
     }
 
@@ -1146,7 +1153,6 @@
       if (emailEl) emailEl.value = c.email || '';
       if (waEl) waEl.value = c.whatsapp || '';
       
-      // Nascondi suggerimenti se aperti
       const sugContainer = document.getElementById(prefix + 'ClientSuggestions');
       if (sugContainer) sugContainer.classList.add('hidden');
     }
@@ -1230,7 +1236,7 @@
       contentEl.innerHTML = '';
 
       if (type === 'crm') {
-        window.editingClientIndex = -1; // Reset stato
+        window.editingClientIndex = -1;
         titleEl.innerHTML = `<i data-lucide="users" class="w-5 h-5 text-indigo-400"></i> Gestione Clienti (CRM)`;
         contentEl.innerHTML = `
           <div class="space-y-4">
@@ -1259,6 +1265,22 @@
                   </div>
                 `).join('')}
             </div>
+          </div>
+        `;
+      } else if (type === 'messages') {
+        titleEl.innerHTML = `<i data-lucide="message-square" class="w-5 h-5 text-pink-400"></i> Testo Notifiche (WhatsApp / Email)`;
+        
+        let defaultMsg = localStorage.getItem('workflow_sga_msg_template') || `Buongiorno {SALUTO},\n\nquesto è il sistema di automazione di SGA Studio Grafico Associato.\n\nVolevamo comunicarle che l'ordine da lei effettuato ("{TITOLO}"){ARTICOLI}\n\nè pronto per il ritiro.\n\nCordiali saluti,\nSGA Studio Grafico Associato`;
+
+        contentEl.innerHTML = `
+          <div class="space-y-4">
+            <p class="text-xs text-slate-400">Personalizza il testo inviato ai clienti per il ritiro merce. Usa queste <strong class="text-pink-400">variabili magiche</strong> (verranno sostituite in automatico con i veri dati della commessa):</p>
+            <div class="bg-slate-950 p-3 rounded-lg border border-slate-800 space-y-1.5 font-mono text-[11px] text-indigo-300">
+              <div><strong class="text-pink-400 text-xs">{SALUTO}</strong> -> "Nome Referente della ditta Azienda"</div>
+              <div><strong class="text-pink-400 text-xs">{TITOLO}</strong> -> Titolo della commessa</div>
+              <div><strong class="text-pink-400 text-xs">{ARTICOLI}</strong> -> Elenco articoli in lista (se presenti)</div>
+            </div>
+            <textarea id="msgTemplateText" rows="10" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-xs text-slate-200 focus:outline-none focus:border-pink-500 font-sans leading-relaxed">${defaultMsg}</textarea>
           </div>
         `;
       } else if (type === 'machines') {
@@ -1387,11 +1409,10 @@
       const wa = document.getElementById('crmModalWa').value.trim();
       if (!name) return alert("Inserisci almeno il nome del cliente/azienda.");
 
-      // CONTROLLO DUPLICATI RIGOROSO (Azienda + Referente identici)
       const isDuplicate = CLIENTS_DB.findIndex((c, idx) => 
         c.name.toLowerCase() === name.toLowerCase() && 
         (c.referent || '').toLowerCase() === ref.toLowerCase() && 
-        idx !== window.editingClientIndex // Ignora quello che stiamo attualmente modificando
+        idx !== window.editingClientIndex
       );
 
       if (isDuplicate >= 0) {
@@ -1405,7 +1426,7 @@
         localStorage.setItem('workflow_sga_clients_db', JSON.stringify(CLIENTS_DB));
         window.editingClientIndex = -1;
         populateClientSelectors();
-        syncClientsToCloud(); // Aggiorna sul Cloud
+        syncClientsToCloud();
       } else {
         registerClientAdvanced(name, ref, email, wa);
       }
@@ -1419,7 +1440,7 @@
         CLIENTS_DB.splice(idx, 1);
         localStorage.setItem('workflow_sga_clients_db', JSON.stringify(CLIENTS_DB));
         populateClientSelectors(); 
-        syncClientsToCloud(); // Aggiorna sul Cloud
+        syncClientsToCloud();
         openSubSettings('crm');
         playSound('delete');
       }
@@ -1465,6 +1486,8 @@
       } else if (activeSubSettingsType === 'zoom') {
         localStorage.setItem('workflow_sga_master_fontsize_px', masterFontSizePx);
         localStorage.setItem('workflow_sga_app_fontsize_px', appFontSizePx);
+      } else if (activeSubSettingsType === 'messages') {
+        localStorage.setItem('workflow_sga_msg_template', document.getElementById('msgTemplateText').value);
       }
       playSound('success');
       closeSubSettings();
@@ -1481,6 +1504,7 @@
         localStorage.removeItem('workflow_sga_alarms');
         localStorage.removeItem('workflow_sga_master_fontsize_px');
         localStorage.removeItem('workflow_sga_app_fontsize_px');
+        localStorage.removeItem('workflow_sga_msg_template');
         applyMasterFontSize(24);
         applyAppFontSize(15);
         closeModal('settingsModal');
@@ -1729,7 +1753,6 @@
             }
           }
         } else {
-          // Se non esiste ancora sul cloud, carichiamo quello locale
           syncClientsToCloud();
         }
       });
@@ -2107,6 +2130,11 @@
            </div>` : '';
       const cardIdShort = card.id ? card.id.slice(-4).toUpperCase() : '0000';
 
+      // Icona notifiche per commesse da consegnare
+      const notifyIconHTML = (card.stage === 'bollettato-da-consegnare' && (card.email || card.whatsapp)) 
+        ? `<button onclick="event.stopPropagation(); triggerNotifyById('${card.id}')" class="ml-2 p-1 bg-emerald-500/20 hover:bg-emerald-500/50 text-emerald-400 rounded cursor-pointer transition-colors" title="Invia Notifica Pronto Ritiro"><i data-lucide="mail" class="w-3.5 h-3.5"></i></button>`
+        : '';
+
       return `
         <div draggable="true" ondragstart="handleDragStart(event)" id="card-${card.id}" data-id="${card.id}" onclick="${isMasterMode ? '' : `playSound('click'); openDetail('${card.id}')`}"
              style="${customCardStyle}"
@@ -2123,6 +2151,7 @@
           <div class="pt-2 border-t flex justify-between items-center text-xs" style="${card.customColor ? 'border-color: rgba(0,0,0,0.15);' : 'border-color: #1e293b;'}" onclick="event.stopPropagation()">
             <div class="flex items-center gap-1">
               <span class="font-mono text-[11px]" style="${card.customColor ? customTextStyle : 'color: #475569;'}">#${cardIdShort}</span>
+              ${notifyIconHTML}
               <div class="hide-in-master flex items-center bg-black/20 rounded ml-2">
                 <button onclick="moveCardVertical('${card.id}', -1)" class="p-0.5 hover:bg-black/30 rounded px-1.5 cursor-pointer" title="Sposta su" style="${card.customColor ? customTextStyle : 'color: #cbd5e1;'}">▲</button>
                 <button onclick="moveCardVertical('${card.id}', 1)" class="p-0.5 hover:bg-black/30 rounded px-1.5 cursor-pointer" title="Sposta giù" style="${card.customColor ? customTextStyle : 'color: #cbd5e1;'}">▼</button>
@@ -2204,6 +2233,12 @@
       }
     }
 
+    function triggerNotifyById(id) {
+      playSound('click');
+      const card = state.cards.find(c => c.id === id);
+      if (card) checkAndTriggerClientNotification(card);
+    }
+
     function checkAndTriggerClientNotification(card) {
       if (!card.whatsapp && !card.email && !card.client) return;
       activeNotifyCard = card;
@@ -2225,94 +2260,58 @@
       lucide.createIcons();
     }
 
-    // GESTIONE MESSAGGIO WHATSAPP
-    function sendWhatsAppNotification() {
-      if (!activeNotifyCard || !activeNotifyCard.whatsapp) return;
-
-      // Costruisce il saluto dinamicamente
-      let saluto = "Buongiorno";
-      if (activeNotifyCard.referent && activeNotifyCard.client) {
-        saluto += ` ${activeNotifyCard.referent} della ditta ${activeNotifyCard.client}`;
-      } else if (activeNotifyCard.referent) {
-        saluto += ` ${activeNotifyCard.referent}`;
-      } else if (activeNotifyCard.client) {
-        saluto += ` ditta ${activeNotifyCard.client}`;
+    // Costruisce il messaggio leggendo il template salvato
+    function getNotificationMessage(card) {
+      let template = localStorage.getItem('workflow_sga_msg_template');
+      if (!template) {
+        template = `Buongiorno {SALUTO},\n\nquesto è il sistema di automazione di SGA Studio Grafico Associato.\n\nVolevamo comunicarle che l'ordine da lei effettuato ("{TITOLO}"){ARTICOLI}\n\nè pronto per il ritiro.\n\nCordiali saluti,\nSGA Studio Grafico Associato`;
       }
 
-      // Costruisce l'elenco degli articoli (se presenti e con una descrizione valida)
+      // Costruisce il saluto dinamicamente
+      let saluto = "";
+      if (card.referent && card.client) {
+        saluto = `${card.referent} della ditta ${card.client}`;
+      } else if (card.referent) {
+        saluto = `${card.referent}`;
+      } else if (card.client) {
+        saluto = `ditta ${card.client}`;
+      } else {
+        saluto = `Cliente`;
+      }
+
+      // Costruisce l'elenco degli articoli
       let articlesList = "";
-      if (activeNotifyCard.articles && activeNotifyCard.articles.length > 0) {
-        const validArticles = activeNotifyCard.articles.filter(a => a.desc && a.desc.trim() !== "");
+      if (card.articles && card.articles.length > 0) {
+        const validArticles = card.articles.filter(a => a.desc && a.desc.trim() !== "");
         if (validArticles.length > 0) {
-          articlesList = validArticles.map(a => `- ${a.qty || 1}x ${a.desc.trim()}`).join('\n');
+          articlesList = " contenente:\n" + validArticles.map(a => `- ${a.qty || 1}x ${a.desc.trim()}`).join('\n');
         }
       }
 
-      // Costruisce il testo base
-      let msgTesto = `${saluto}, questo è il sistema di automazione di SGA Studio Grafico Associato.\n\nVolevamo comunicarle che l'ordine da lei effettuato ("${activeNotifyCard.title}")`;
-      
-      // Aggiunge l'elenco articoli se esiste
-      if (articlesList) {
-        msgTesto += ` contenente:\n${articlesList}\n\nè pronto per il ritiro.`;
-      } else {
-        msgTesto += ` è pronto per il ritiro.`;
-      }
-      
-      // Codifica il testo per l'URL di WhatsApp
+      // Sostituisce le variabili nel template
+      return template
+        .replace(/{SALUTO}/g, saluto)
+        .replace(/{TITOLO}/g, card.title || '')
+        .replace(/{ARTICOLI}/g, articlesList);
+    }
+
+    // GESTIONE MESSAGGIO WHATSAPP
+    function sendWhatsAppNotification() {
+      if (!activeNotifyCard || !activeNotifyCard.whatsapp) return;
+      const msgTesto = getNotificationMessage(activeNotifyCard);
       const msg = encodeURIComponent(msgTesto);
-      
-      // Pulisce il numero di telefono
       let phone = activeNotifyCard.whatsapp.replace(/[^0-9+]/g, '');
       window.open(`https://wa.me/${phone}?text=${msg}`, '_blank');
-      
       closeModal('clientNotifyModal');
     }
 
     // GESTIONE MESSAGGIO EMAIL
     function sendEmailNotification() {
       if (!activeNotifyCard || !activeNotifyCard.email) return;
-
-      // Costruisce il saluto dinamicamente
-      let saluto = "Buongiorno";
-      if (activeNotifyCard.referent && activeNotifyCard.client) {
-        saluto += ` ${activeNotifyCard.referent} della ditta ${activeNotifyCard.client}`;
-      } else if (activeNotifyCard.referent) {
-        saluto += ` ${activeNotifyCard.referent}`;
-      } else if (activeNotifyCard.client) {
-        saluto += ` ditta ${activeNotifyCard.client}`;
-      }
-
-      // Costruisce l'elenco degli articoli (se presenti e con una descrizione valida)
-      let articlesList = "";
-      if (activeNotifyCard.articles && activeNotifyCard.articles.length > 0) {
-        const validArticles = activeNotifyCard.articles.filter(a => a.desc && a.desc.trim() !== "");
-        if (validArticles.length > 0) {
-          articlesList = validArticles.map(a => `- ${a.qty || 1}x ${a.desc.trim()}`).join('\n');
-        }
-      }
-
-      // Oggetto della mail
+      const msgTesto = getNotificationMessage(activeNotifyCard);
       const subject = encodeURIComponent(`Avviso: Ordine pronto per il ritiro - ${activeNotifyCard.title}`);
-      
-      // Corpo base della mail
-      let bodyTesto = `${saluto},\n\nquesto è il sistema di automazione di SGA Studio Grafico Associato.\n\nVolevamo comunicarle che l'ordine da lei effettuato ("${activeNotifyCard.title}")`;
-      
-      // Aggiunge l'elenco articoli se esiste
-      if (articlesList) {
-        bodyTesto += ` contenente:\n${articlesList}\n\nè pronto per il ritiro.`;
-      } else {
-        bodyTesto += ` è pronto per il ritiro.`;
-      }
-
-      // Aggiunge i saluti finali
-      bodyTesto += `\n\nCordiali saluti,\nSGA Studio Grafico Associato`;
-      
-      // Codifica il testo per il client di posta
-      const body = encodeURIComponent(bodyTesto);
-
-      // Apre il client di posta predefinito
+      const body = encodeURIComponent(msgTesto);
       window.location.href = `mailto:${activeNotifyCard.email}?subject=${subject}&body=${body}`;
-      
       closeModal('clientNotifyModal');
     }
 
