@@ -1076,6 +1076,14 @@
     function updateMasterSpeed(val) {
       masterScrollSpeed = parseFloat(val);
     }
+    
+    // ============================================
+    // SINCRONIZZAZIONE CRM (CLIENTI) CON IL CLOUD
+    // ============================================
+    function syncClientsToCloud() {
+      if (!db) return;
+      db.collection('workflow_sga_settings').doc('clients').set({ db: CLIENTS_DB }).catch(err => console.error(err));
+    }
 
     // GESTIONE DUPLICATI E SALVATAGGIO SILENZIOSO (DA FORM COMMESSA)
     function registerClientAdvanced(name, referent, email, whatsapp) {
@@ -1097,6 +1105,7 @@
       CLIENTS_DB.sort((a,b) => a.name.localeCompare(b.name));
       localStorage.setItem('workflow_sga_clients_db', JSON.stringify(CLIENTS_DB));
       populateClientSelectors();
+      syncClientsToCloud(); // Aggiorna sul Cloud
     }
 
     // GESTIONE SELETTORI TENDINA CRM
@@ -1396,6 +1405,7 @@
         localStorage.setItem('workflow_sga_clients_db', JSON.stringify(CLIENTS_DB));
         window.editingClientIndex = -1;
         populateClientSelectors();
+        syncClientsToCloud(); // Aggiorna sul Cloud
       } else {
         registerClientAdvanced(name, ref, email, wa);
       }
@@ -1409,6 +1419,7 @@
         CLIENTS_DB.splice(idx, 1);
         localStorage.setItem('workflow_sga_clients_db', JSON.stringify(CLIENTS_DB));
         populateClientSelectors(); 
+        syncClientsToCloud(); // Aggiorna sul Cloud
         openSubSettings('crm');
         playSound('delete');
       }
@@ -1701,6 +1712,25 @@
             localStorage.setItem('workflow_sga_company_logo', sharedCompanyLogo);
             loadCompanyLogo();
           }
+        }
+      });
+
+      // RICEZIONE AGGIORNAMENTI DEL CRM DAL CLOUD
+      db.collection('workflow_sga_settings').doc('clients').onSnapshot((doc) => {
+        if (doc.exists) {
+          const data = doc.data();
+          if (data.db && Array.isArray(data.db)) {
+            CLIENTS_DB = data.db;
+            localStorage.setItem('workflow_sga_clients_db', JSON.stringify(CLIENTS_DB));
+            populateClientSelectors();
+            // Se la finestra impostazioni CRM è aperta, forziamo il ricaricamento visivo
+            if (activeSubSettingsType === 'crm') {
+              openSubSettings('crm');
+            }
+          }
+        } else {
+          // Se non esiste ancora sul cloud, carichiamo quello locale
+          syncClientsToCloud();
         }
       });
 
