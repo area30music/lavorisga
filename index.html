@@ -75,7 +75,7 @@
 </head>
 <body class="bg-slate-950 text-slate-100 font-sans h-screen flex flex-col overflow-hidden">
 
-  <!-- ALERT VIDEOGAME POPUP (SCADENZE INGRANDITO CON BARRA TEMPO) -->
+  <!-- ALERT VIDEOGAME POPUP -->
   <div id="arcadeAlertModal" class="hidden fixed inset-0 bg-black/85 backdrop-blur-md z-[150] flex items-center justify-center p-4">
     <div class="arcade-alert-box rounded-3xl w-full max-w-2xl p-8 shadow-2xl relative space-y-6 pointer-events-auto">
       <button type="button" onclick="closeArcadeAlert()" class="absolute top-4 right-4 bg-red-600 hover:bg-red-500 text-white rounded-full p-2 shadow-lg active:scale-95 transition-all cursor-pointer z-10" title="Chiudi avviso">
@@ -90,9 +90,7 @@
         <p class="text-sm text-yellow-400 font-bold uppercase tracking-widest">Le seguenti commesse richiedono azione immediata</p>
       </div>
       
-      <div id="arcadeAlertList" class="space-y-3 max-h-80 overflow-y-auto pr-2">
-        <!-- Lista inserita via JS -->
-      </div>
+      <div id="arcadeAlertList" class="space-y-3 max-h-80 overflow-y-auto pr-2"></div>
 
       <div class="pt-2 text-center space-y-3">
         <button type="button" onclick="closeArcadeAlert()" class="bg-red-600 hover:bg-red-500 text-white font-black px-8 py-3.5 rounded-xl text-base uppercase tracking-wider shadow-xl shadow-red-900/50 active:scale-95 transition-transform border border-red-400 cursor-pointer">
@@ -138,7 +136,7 @@
   <!-- TOP BAR -->
   <header class="bg-slate-900 border-b border-slate-800 px-3 md:px-4 py-2 flex justify-between items-center shrink-0 flex-wrap gap-2 z-10 relative">
     <div class="flex items-center space-x-2 md:space-x-3">
-      <!-- LOGO AZIENDALE CONDIVISO DAL DB -->
+      <!-- LOGO AZIENDALE CONDIVISO -->
       <div id="companyLogoContainer" class="relative group cursor-pointer bg-indigo-600 rounded-lg text-white shadow-lg shadow-indigo-900/20 flex items-center justify-center overflow-hidden shrink-0" style="width: 120px; height: 44px;" title="Logo Aziendale Condiviso">
         <div id="logoDefaultIcon" class="flex items-center justify-center"><i data-lucide="layers" class="w-6 h-6"></i></div>
         <img id="logoImageDisplay" src="" class="hidden w-full h-full object-contain p-1">
@@ -163,9 +161,7 @@
       </div>
 
       <div class="hide-in-master">
-        <h1 class="font-bold text-sm md:text-base leading-tight text-white flex items-center gap-2">
-          Workflow SGA
-        </h1>
+        <h1 class="font-bold text-sm md:text-base leading-tight text-white flex items-center gap-2">Workflow SGA</h1>
         <p id="cloudStatus" onclick="playSound('click'); openModal('cloudModal');" class="text-[11px] flex items-center gap-1 cursor-pointer transition-colors mt-0.5" title="Clicca per impostazioni Cloud">
           <i data-lucide="hard-drive" class="w-3 h-3 text-slate-400"></i> <span class="text-slate-400 hover:text-slate-200">Modalità Locale</span>
         </p>
@@ -211,100 +207,85 @@
     <!-- Colonne generate via JS -->
   </main>
 
-  <!-- MODAL: IMPOSTAZIONI GRAFICHE E GENERALI -->
+  <!-- MODAL: MENU PRINCIPALE IMPOSTAZIONI A CARD -->
   <div id="settingsModal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
     <div class="bg-slate-900 border border-slate-800 rounded-xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden shadow-2xl">
       <div class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-850">
         <h3 class="font-bold text-base text-slate-100 flex items-center gap-2">
-          <i data-lucide="sliders" class="w-5 h-5 text-indigo-400"></i> Personalizzazione Impostazioni
+          <i data-lucide="sliders" class="w-5 h-5 text-indigo-400"></i> Impostazioni Generali
         </h3>
         <button onclick="playSound('close'); closeModal('settingsModal');" class="text-slate-400 hover:text-slate-200 bg-slate-800 rounded-full p-1 cursor-pointer">
           <i data-lucide="x" class="w-4 h-4"></i>
         </button>
       </div>
 
-      <div class="p-5 overflow-y-auto space-y-6 flex-1 text-sm">
-        
-        <!-- SEZIONE COLLEGAMENTO CLOUD -->
-        <div class="bg-slate-950 p-4 rounded-lg border border-slate-800 space-y-3">
-          <div class="flex justify-between items-center">
+      <div class="p-5 overflow-y-auto space-y-4 flex-1 text-sm">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Card Gestione Clienti -->
+          <div onclick="playSound('click'); openSubSettings('crm');" class="bg-slate-950 hover:bg-slate-850 border border-slate-800 hover:border-indigo-500/50 p-4 rounded-xl cursor-pointer transition-all flex items-start gap-3.5 group">
+            <div class="bg-indigo-600/20 text-indigo-400 p-3 rounded-lg border border-indigo-500/30 group-hover:scale-105 transition-transform">
+              <i data-lucide="users" class="w-6 h-6"></i>
+            </div>
             <div>
-              <h4 class="text-xs font-bold text-indigo-400 uppercase tracking-wider flex items-center gap-1.5">
-                <i data-lucide="cloud" class="w-4 h-4"></i> Stato & Configurazione Cloud
-              </h4>
-              <p class="text-xs text-slate-400 mt-0.5">Gestisci la connessione al database Cloud condiviso.</p>
-            </div>
-            <button onclick="playSound('click'); closeModal('settingsModal'); openModal('cloudModal');" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs px-3 py-2 rounded font-semibold flex items-center gap-1.5 cursor-pointer transition-colors shadow">
-              <i data-lucide="settings" class="w-3.5 h-3.5"></i> Impostazioni Cloud
-            </button>
-          </div>
-        </div>
-
-        <div class="bg-slate-950 p-4 rounded-lg border border-slate-800 space-y-3">
-          <h4 class="text-xs font-bold text-indigo-400 uppercase tracking-wider">Logo Aziendale Condiviso (Database)</h4>
-          <p class="text-xs text-slate-400">Carica il logo in PNG trasparente: verrà salvato nel database Cloud e sarà visibile automaticamente su tutti i dispositivi.</p>
-          <div class="flex items-center gap-4">
-            <div id="settingsLogoPreviewBox" class="w-28 h-12 bg-slate-900 border border-slate-700 rounded flex items-center justify-center overflow-hidden">
-              <span class="text-[10px] text-slate-500">Nessun Logo</span>
-            </div>
-            <div class="flex gap-2">
-              <label class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs px-3 py-2 rounded font-semibold cursor-pointer transition-colors flex items-center gap-1.5">
-                <i data-lucide="upload" class="w-3.5 h-3.5"></i> Carica Logo PNG
-                <input type="file" accept="image/png, image/jpeg" class="hidden" onchange="uploadCompanyLogo(event)">
-              </label>
-              <button onclick="removeCompanyLogo()" class="bg-slate-800 hover:bg-slate-700 text-red-400 text-xs px-3 py-2 rounded font-semibold transition-colors cursor-pointer">
-                Rimuovi Logo
-              </button>
+              <h4 class="font-bold text-slate-200 text-sm">Gestione Clienti (CRM)</h4>
+              <p class="text-xs text-slate-400 mt-0.5">Visualizza e gestisci l'anagrafica dei clienti salvati.</p>
             </div>
           </div>
-        </div>
 
-        <div class="bg-slate-950 p-4 rounded-lg border border-slate-800 space-y-3">
-          <div class="flex justify-between items-center">
-            <h4 class="text-xs font-bold text-indigo-400 uppercase tracking-wider flex items-center gap-1.5">
-              <i data-lucide="type" class="w-4 h-4"></i> Zoom Carattere Programmazione
-            </h4>
-            <span id="appFontSizeVal" class="font-mono text-indigo-400 font-bold text-sm bg-slate-900 px-3 py-1 rounded border border-slate-800">15px</span>
-          </div>
-          <p class="text-xs text-slate-400">Regola la dimensione in pixel dei caratteri per la schermata principale.</p>
-          <div class="flex items-center gap-4 pt-1">
-            <input type="range" id="appFontRange" min="12" max="24" value="15" step="1" oninput="previewAppFontSize(this.value)" class="w-full accent-indigo-500 cursor-pointer h-2 bg-slate-900 rounded-lg">
-            <button onclick="resetAppFont()" class="text-xs bg-slate-900 hover:bg-slate-800 text-slate-300 px-3 py-1.5 rounded border border-slate-700 cursor-pointer shrink-0">Default (15px)</button>
-          </div>
-        </div>
-
-        <div class="bg-slate-950 p-4 rounded-lg border border-slate-800 space-y-3">
-          <div class="flex justify-between items-center">
-            <h4 class="text-xs font-bold text-indigo-400 uppercase tracking-wider flex items-center gap-1.5">
-              <i data-lucide="monitor" class="w-4 h-4"></i> Zoom Carattere Master View
-            </h4>
-            <span id="masterFontSizeVal" class="font-mono text-emerald-400 font-bold text-sm bg-slate-900 px-3 py-1 rounded border border-slate-800">24px</span>
-          </div>
-          <p class="text-xs text-slate-400">Regola la dimensione dei caratteri per la Master View sul proiettore.</p>
-          <div class="flex items-center gap-4 pt-1">
-            <input type="range" id="masterFontRange" min="16" max="50" value="24" step="1" oninput="previewMasterFontSize(this.value)" class="w-full accent-indigo-500 cursor-pointer h-2 bg-slate-900 rounded-lg">
-            <button onclick="resetMasterFont()" class="text-xs bg-slate-900 hover:bg-slate-800 text-slate-300 px-3 py-1.5 rounded border border-slate-700 cursor-pointer shrink-0">Default (24px)</button>
-          </div>
-        </div>
-
-        <div class="bg-slate-950 p-4 rounded-lg border border-slate-800 space-y-3">
-          <div class="flex justify-between items-center">
+          <!-- Card Connessione Cloud -->
+          <div onclick="playSound('click'); closeModal('settingsModal'); openModal('cloudModal');" class="bg-slate-950 hover:bg-slate-850 border border-slate-800 hover:border-indigo-500/50 p-4 rounded-xl cursor-pointer transition-all flex items-start gap-3.5 group">
+            <div class="bg-emerald-600/20 text-emerald-400 p-3 rounded-lg border border-emerald-500/30 group-hover:scale-105 transition-transform">
+              <i data-lucide="cloud" class="w-6 h-6"></i>
+            </div>
             <div>
-              <h4 class="text-xs font-bold text-indigo-400 uppercase tracking-wider flex items-center gap-1.5">
-                <i data-lucide="alarm-clock" class="w-4 h-4"></i> Gestione Sveglie Alert Scadenze
-              </h4>
-              <p class="text-xs text-slate-400 mt-0.5">Crea più sveglie per visualizzare l'avviso delle scadenze.</p>
+              <h4 class="font-bold text-slate-200 text-sm">Collegamento Cloud</h4>
+              <p class="text-xs text-slate-400 mt-0.5">Configura e verifica lo stato del database Firebase e ImgBB.</p>
             </div>
-            <button onclick="playSound('click'); addAlarmRule();" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs px-3 py-1.5 rounded font-semibold flex items-center gap-1 cursor-pointer transition-colors shadow">
-              <i data-lucide="plus" class="w-3.5 h-3.5"></i> Aggiungi Sveglia
-            </button>
           </div>
-          <div id="alarmsListContainer" class="space-y-3 max-h-60 overflow-y-auto pr-1"></div>
-        </div>
 
-        <div class="bg-slate-950 p-4 rounded-lg border border-slate-800 space-y-3">
-          <h4 class="text-xs font-bold text-indigo-400 uppercase tracking-wider">Colori delle Fasi / Colonne</h4>
-          <div id="columnsColorSettingsList" class="space-y-2 max-h-44 overflow-y-auto pr-2"></div>
+          <!-- Card Logo Aziendale -->
+          <div onclick="playSound('click'); openSubSettings('logo');" class="bg-slate-950 hover:bg-slate-850 border border-slate-800 hover:border-indigo-500/50 p-4 rounded-xl cursor-pointer transition-all flex items-start gap-3.5 group">
+            <div class="bg-blue-600/20 text-blue-400 p-3 rounded-lg border border-blue-500/30 group-hover:scale-105 transition-transform">
+              <i data-lucide="image" class="w-6 h-6"></i>
+            </div>
+            <div>
+              <h4 class="font-bold text-slate-200 text-sm">Logo Aziendale</h4>
+              <p class="text-xs text-slate-400 mt-0.5">Carica o sostituisci il logo condiviso nella top bar.</p>
+            </div>
+          </div>
+
+          <!-- Card Sveglie & Alert -->
+          <div onclick="playSound('click'); openSubSettings('alarms');" class="bg-slate-950 hover:bg-slate-850 border border-slate-800 hover:border-indigo-500/50 p-4 rounded-xl cursor-pointer transition-all flex items-start gap-3.5 group">
+            <div class="bg-rose-600/20 text-rose-400 p-3 rounded-lg border border-rose-500/30 group-hover:scale-105 transition-transform">
+              <i data-lucide="alarm-clock" class="w-6 h-6"></i>
+            </div>
+            <div>
+              <h4 class="font-bold text-slate-200 text-sm">Programmazione Sveglie</h4>
+              <p class="text-xs text-slate-400 mt-0.5">Imposta orari e giorni per gli alert scadenze.</p>
+            </div>
+          </div>
+
+          <!-- Card Colori Colonne -->
+          <div onclick="playSound('click'); openSubSettings('colors');" class="bg-slate-950 hover:bg-slate-850 border border-slate-800 hover:border-indigo-500/50 p-4 rounded-xl cursor-pointer transition-all flex items-start gap-3.5 group">
+            <div class="bg-amber-600/20 text-amber-400 p-3 rounded-lg border border-amber-500/30 group-hover:scale-105 transition-transform">
+              <i data-lucide="palette" class="w-6 h-6"></i>
+            </div>
+            <div>
+              <h4 class="font-bold text-slate-200 text-sm">Colori delle Colonne</h4>
+              <p class="text-xs text-slate-400 mt-0.5">Personalizza le tonalità cromatiche delle fasi di lavoro.</p>
+            </div>
+          </div>
+
+          <!-- Card Zoom e Caratteri -->
+          <div onclick="playSound('click'); openSubSettings('zoom');" class="bg-slate-950 hover:bg-slate-850 border border-slate-800 hover:border-indigo-500/50 p-4 rounded-xl cursor-pointer transition-all flex items-start gap-3.5 group">
+            <div class="bg-violet-600/20 text-violet-400 p-3 rounded-lg border border-violet-500/30 group-hover:scale-105 transition-transform">
+              <i data-lucide="type" class="w-6 h-6"></i>
+            </div>
+            <div>
+              <h4 class="font-bold text-slate-200 text-sm">Visualizzazione & Zoom</h4>
+              <p class="text-xs text-slate-400 mt-0.5">Regola la dimensione dei caratteri per app e proiettore.</p>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -312,9 +293,26 @@
         <button onclick="playSound('click'); resetDefaultSettings();" class="text-xs text-slate-400 hover:text-red-400 transition-colors underline cursor-pointer">
           Ripristina Predefiniti
         </button>
-        <button onclick="playSound('success'); saveSettings();" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-5 py-2 rounded-lg text-xs active:scale-95 transition-transform shadow-lg shadow-indigo-900/20 cursor-pointer">
-          Salva e Applica
+        <button onclick="playSound('close'); closeModal('settingsModal');" class="bg-slate-800 hover:bg-slate-700 text-white font-bold px-5 py-2 rounded-lg text-xs active:scale-95 transition-transform cursor-pointer">
+          Chiudi
         </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: SOTTO-SCHERMATA IMPOSTAZIONI SPECIFICA -->
+  <div id="subSettingsModal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-xl w-full max-w-xl max-h-[90vh] flex flex-col overflow-hidden shadow-2xl">
+      <div class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-850">
+        <h3 id="subSettingsTitle" class="font-bold text-base text-slate-100 flex items-center gap-2"></h3>
+        <button onclick="playSound('close'); closeSubSettings();" class="text-slate-400 hover:text-slate-200 bg-slate-800 rounded-full p-1 cursor-pointer">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+      <div id="subSettingsContent" class="p-5 overflow-y-auto space-y-4 flex-1 text-sm"></div>
+      <div class="p-4 border-t border-slate-800 bg-slate-950 flex justify-between items-center">
+        <button onclick="playSound('close'); closeSubSettings();" class="text-xs text-slate-400 hover:text-slate-200 transition-colors cursor-pointer">Indietro</button>
+        <button onclick="playSound('success'); saveSubSettings();" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-5 py-2 rounded-lg text-xs active:scale-95 transition-transform cursor-pointer">Salva Modifiche</button>
       </div>
     </div>
   </div>
@@ -339,9 +337,10 @@
             <input type="text" id="editTitle" class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-1.5 text-slate-100 font-semibold text-base focus:outline-none focus:border-indigo-500">
           </div>
           <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <div>
+            <div class="relative">
               <label class="text-[10px] text-indigo-400 font-semibold uppercase tracking-wider block mb-1">Referente / Contatto</label>
-              <input type="text" id="editClient" class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-1.5 text-slate-200 text-sm focus:outline-none focus:border-indigo-500">
+              <input type="text" id="editClient" autocomplete="off" oninput="handleClientInput(this.value, 'editClientSuggestions')" class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-1.5 text-slate-200 text-sm focus:outline-none focus:border-indigo-500">
+              <div id="editClientSuggestions" class="hidden absolute left-0 right-0 top-full mt-1 bg-slate-900 border border-slate-700 rounded-lg shadow-xl z-30 max-h-40 overflow-y-auto"></div>
             </div>
             <div>
               <label class="text-[10px] text-indigo-400 font-semibold uppercase tracking-wider block mb-1">Data Consegna</label>
@@ -476,9 +475,10 @@
           <input type="text" id="formTitle" required placeholder="Es. Rossi S.r.l. - Striscione PVC" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-indigo-500">
         </div>
         <div class="grid grid-cols-2 gap-3">
-          <div>
+          <div class="relative">
             <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Referente / Contatto</label>
-            <input type="text" id="formClient" placeholder="Es. Marco Rossi" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-indigo-500">
+            <input type="text" id="formClient" autocomplete="off" placeholder="Es. Marco Rossi" oninput="handleClientInput(this.value, 'formClientSuggestions')" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-indigo-500">
+            <div id="formClientSuggestions" class="hidden absolute left-0 right-0 top-full mt-1 bg-slate-900 border border-slate-700 rounded-lg shadow-xl z-30 max-h-40 overflow-y-auto"></div>
           </div>
           <div>
             <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Tipo Lavorazione</label>
@@ -630,9 +630,11 @@
 
     let COLUMNS_CONFIG = JSON.parse(JSON.stringify(DEFAULT_COLUMNS_CONFIG));
     let USER_ALARMS = []; 
+    let CLIENTS_DB = []; // Database clienti salvati
     let masterFontSizePx = 24; 
     let appFontSizePx = 15;
     let sharedCompanyLogo = "";
+    let activeSubSettingsType = null;
 
     const COLOR_OPTIONS = [
       { label: "Arancione", value: "bg-orange-600/20 border-orange-500/50 text-orange-400", border: "border-l-4 border-l-orange-500" },
@@ -824,7 +826,6 @@
       const defaultIcon = document.getElementById('logoDefaultIcon');
       const logoImg = document.getElementById('logoImageDisplay');
       const logoContainer = document.getElementById('companyLogoContainer');
-      const settingsBox = document.getElementById('settingsLogoPreviewBox');
 
       if (sharedCompanyLogo) {
         if (defaultIcon) defaultIcon.classList.add('hidden');
@@ -836,14 +837,10 @@
           logoContainer.classList.remove('bg-indigo-600');
           logoContainer.style.background = 'transparent';
         }
-        if (settingsBox) {
-          settingsBox.innerHTML = `<img src="${sharedCompanyLogo}" class="max-h-full max-w-full object-contain">`;
-        }
       } else {
         if (defaultIcon) defaultIcon.classList.remove('hidden');
         if (logoImg) logoImg.classList.add('hidden');
         if (logoContainer) logoContainer.className = "relative group cursor-pointer bg-indigo-600 rounded-lg text-white shadow-lg shadow-indigo-900/20 flex items-center justify-center overflow-hidden shrink-0";
-        if (settingsBox) settingsBox.innerHTML = `<span class="text-[10px] text-slate-500">Nessun Logo</span>`;
       }
     }
 
@@ -860,7 +857,7 @@
         if (db) {
           db.collection('workflow_sga_settings').doc('config').set({ companyLogo: sharedCompanyLogo }, { merge: true }).catch(e => console.error(e));
         }
-        alert("Logo aziendale caricato e condiviso con successo su tutti i dispositivi!");
+        alert("Logo aziendale caricato e condiviso con successo!");
       };
       reader.readAsDataURL(file);
       event.target.value = '';
@@ -910,6 +907,11 @@
           });
         } catch(e){ USER_ALARMS = []; }
       }
+
+      const savedClients = localStorage.getItem('workflow_sga_clients');
+      if (savedClients) {
+        try { CLIENTS_DB = JSON.parse(savedClients); } catch(e) { CLIENTS_DB = []; }
+      }
       
       const savedMasterFont = localStorage.getItem('workflow_sga_master_fontsize_px');
       if (savedMasterFont) masterFontSizePx = parseInt(savedMasterFont);
@@ -950,118 +952,199 @@
       masterScrollSpeed = parseFloat(val);
     }
 
-    function addAlarmRule() {
-      USER_ALARMS.push({ id: 'a' + Date.now(), time: "09:00", active: true, days: [1, 2, 3, 4, 5] }); 
-      renderAlarmsList();
-    }
-
-    function removeAlarmRule(id) {
-      USER_ALARMS = USER_ALARMS.filter(a => a.id !== id);
-      renderAlarmsList();
-    }
-
-    function updateAlarmTime(id, val) {
-      const alarm = USER_ALARMS.find(a => a.id === id);
-      if (alarm) alarm.time = val;
-    }
-
-    function toggleAlarmActive(id, val) {
-      const alarm = USER_ALARMS.find(a => a.id === id);
-      if (alarm) alarm.active = val;
-    }
-
-    function toggleAlarmDay(id, dayVal) {
-      playSound('click');
-      const alarm = USER_ALARMS.find(a => a.id === id);
-      if (alarm) {
-        if (!Array.isArray(alarm.days)) alarm.days = [];
-        const index = alarm.days.indexOf(dayVal);
-        if (index >= 0) alarm.days.splice(index, 1);
-        else alarm.days.push(dayVal);
-        renderAlarmsList();
+    function registerClient(clientName) {
+      if (!clientName || !clientName.trim()) return;
+      const cleanName = clientName.trim();
+      if (!CLIENTS_DB.some(c => c.toLowerCase() === cleanName.toLowerCase())) {
+        CLIENTS_DB.push(cleanName);
+        CLIENTS_DB.sort((a,b) => a.localeCompare(b));
+        localStorage.setItem('workflow_sga_clients', JSON.stringify(CLIENTS_DB));
       }
     }
 
-    function renderAlarmsList() {
-      const container = document.getElementById('alarmsListContainer');
+    function handleClientInput(query, containerId) {
+      const container = document.getElementById(containerId);
       if (!container) return;
-      container.innerHTML = '';
-      if (USER_ALARMS.length === 0) {
-        container.innerHTML = `<p class="text-xs text-slate-500 italic py-3 text-center">Nessuna sveglia impostata.</p>`;
-        return;
+      const q = query.toLowerCase().trim();
+      if (!q) { container.classList.add('hidden'); container.innerHTML = ''; return; }
+
+      const matches = CLIENTS_DB.filter(c => c.toLowerCase().includes(q));
+      if (matches.length === 0) { container.classList.add('hidden'); container.innerHTML = ''; return; }
+
+      container.innerHTML = matches.map(m => `
+        <div onclick="selectClientSuggestion('${m}', '${containerId}')" class="px-3 py-2 hover:bg-indigo-600/30 text-slate-200 cursor-pointer text-xs border-b border-slate-800/60 last:border-0 truncate">
+          ${m}
+        </div>
+      `).join('');
+      container.classList.remove('hidden');
+    }
+
+    function selectClientSuggestion(clientName, containerId) {
+      if (containerId === 'formClientSuggestions') {
+        document.getElementById('formClient').value = clientName;
+      } else if (containerId === 'editClientSuggestions') {
+        document.getElementById('editClient').value = clientName;
       }
-      const daysDef = [{val:1,label:"L"},{val:2,label:"M"},{val:3,label:"M"},{val:4,label:"G"},{val:5,label:"V"},{val:6,label:"S"},{val:0,label:"D"}];
-
-      USER_ALARMS.forEach(alarm => {
-        const card = document.createElement('div');
-        card.className = "bg-slate-900 p-3 rounded-lg border border-slate-800 space-y-3";
-        let daysBtnsHtml = daysDef.map(d => {
-          const isSelected = Array.isArray(alarm.days) && alarm.days.includes(d.val);
-          const btnClass = isSelected 
-            ? "w-7 h-7 rounded-full bg-indigo-600 text-white font-bold text-xs flex items-center justify-center shadow cursor-pointer transition-all" 
-            : "w-7 h-7 rounded-full bg-slate-950 text-slate-400 font-semibold text-xs flex items-center justify-center border border-slate-800 hover:border-slate-700 cursor-pointer transition-all";
-          return `<button type="button" onclick="toggleAlarmDay('${alarm.id}', ${d.val})" class="${btnClass}">${d.label}</button>`;
-        }).join('');
-
-        card.innerHTML = `
-          <div class="flex items-center justify-between gap-3">
-            <div class="flex items-center gap-3">
-              <input type="time" value="${alarm.time || '09:00'}" onchange="updateAlarmTime('${alarm.id}', this.value)" class="bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-base text-emerald-400 font-mono font-bold focus:outline-none focus:border-indigo-500">
-              <label class="flex items-center cursor-pointer select-none text-xs text-slate-300 gap-1.5">
-                <input type="checkbox" ${alarm.active ? 'checked' : ''} onchange="toggleAlarmActive('${alarm.id}', this.checked)" class="w-4 h-4 rounded bg-slate-950 border-slate-700 text-indigo-600 cursor-pointer">
-                <span>Attiva</span>
-              </label>
-            </div>
-            <button onclick="playSound('delete'); removeAlarmRule('${alarm.id}')" class="text-red-400 hover:text-red-300 p-1.5 rounded-lg bg-red-950/30 hover:bg-red-950/60 transition-colors cursor-pointer"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
-          </div>
-          <div class="flex items-center justify-between pt-1 border-t border-slate-800/60 flex-wrap gap-2">
-            <span class="text-[10px] text-slate-400 uppercase font-semibold">Giorni attivo:</span>
-            <div class="flex gap-1.5">${daysBtnsHtml}</div>
-          </div>
-        `;
-        container.appendChild(card);
-      });
-      lucide.createIcons();
+      document.getElementById(containerId).classList.add('hidden');
     }
 
     function openSettingsModal() {
-      renderAlarmsList();
-      applyMasterFontSize(masterFontSizePx);
-      applyAppFontSize(appFontSizePx);
-      const container = document.getElementById('columnsColorSettingsList');
-      container.innerHTML = '';
-
-      COLUMNS_CONFIG.forEach(col => {
-        const row = document.createElement('div');
-        row.className = "flex items-center justify-between bg-slate-900 p-2.5 rounded border border-slate-800 gap-3";
-        let optionsHtml = COLOR_OPTIONS.map(opt => `<option value="${opt.label}" ${opt.value === col.color ? 'selected' : ''}>${opt.label}</option>`).join('');
-        row.innerHTML = `<div class="font-semibold text-xs text-slate-200 truncate w-1/3">${col.label}</div><div class="w-2/3"><select id="colColorSelect-${col.id}" class="w-full bg-slate-950 border border-slate-700 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">${optionsHtml}</select></div>`;
-        container.appendChild(row);
-      });
       openModal('settingsModal');
     }
 
-    function saveSettings() {
-      COLUMNS_CONFIG.forEach(col => {
-        const select = document.getElementById(`colColorSelect-${col.id}`);
-        if (select) {
-          const matchedOpt = COLOR_OPTIONS.find(o => o.label === select.value);
-          if (matchedOpt) { col.color = matchedOpt.value; col.border = matchedOpt.border; }
-        }
-      });
+    function openSubSettings(type) {
+      activeSubSettingsType = type;
+      const titleEl = document.getElementById('subSettingsTitle');
+      const contentEl = document.getElementById('subSettingsContent');
+      contentEl.innerHTML = '';
 
-      localStorage.setItem('workflow_sga_columns_config', JSON.stringify(COLUMNS_CONFIG));
-      localStorage.setItem('workflow_sga_alarms', JSON.stringify(USER_ALARMS));
-      localStorage.setItem('workflow_sga_master_fontsize_px', masterFontSizePx);
-      localStorage.setItem('workflow_sga_app_fontsize_px', appFontSizePx);
-      
-      closeModal('settingsModal');
-      renderBoard();
+      if (type === 'crm') {
+        titleEl.innerHTML = `<i data-lucide="users" class="w-5 h-5 text-indigo-400"></i> Gestione Clienti (CRM)`;
+        contentEl.innerHTML = `
+          <div class="space-y-3">
+            <p class="text-xs text-slate-400">Elenco dei clienti salvati automaticamente o inseriti manualmente nel sistema:</p>
+            <div class="flex gap-2">
+              <input type="text" id="newManualClientInput" placeholder="Aggiungi nuovo cliente..." class="flex-1 bg-slate-950 border border-slate-700 rounded px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">
+              <button type="button" onclick="addManualClient()" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs px-3 py-2 rounded font-semibold cursor-pointer">Aggiungi</button>
+            </div>
+            <div id="settingsClientsList" class="space-y-1.5 max-h-56 overflow-y-auto pr-1">
+              ${CLIENTS_DB.length === 0 ? '<p class="text-xs text-slate-500 italic py-2">Nessun cliente in archivio.</p>' : 
+                CLIENTS_DB.map((c, idx) => `
+                  <div class="flex items-center justify-between bg-slate-950 p-2 rounded border border-slate-800 text-xs">
+                    <span class="text-slate-200 font-medium">${c}</span>
+                    <button onclick="removeClient(${idx})" class="text-red-400 hover:text-red-300 p-1 cursor-pointer"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+                  </div>
+                `).join('')}
+            </div>
+          </div>
+        `;
+      } else if (type === 'logo') {
+        titleEl.innerHTML = `<i data-lucide="image" class="w-5 h-5 text-indigo-400"></i> Logo Aziendale`;
+        contentEl.innerHTML = `
+          <div class="space-y-3">
+            <p class="text-xs text-slate-400">Carica il logo in PNG trasparente: verrà salvato nel Cloud e visibile su tutti i dispositivi.</p>
+            <div class="flex items-center gap-4">
+              <div id="subSettingsLogoBox" class="w-32 h-14 bg-slate-950 border border-slate-700 rounded flex items-center justify-center overflow-hidden">
+                ${sharedCompanyLogo ? `<img src="${sharedCompanyLogo}" class="max-h-full max-w-full object-contain">` : '<span class="text-[10px] text-slate-500">Nessun Logo</span>'}
+              </div>
+              <div class="flex gap-2">
+                <label class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs px-3 py-2 rounded font-semibold cursor-pointer transition-colors flex items-center gap-1.5">
+                  <i data-lucide="upload" class="w-3.5 h-3.5"></i> Carica Logo PNG
+                  <input type="file" accept="image/png, image/jpeg" class="hidden" onchange="uploadCompanyLogo(event); openSubSettings('logo');">
+                </label>
+                <button onclick="removeCompanyLogo(); openSubSettings('logo');" class="bg-slate-800 hover:bg-slate-700 text-red-400 text-xs px-3 py-2 rounded font-semibold transition-colors cursor-pointer">Rimuovi</button>
+              </div>
+            </div>
+          </div>
+        `;
+      } else if (type === 'alarms') {
+        titleEl.innerHTML = `<i data-lucide="alarm-clock" class="w-5 h-5 text-indigo-400"></i> Gestione Sveglie Alert Scadenze`;
+        contentEl.innerHTML = `
+          <div class="space-y-3">
+            <div class="flex justify-between items-center">
+              <p class="text-xs text-slate-400">Crea sveglie per visualizzare l'avviso delle scadenze.</p>
+              <button onclick="playSound('click'); addAlarmRule(); openSubSettings('alarms');" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs px-3 py-1.5 rounded font-semibold flex items-center gap-1 cursor-pointer">
+                <i data-lucide="plus" class="w-3.5 h-3.5"></i> Aggiungi Sveglia
+              </button>
+            </div>
+            <div id="alarmsListContainer" class="space-y-3 max-h-60 overflow-y-auto pr-1"></div>
+          </div>
+        `;
+        setTimeout(renderAlarmsList, 50);
+      } else if (type === 'colors') {
+        titleEl.innerHTML = `<i data-lucide="palette" class="w-5 h-5 text-indigo-400"></i> Colori delle Fasi / Colonne`;
+        contentEl.innerHTML = `
+          <div class="space-y-2">
+            <p class="text-xs text-slate-400 mb-2">Personalizza la colorazione di ciascuna colonna del workflow:</p>
+            <div id="columnsColorSettingsList" class="space-y-2 max-h-60 overflow-y-auto pr-2"></div>
+          </div>
+        `;
+        setTimeout(() => {
+          const container = document.getElementById('columnsColorSettingsList');
+          if (container) {
+            container.innerHTML = '';
+            COLUMNS_CONFIG.forEach(col => {
+              const row = document.createElement('div');
+              row.className = "flex items-center justify-between bg-slate-950 p-2.5 rounded border border-slate-800 gap-3";
+              let optionsHtml = COLOR_OPTIONS.map(opt => `<option value="${opt.label}" ${opt.value === col.color ? 'selected' : ''}>${opt.label}</option>`).join('');
+              row.innerHTML = `<div class="font-semibold text-xs text-slate-200 truncate w-1/3">${col.label}</div><div class="w-2/3"><select id="colColorSelect-${col.id}" class="w-full bg-slate-900 border border-slate-700 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">${optionsHtml}</select></div>`;
+              container.appendChild(row);
+            });
+          }
+        }, 50);
+      } else if (type === 'zoom') {
+        titleEl.innerHTML = `<i data-lucide="type" class="w-5 h-5 text-indigo-400"></i> Visualizzazione & Zoom Caratteri`;
+        contentEl.innerHTML = `
+          <div class="space-y-5">
+            <div class="bg-slate-950 p-3.5 rounded-lg border border-slate-800 space-y-2">
+              <div class="flex justify-between items-center">
+                <h4 class="text-xs font-bold text-indigo-400 uppercase tracking-wider">Zoom Programmazione</h4>
+                <span id="appFontSizeVal" class="font-mono text-indigo-400 font-bold text-xs bg-slate-900 px-2.5 py-1 rounded border border-slate-800">${appFontSizePx}px</span>
+              </div>
+              <input type="range" id="appFontRange" min="12" max="24" value="${appFontSizePx}" step="1" oninput="previewAppFontSize(this.value)" class="w-full accent-indigo-500 cursor-pointer h-2 bg-slate-900 rounded-lg">
+            </div>
+            <div class="bg-slate-950 p-3.5 rounded-lg border border-slate-800 space-y-2">
+              <div class="flex justify-between items-center">
+                <h4 class="text-xs font-bold text-emerald-400 uppercase tracking-wider">Zoom Master View</h4>
+                <span id="masterFontSizeVal" class="font-mono text-emerald-400 font-bold text-xs bg-slate-900 px-2.5 py-1 rounded border border-slate-800">${masterFontSizePx}px</span>
+              </div>
+              <input type="range" id="masterFontRange" min="16" max="50" value="${masterFontSizePx}" step="1" oninput="previewMasterFontSize(this.value)" class="w-full accent-indigo-500 cursor-pointer h-2 bg-slate-900 rounded-lg">
+            </div>
+          </div>
+        `;
+      }
+
+      openModal('subSettingsModal');
+      lucide.createIcons();
+    }
+
+    function closeSubSettings() {
+      closeModal('subSettingsModal');
+      activeSubSettingsType = null;
+    }
+
+    function addManualClient() {
+      const input = document.getElementById('newManualClientInput');
+      if (!input || !input.value.trim()) return;
+      registerClient(input.value.trim());
+      input.value = '';
+      openSubSettings('crm');
+      playSound('success');
+    }
+
+    function removeClient(idx) {
+      if (confirm("Vuoi rimuovere questo cliente dall'archivio?")) {
+        CLIENTS_DB.splice(idx, 1);
+        localStorage.setItem('workflow_sga_clients', JSON.stringify(CLIENTS_DB));
+        openSubSettings('crm');
+        playSound('delete');
+      }
+    }
+
+    function saveSubSettings() {
+      if (activeSubSettingsType === 'colors') {
+        COLUMNS_CONFIG.forEach(col => {
+          const select = document.getElementById(`colColorSelect-${col.id}`);
+          if (select) {
+            const matchedOpt = COLOR_OPTIONS.find(o => o.label === select.value);
+            if (matchedOpt) { col.color = matchedOpt.value; col.border = matchedOpt.border; }
+          }
+        });
+        localStorage.setItem('workflow_sga_columns_config', JSON.stringify(COLUMNS_CONFIG));
+        renderBoard();
+      } else if (activeSubSettingsType === 'alarms') {
+        localStorage.setItem('workflow_sga_alarms', JSON.stringify(USER_ALARMS));
+      } else if (activeSubSettingsType === 'zoom') {
+        localStorage.setItem('workflow_sga_master_fontsize_px', masterFontSizePx);
+        localStorage.setItem('workflow_sga_app_fontsize_px', appFontSizePx);
+      }
+      playSound('success');
+      closeSubSettings();
       alert("Impostazioni salvate con successo!");
     }
 
     function resetDefaultSettings() {
-      if (confirm("Vuoi ripristinare i valori predefiniti?")) {
+      if (confirm("Vuoi ripristinare tutti i valori predefiniti?")) {
         COLUMNS_CONFIG = JSON.parse(JSON.stringify(DEFAULT_COLUMNS_CONFIG));
         USER_ALARMS = [];
         masterFontSizePx = 24;
@@ -1125,11 +1208,6 @@
       if (sirenInterval) { clearInterval(sirenInterval); sirenInterval = null; }
       document.getElementById('arcadeAlertModal').classList.add('hidden');
       if (arcadeTimer) { clearTimeout(arcadeTimer); arcadeTimer = null; }
-      const progressBar = document.getElementById('arcadeProgressBar');
-      if (progressBar) {
-        progressBar.style.transition = 'none';
-        progressBar.style.width = '100%';
-      }
     }
 
     function togglePlayPauseMaster() {
@@ -1155,13 +1233,7 @@
       if (isMasterMode) {
         body.classList.add('master-mode');
         backBtns.forEach(el => { el.classList.remove('hidden'); el.style.display = 'flex'; });
-        
         isAutoScrollPaused = false;
-        const icon = document.getElementById('masterPlayPauseIcon');
-        const text = document.getElementById('masterPlayPauseText');
-        if(icon) { icon.setAttribute('data-lucide', 'pause'); icon.className = 'w-4 h-4 text-amber-400'; }
-        if(text) text.innerText = 'Pausa';
-
         renderBoard();
         startAutoScroll();
       } else {
@@ -1338,12 +1410,6 @@
         const currentScroll = board ? board.scrollLeft : 0;
         saveLocal(); 
         if (isMasterMode && board) board.scrollLeft = currentScroll;
-        
-        if (activeCardId) {
-          const activeCard = state.cards.find(c => c.id === activeCardId);
-          if (activeCard) renderAttachments(activeCard);
-          else closeModal('detailModal');
-        }
       });
     }
 
@@ -1481,11 +1547,6 @@
       } else {
         card.articles = card.articles.map(art => { if (art.tax === undefined) art.tax = 22; return art; });
       }
-      
-      if (card.stage === 'accettato-mod') card.stage = 'da-ordinare';
-      if (card.stage === 'lavorato') card.stage = 'lavorato-da-bollettare';
-      if (card.stage === 'consegnato') card.stage = 'bollettato-da-consegnare';
-
       return card;
     }
 
@@ -1531,6 +1592,7 @@
                  safeCard.id = 'c' + Date.now().toString(36) + Math.random().toString(36).substring(2, 7);
                  state.cards.push(safeCard);
                  syncCardToCloud(safeCard);
+                 if (safeCard.client) registerClient(safeCard.client);
                  count++;
                }
             });
@@ -1780,6 +1842,8 @@
       const initialNote = document.getElementById('formNotes') ? document.getElementById('formNotes').value.trim() : '';
       if (!title) return;
 
+      if (client) registerClient(client);
+
       let extractedArticles = [], initialPhotos = [];
       if (tempFormFile) {
         const cfgStr = localStorage.getItem('workflow_sga_firebase_config');
@@ -1840,6 +1904,7 @@
       if (!card) return;
       card.title = document.getElementById('editTitle').value.trim();
       card.client = document.getElementById('editClient').value.trim();
+      if (card.client) registerClient(card.client);
       card.deliveryDate = document.getElementById('editDeliveryDate').value;
       card.customColor = document.getElementById('editCardColor').value;
       let newJobType = document.getElementById('editJobType').value;
@@ -2127,6 +2192,80 @@
         </body></html>
       `);
       printWindow.document.close();
+    }
+
+    function addAlarmRule() {
+      USER_ALARMS.push({ id: 'a' + Date.now(), time: "09:00", active: true, days: [1, 2, 3, 4, 5] }); 
+      renderAlarmsList();
+    }
+
+    function removeAlarmRule(id) {
+      USER_ALARMS = USER_ALARMS.filter(a => a.id !== id);
+      renderAlarmsList();
+    }
+
+    function updateAlarmTime(id, val) {
+      const alarm = USER_ALARMS.find(a => a.id === id);
+      if (alarm) alarm.time = val;
+    }
+
+    function toggleAlarmActive(id, val) {
+      const alarm = USER_ALARMS.find(a => a.id === id);
+      if (alarm) alarm.active = val;
+    }
+
+    function toggleAlarmDay(id, dayVal) {
+      playSound('click');
+      const alarm = USER_ALARMS.find(a => a.id === id);
+      if (alarm) {
+        if (!Array.isArray(alarm.days)) alarm.days = [];
+        const index = alarm.days.indexOf(dayVal);
+        if (index >= 0) alarm.days.splice(index, 1);
+        else alarm.days.push(dayVal);
+        renderAlarmsList();
+      }
+    }
+
+    function renderAlarmsList() {
+      const container = document.getElementById('alarmsListContainer');
+      if (!container) return;
+      container.innerHTML = '';
+      if (USER_ALARMS.length === 0) {
+        container.innerHTML = `<p class="text-xs text-slate-500 italic py-3 text-center">Nessuna sveglia impostata.</p>`;
+        return;
+      }
+      const daysDef = [{val:1,label:"L"},{val:2,label:"M"},{val:3,label:"M"},{val:4,label:"G"},{val:5,label:"V"},{val:6,label:"S"},{val:0,label:"D"}];
+
+      USER_ALARMS.forEach(alarm => {
+        const card = document.createElement('div');
+        card.className = "bg-slate-900 p-3 rounded-lg border border-slate-800 space-y-3";
+        let daysBtnsHtml = daysDef.map(d => {
+          const isSelected = Array.isArray(alarm.days) && alarm.days.includes(d.val);
+          const btnClass = isSelected 
+            ? "w-7 h-7 rounded-full bg-indigo-600 text-white font-bold text-xs flex items-center justify-center shadow cursor-pointer transition-all" 
+            : "w-7 h-7 rounded-full bg-slate-950 text-slate-400 font-semibold text-xs flex items-center justify-center border border-slate-800 hover:border-slate-700 cursor-pointer transition-all";
+          return `<button type="button" onclick="toggleAlarmDay('${alarm.id}', ${d.val})" class="${btnClass}">${d.label}</button>`;
+        }).join('');
+
+        card.innerHTML = `
+          <div class="flex items-center justify-between gap-3">
+            <div class="flex items-center gap-3">
+              <input type="time" value="${alarm.time || '09:00'}" onchange="updateAlarmTime('${alarm.id}', this.value)" class="bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-base text-emerald-400 font-mono font-bold focus:outline-none focus:border-indigo-500">
+              <label class="flex items-center cursor-pointer select-none text-xs text-slate-300 gap-1.5">
+                <input type="checkbox" ${alarm.active ? 'checked' : ''} onchange="toggleAlarmActive('${alarm.id}', this.checked)" class="w-4 h-4 rounded bg-slate-950 border-slate-700 text-indigo-600 cursor-pointer">
+                <span>Attiva</span>
+              </label>
+            </div>
+            <button onclick="playSound('delete'); removeAlarmRule('${alarm.id}')" class="text-red-400 hover:text-red-300 p-1.5 rounded-lg bg-red-950/35 hover:bg-red-950/60 transition-colors cursor-pointer"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+          </div>
+          <div class="flex items-center justify-between pt-1 border-t border-slate-800/60 flex-wrap gap-2">
+            <span class="text-[10px] text-slate-400 uppercase font-semibold">Giorni attivo:</span>
+            <div class="flex gap-1.5">${daysBtnsHtml}</div>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+      lucide.createIcons();
     }
 
     function openModal(modalId) { document.getElementById(modalId).classList.remove('hidden'); }
