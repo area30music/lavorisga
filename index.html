@@ -4,34 +4,29 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Workflow SGA</title>
-  <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Icone Lucide -->
   <script src="https://unpkg.com/lucide@latest"></script>
-  <!-- PDF.js -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-  <script>
-    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-  </script>
-  <!-- Firebase SDK -->
+  <script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
   <style>
     ::-webkit-scrollbar { height: 6px; width: 6px; }
-    ::-webkit-scrollbar-track { background: #1e293b; }
-    ::-webkit-scrollbar-thumb { background: #475569; border-radius: 3px; }
+    ::-webkit-scrollbar-track { background: #0f172a; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
     .board-column { min-width: 300px; max-width: 300px; }
     * { touch-action: manipulation; }
     
     :root {
       --app-font-size: 15px;
-      --master-font-size: 32px;
+      --master-font-size: 30px;
     }
     body { font-size: var(--app-font-size, 15px); }
-    body.master-mode { font-size: var(--master-font-size, 32px); }
+    body.master-mode { font-size: var(--master-font-size, 30px); }
 
     @media (max-width: 1024px) {
-      .board-column { min-width: 270px; max-width: 270px; }
+      .board-column { min-width: 275px; max-width: 275px; }
+      header .top-buttons-text { display: inline-block; font-size: 10px; }
     }
 
     body.master-mode .hide-in-master { display: none !important; }
@@ -40,12 +35,17 @@
     
     body.master-mode .board-column { 
       pointer-events: none; 
-      min-width: calc(300px * (var(--master-font-size, 32px) / 15px)); 
-      max-width: calc(300px * (var(--master-font-size, 32px) / 15px)); 
+      min-width: calc(300px * (var(--master-font-size, 30px) / 15px)); 
+      max-width: calc(300px * (var(--master-font-size, 30px) / 15px)); 
       transition: all 0.3s ease;
     }
     body.master-mode #board::-webkit-scrollbar { display: none; }
     body.master-mode .card-dropzone::-webkit-scrollbar { display: none; }
+
+    /* Orologio Gigante in Master View */
+    body.master-mode #liveClockWidget { font-size: 2rem !important; padding: 0.75rem 1.5rem; }
+    body.master-mode .master-title { font-size: 1.4em !important; line-height: 1.2; white-space: normal; }
+    body.master-mode .master-badge { font-size: 0.8em !important; padding: 0.4em 0.8em !important; }
 
     @keyframes arcadeGlow {
       0% { box-shadow: 0 0 15px #ef4444, inset 0 0 15px #ef4444; border-color: #f87171; }
@@ -64,22 +64,6 @@
 </head>
 <body class="bg-slate-950 text-slate-100 font-sans h-screen flex flex-col overflow-hidden">
 
-  <!-- ALERT POPUP SCADENZE -->
-  <div id="arcadeAlertModal" class="hidden fixed inset-0 bg-black/85 backdrop-blur-md z-[150] flex items-center justify-center p-4">
-    <div class="arcade-alert-box rounded-3xl w-full max-w-2xl p-8 shadow-2xl relative space-y-6">
-      <button onclick="closeArcadeAlert()" class="absolute top-4 right-4 bg-red-600 hover:bg-red-500 text-white rounded-full p-2 shadow-lg cursor-pointer z-10"><i data-lucide="x" class="w-6 h-6"></i></button>
-      <div class="text-center space-y-2">
-        <div class="inline-flex items-center justify-center bg-red-600/30 p-4 rounded-full border-2 border-red-500 mb-1 animate-bounce"><i data-lucide="alert-triangle" class="w-10 h-10 text-red-500"></i></div>
-        <h2 class="text-3xl font-black text-red-500 arcade-text uppercase">⚠️ ATTENZIONE: SCADENZE IMMINENTI! ⚠️</h2>
-        <p class="text-sm text-yellow-400 font-bold uppercase tracking-widest">Le seguenti commesse richiedono azione immediata</p>
-      </div>
-      <div id="arcadeAlertList" class="space-y-3 max-h-80 overflow-y-auto pr-2"></div>
-      <div class="pt-2 text-center">
-        <button onclick="closeArcadeAlert()" class="bg-red-600 hover:bg-red-500 text-white font-black px-8 py-3.5 rounded-xl text-base uppercase tracking-wider shadow-xl shadow-red-900/50 cursor-pointer">Ricevuto / Chiudi</button>
-      </div>
-    </div>
-  </div>
-
   <!-- LOGIN -->
   <div id="loginScreen" class="fixed inset-0 bg-slate-950 z-[100] flex items-center justify-center p-4">
     <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-sm p-6 shadow-2xl space-y-6">
@@ -90,13 +74,8 @@
       </div>
       <form onsubmit="handleLogin(event)" class="space-y-4">
         <div>
-          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Password</label>
           <input type="password" id="loginPassword" required placeholder="Password..." class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2.5 text-slate-200 focus:outline-none focus:border-indigo-500 text-sm">
           <p id="loginError" class="hidden mt-2 text-red-400 text-xs font-bold text-center">Password errata.</p>
-        </div>
-        <div class="flex items-center gap-2">
-          <input type="checkbox" id="rememberMe" class="rounded bg-slate-950 border-slate-800 text-indigo-600 w-4 h-4 cursor-pointer">
-          <label for="rememberMe" class="text-xs text-slate-300 cursor-pointer select-none">Ricordami</label>
         </div>
         <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2.5 px-4 rounded-lg flex items-center justify-center gap-2 text-sm cursor-pointer"><i data-lucide="arrow-right" class="w-4 h-4"></i> Accedi</button>
       </form>
@@ -104,23 +83,23 @@
   </div>
 
   <!-- TOP BAR -->
-  <header class="bg-slate-900 border-b border-slate-800 px-3 py-2 flex flex-wrap justify-between items-center shrink-0 gap-2 z-10 relative">
-    <div class="flex items-center space-x-2 md:space-x-3">
-      <!-- LOGO CONDIVISO DAL DB -->
-      <div id="companyLogoContainer" class="relative group cursor-pointer bg-indigo-600 rounded-lg text-white shadow-lg flex items-center justify-center overflow-hidden shrink-0" style="width: 110px; height: 40px;" title="Logo Aziendale Condiviso">
-        <div id="logoDefaultIcon" class="flex items-center justify-center"><i data-lucide="layers" class="w-5 h-5"></i></div>
+  <header class="bg-slate-900 border-b border-slate-800 px-3 py-2.5 flex flex-wrap justify-between items-center shrink-0 gap-3 z-10 relative">
+    <div class="flex items-center space-x-3">
+      <!-- LOGO -->
+      <div id="companyLogoContainer" class="relative group cursor-pointer bg-indigo-600 rounded-lg text-white shadow flex items-center justify-center overflow-hidden shrink-0" style="width: 100px; height: 38px;" title="Logo Aziendale">
+        <div id="logoDefaultIcon"><i data-lucide="layers" class="w-5 h-5"></i></div>
         <img id="logoImageDisplay" src="" class="hidden w-full h-full object-contain p-1">
-        <input type="file" accept="image/png, image/jpeg" class="absolute inset-0 opacity-0 cursor-pointer hide-in-master" onchange="uploadCompanyLogo(event)" title="Carica Logo">
+        <input type="file" accept="image/png, image/jpeg" class="absolute inset-0 opacity-0 cursor-pointer hide-in-master" onchange="uploadCompanyLogo(event)">
       </div>
 
-      <button onclick="toggleMasterMode(); playSound('close');" class="master-back-btn hidden bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-lg text-xs font-extrabold items-center gap-1.5 shadow-lg border border-indigo-400 cursor-pointer">
-        <i data-lucide="arrow-left" class="w-4 h-4"></i> Torna a Programmazione
+      <button onclick="toggleMasterMode(); playSound('close');" class="master-back-btn hidden bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg text-sm font-extrabold items-center gap-2 shadow-lg border border-indigo-400 cursor-pointer">
+        <i data-lucide="arrow-left" class="w-5 h-5"></i> Torna a Programmazione
       </button>
 
       <div>
         <h1 class="font-bold text-sm leading-tight text-white flex items-center gap-1.5">
           Workflow SGA
-          <span class="show-in-master hidden bg-emerald-600/25 border border-emerald-500/50 text-emerald-400 px-1.5 py-0.5 rounded text-[9px] uppercase font-bold tracking-wider animate-pulse">Monitor</span>
+          <span class="show-in-master hidden bg-emerald-600/25 border border-emerald-500/50 text-emerald-400 px-1.5 py-0.5 rounded text-[10px] uppercase font-bold animate-pulse">Monitor</span>
         </h1>
         <p id="cloudStatus" onclick="if(!isMasterMode) { playSound('click'); openModal('cloudModal'); }" class="text-[10px] flex items-center gap-1 cursor-pointer mt-0.5">
           <i data-lucide="hard-drive" class="w-3 h-3 text-slate-400"></i> <span class="text-slate-400">Modalità Locale</span>
@@ -128,32 +107,33 @@
       </div>
     </div>
     
-    <div class="flex items-center space-x-2 flex-wrap">
-      <!-- CURSORE VELOCITA' MASTER VIEW (VICINO ALL'ORA) -->
-      <div class="show-in-master hidden items-center gap-1.5 bg-slate-950 border border-indigo-500/40 px-2.5 py-1 rounded-lg shadow">
-        <i data-lucide="gauge" class="w-4 h-4 text-indigo-400"></i>
-        <span class="text-xs text-slate-300 font-semibold">Velocità:</span>
-        <input type="range" id="masterSpeedRange" min="0.02" max="0.25" value="0.08" step="0.01" oninput="updateMasterSpeed(this.value)" class="w-24 accent-indigo-500 cursor-pointer h-1.5 bg-slate-900 rounded-lg">
+    <div class="flex items-center gap-2 md:gap-3 flex-wrap justify-end">
+      <!-- CURSORE VELOCITA' E OROLOGIO -->
+      <div class="show-in-master hidden items-center gap-2 bg-slate-950 border border-indigo-500/40 px-3 py-2 rounded-xl shadow">
+        <i data-lucide="gauge" class="w-5 h-5 text-indigo-400"></i>
+        <span class="text-sm text-slate-300 font-bold">Velocità:</span>
+        <input type="range" id="masterSpeedRange" min="0.02" max="0.25" value="0.08" step="0.01" oninput="updateMasterSpeed(this.value)" class="w-32 accent-indigo-500 cursor-pointer h-2 bg-slate-900 rounded-lg">
       </div>
 
-      <!-- WIDGET DATA E ORA INGRANDITO -->
-      <div id="liveClockWidget" class="flex items-center gap-2 bg-slate-950 border border-slate-700 px-3.5 py-1.5 rounded-xl text-sm md:text-base font-mono text-emerald-400 font-bold shadow-lg">
-        <i data-lucide="clock" class="w-4 h-4 md:w-5 md:h-5 text-indigo-400 animate-pulse"></i>
+      <div id="liveClockWidget" class="flex items-center gap-2 bg-slate-950 border border-slate-700 px-4 py-2 rounded-xl text-lg md:text-xl font-mono text-emerald-400 font-bold shadow-lg transition-all">
+        <i data-lucide="clock" class="w-5 h-5 text-indigo-400 animate-pulse"></i>
         <span id="headerClockTime" class="tracking-wider">--:--:--</span>
         <span class="text-slate-600">|</span>
         <span id="headerClockDate" class="text-slate-300">--/--/----</span>
       </div>
 
-      <button onclick="playSound('close'); logoutApp();" class="hide-in-master bg-slate-800 hover:bg-slate-700 text-slate-300 px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 cursor-pointer" title="Esci"><i data-lucide="log-out" class="w-3.5 h-3.5"></i> <span class="hidden sm:inline">Esci</span></button>
-      <button onclick="playSound('click'); openSettingsModal();" class="hide-in-master bg-slate-800 hover:bg-slate-700 text-slate-300 px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 cursor-pointer" title="Impostazioni"><i data-lucide="sliders" class="w-3.5 h-3.5"></i> <span class="hidden sm:inline">Impostazioni</span></button>
-      <button onclick="playSound('success'); exportBackup();" class="hide-in-master bg-slate-800 hover:bg-slate-700 text-slate-300 px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 cursor-pointer" title="Backup"><i data-lucide="download-cloud" class="w-3.5 h-3.5"></i> <span class="hidden sm:inline">Backup</span></button>
-      <label class="hide-in-master bg-slate-800 hover:bg-slate-700 text-slate-300 px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 cursor-pointer" title="Ripristina"><i data-lucide="upload-cloud" class="w-3.5 h-3.5"></i> <span class="hidden sm:inline">Ripristina</span><input type="file" accept=".json" class="hidden" onchange="importBackup(event)"></label>
-      
-      <div class="hide-in-master w-px h-4 bg-slate-700 mx-0.5"></div>
+      <!-- TASTI CON TESTO RIDOTTO PER IPAD -->
+      <div class="flex gap-1.5 hide-in-master">
+        <button onclick="playSound('close'); logoutApp();" class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-1.5 rounded-lg flex items-center gap-1.5 cursor-pointer transition-colors shadow-sm"><i data-lucide="log-out" class="w-4 h-4"></i> <span class="text-[10px] md:text-xs font-bold top-buttons-text uppercase tracking-wide">Esci</span></button>
+        <button onclick="playSound('click'); openSettingsModal();" class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-1.5 rounded-lg flex items-center gap-1.5 cursor-pointer transition-colors shadow-sm"><i data-lucide="sliders" class="w-4 h-4"></i> <span class="text-[10px] md:text-xs font-bold top-buttons-text uppercase tracking-wide">Impostazioni</span></button>
+        <button onclick="playSound('success'); exportBackup();" class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-1.5 rounded-lg flex items-center gap-1.5 cursor-pointer transition-colors shadow-sm"><i data-lucide="download-cloud" class="w-4 h-4"></i> <span class="text-[10px] md:text-xs font-bold top-buttons-text uppercase tracking-wide">Backup</span></button>
+        <label class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-1.5 rounded-lg flex items-center gap-1.5 cursor-pointer transition-colors shadow-sm"><i data-lucide="upload-cloud" class="w-4 h-4"></i> <span class="text-[10px] md:text-xs font-bold top-buttons-text uppercase tracking-wide">Ripristina</span><input type="file" accept=".json" class="hidden" onchange="importBackup(event)"></label>
+      </div>
 
-      <button onclick="playSound('click'); toggleMasterMode();" class="hide-in-master bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-emerald-900/50 px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 cursor-pointer"><i data-lucide="monitor" class="w-4 h-4"></i> Master View</button>
-      
-      <button onclick="playSound('click'); openModal('addCardModal');" class="hide-in-master bg-indigo-600 hover:bg-indigo-500 text-white px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow cursor-pointer"><i data-lucide="plus" class="w-4 h-4"></i> Nuova Commessa</button>
+      <div class="hide-in-master w-px h-6 bg-slate-700 mx-1"></div>
+
+      <button onclick="playSound('click'); toggleMasterMode();" class="hide-in-master bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-emerald-900/50 px-3 py-1.5 rounded-lg flex items-center gap-1.5 cursor-pointer shadow-sm"><i data-lucide="monitor" class="w-4 h-4"></i> <span class="text-[10px] md:text-xs font-bold uppercase tracking-wide">Master View</span></button>
+      <button onclick="playSound('click'); openModal('addCardModal');" class="hide-in-master bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-lg flex items-center gap-1.5 shadow-md cursor-pointer"><i data-lucide="plus" class="w-4 h-4"></i> <span class="text-[10px] md:text-xs font-bold uppercase tracking-wide">Nuova Commessa</span></button>
     </div>
   </header>
 
@@ -185,8 +165,8 @@
         </div>
 
         <div class="bg-slate-950 p-4 rounded-lg border border-slate-800 space-y-3">
-          <div class="flex justify-between items-center"><h4 class="text-xs font-bold text-emerald-400 uppercase tracking-wider">Zoom Master View</h4><span id="masterFontSizeVal" class="font-mono text-emerald-400 font-bold text-sm bg-slate-900 px-3 py-1 rounded border border-slate-800">32px</span></div>
-          <input type="range" id="masterFontRange" min="16" max="60" value="32" step="1" oninput="previewMasterFontSize(this.value)" class="w-full accent-indigo-500 cursor-pointer h-2 bg-slate-900 rounded-lg">
+          <div class="flex justify-between items-center"><h4 class="text-xs font-bold text-emerald-400 uppercase tracking-wider">Zoom Master View</h4><span id="masterFontSizeVal" class="font-mono text-emerald-400 font-bold text-sm bg-slate-900 px-3 py-1 rounded border border-slate-800">30px</span></div>
+          <input type="range" id="masterFontRange" min="16" max="60" value="30" step="1" oninput="previewMasterFontSize(this.value)" class="w-full accent-indigo-500 cursor-pointer h-2 bg-slate-900 rounded-lg">
         </div>
       </div>
       <div class="p-4 border-t border-slate-800 bg-slate-950 flex justify-between items-center">
@@ -196,12 +176,12 @@
     </div>
   </div>
 
-  <!-- MODAL DETTAGLIO COMMESSA -->
+  <!-- MODAL DETTAGLIO COMMESSA (RIPRISTINATO COMPLETAMENTE) -->
   <div id="detailModal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-2 md:p-4">
     <div class="bg-slate-900 border border-slate-800 rounded-xl w-full max-w-6xl max-h-[96vh] flex flex-col overflow-hidden shadow-2xl">
       <div class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-850">
         <div class="flex items-center gap-2"><span id="detailBadge" class="px-2 py-0.5 rounded text-xs font-bold text-white uppercase"></span><h2 class="text-lg font-bold">Dettaglio Commessa</h2></div>
-        <button onclick="playSound('close'); closeModal('detailModal');" class="text-slate-400 bg-slate-800 rounded-full p-1 cursor-pointer"><i data-lucide="x" class="w-5 h-5"></i></button>
+        <button onclick="playSound('close'); closeModal('detailModal');" class="text-slate-400 hover:text-slate-200 bg-slate-800 rounded-full p-1 cursor-pointer"><i data-lucide="x" class="w-5 h-5"></i></button>
       </div>
       <div class="p-3 md:p-5 overflow-y-auto space-y-5 flex-1 text-sm">
         <div class="space-y-3 bg-slate-950 p-3.5 rounded-lg border border-slate-800">
@@ -209,30 +189,39 @@
           <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
             <div><label class="text-[10px] text-indigo-400 font-semibold uppercase block mb-1">Referente</label><input type="text" id="editClient" class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-1.5 text-slate-200 text-sm focus:outline-none"></div>
             <div><label class="text-[10px] text-indigo-400 font-semibold uppercase block mb-1">Consegna</label><input type="date" id="editDeliveryDate" class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-1.5 text-slate-200 text-sm focus:outline-none"></div>
-            <div><label class="text-[10px] text-indigo-400 font-semibold uppercase block mb-1">Tipo</label><select id="editJobType" class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-1.5 text-slate-200 text-sm focus:outline-none"><option value="Stampa Digitale / Banner">Stampa Digitale / Banner</option><option value="Abbigliamento / Ricamo">Abbigliamento / Ricamo</option><option value="Insegne & Vetrofanie">Insegne & Vetrofanie</option><option value="Etichette & Adesivi">Etichette & Adesivi</option><option value="Grafica / Progettazione">Grafica / Progettazione</option><option value="Altro">Altro</option></select></div>
+            <div><label class="text-[10px] text-indigo-400 font-semibold uppercase block mb-1">Tipo Lavorazione</label><select id="editJobType" class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-1.5 text-slate-200 text-sm focus:outline-none"><option value="Stampa Digitale / Banner">Stampa Digitale / Banner</option><option value="Abbigliamento / Ricamo">Abbigliamento / Ricamo</option><option value="Insegne & Vetrofanie">Insegne & Vetrofanie</option><option value="Etichette & Adesivi">Etichette & Adesivi</option><option value="Grafica / Progettazione">Grafica / Progettazione</option><option value="Altro">Altro</option></select></div>
           </div>
-          <button onclick="playSound('success'); saveCardEdits();" class="bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 text-xs px-3 py-1.5 rounded font-semibold cursor-pointer"><i data-lucide="save" class="w-3.5 h-3.5"></i> Aggiorna Anagrafica</button>
+          <div class="pt-2 border-t border-slate-900 flex items-center justify-between">
+            <div><label class="text-[10px] text-indigo-400 font-semibold uppercase">Colore Evidenziazione</label></div>
+            <div class="flex items-center gap-2"><input type="color" id="editCardColor" class="w-9 h-9 rounded bg-transparent cursor-pointer border border-slate-700"><button onclick="resetCardCustomColor()" class="text-xs bg-slate-900 hover:bg-slate-800 text-slate-300 px-2.5 py-1.5 rounded border border-slate-700 cursor-pointer">Default</button></div>
+          </div>
+          <button onclick="playSound('success'); saveCardEdits();" class="bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-300 border border-indigo-500/30 text-xs px-3 py-1.5 rounded font-semibold cursor-pointer transition-colors"><i data-lucide="save" class="w-3.5 h-3.5 inline-block"></i> Aggiorna Anagrafica e Colore</button>
         </div>
 
         <div class="space-y-3 bg-slate-950 p-3.5 rounded-lg border border-slate-800">
-          <div class="flex justify-between items-center"><label class="text-xs text-indigo-400 font-bold uppercase">Articoli & Preventivo</label><button onclick="playSound('click'); addArticleRow();" class="bg-indigo-600 text-white text-xs px-2.5 py-1 rounded font-semibold cursor-pointer"><i data-lucide="plus" class="w-3.5 h-3.5"></i> Aggiungi Riga</button></div>
-          <div class="overflow-x-auto"><table class="w-full text-left text-xs min-w-[700px]"><thead><tr class="border-b border-slate-800 text-slate-400 uppercase text-[10px]"><th class="py-2 px-1 w-16 text-center">Sposta</th><th class="py-2 px-2 w-24">Codice</th><th class="py-2 px-2">Descrizione</th><th class="py-2 px-2 w-16 text-center">Q.tà</th><th class="py-2 px-2 w-20 text-right">Prezzo</th><th class="py-2 px-2 w-16 text-center">IVA %</th><th class="py-2 px-2 w-20 text-right">Netto</th><th class="py-2 px-2 w-20 text-right">Pr. Ivato</th><th class="py-2 px-2 w-24 text-right">Totale</th><th class="py-2 px-2 w-10"></th></tr></thead><tbody id="articlesTableBody" class="divide-y divide-slate-900"></tbody></table></div>
+          <div class="flex justify-between items-center"><label class="text-xs text-indigo-400 font-bold uppercase">Articoli & Preventivo</label><button onclick="playSound('click'); addArticleRow();" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs px-2.5 py-1 rounded font-semibold cursor-pointer"><i data-lucide="plus" class="w-3.5 h-3.5 inline-block"></i> Aggiungi Riga</button></div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs min-w-[700px]">
+              <thead><tr class="border-b border-slate-800 text-slate-400 uppercase text-[10px]"><th class="py-2 px-1 w-16 text-center">Sposta</th><th class="py-2 px-2 w-24">Codice</th><th class="py-2 px-2">Descrizione</th><th class="py-2 px-2 w-16 text-center">Q.tà</th><th class="py-2 px-2 w-20 text-right">Prezzo Un.</th><th class="py-2 px-2 w-16 text-center">IVA %</th><th class="py-2 px-2 w-20 text-right">Tot. Netto</th><th class="py-2 px-2 w-20 text-right">Pr. Ivato</th><th class="py-2 px-2 w-24 text-right">Tot. Ivato</th><th class="py-2 px-2 w-10"></th></tr></thead>
+              <tbody id="articlesTableBody" class="divide-y divide-slate-900"></tbody>
+            </table>
+          </div>
           <div class="flex justify-between items-center pt-3 border-t border-slate-800 flex-wrap gap-3">
-            <button onclick="playSound('success'); saveArticlesEdits();" class="bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 text-xs px-3 py-1.5 rounded font-semibold cursor-pointer">Salva Articoli</button>
-            <div class="flex gap-4 text-right"><div><span class="text-[10px] text-slate-400 uppercase block font-bold">Imponibile:</span><span id="grandSubtotalDisplay" class="text-xs font-semibold text-slate-300">€ 0,00</span></div><div><span class="text-[10px] text-slate-400 uppercase block font-bold">IVA:</span><span id="grandTaxDisplay" class="text-xs font-semibold text-slate-300">€ 0,00</span></div><div><span class="text-[10px] text-slate-400 uppercase block font-bold">Totale Ivato:</span><span id="grandTotalDisplay" class="text-base font-extrabold text-emerald-400">€ 0,00</span></div></div>
+            <button onclick="playSound('success'); saveArticlesEdits();" class="bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-300 border border-indigo-500/30 text-xs px-3 py-1.5 rounded font-semibold cursor-pointer transition-colors"><i data-lucide="save" class="w-3.5 h-3.5 inline-block"></i> Salva Articoli</button>
+            <div class="flex gap-4 text-right"><div><span class="text-[10px] text-slate-400 uppercase block font-bold">Imponibile:</span><span id="grandSubtotalDisplay" class="text-xs font-semibold text-slate-300">€ 0,00</span></div><div><span class="text-[10px] text-slate-400 uppercase block font-bold">Tot. IVA:</span><span id="grandTaxDisplay" class="text-xs font-semibold text-slate-300">€ 0,00</span></div><div><span class="text-[10px] text-slate-400 uppercase block font-bold">Tot. Ordine Ivato:</span><span id="grandTotalDisplay" class="text-base font-extrabold text-emerald-400">€ 0,00</span></div></div>
           </div>
         </div>
 
         <div>
-          <div class="flex justify-between items-center mb-2"><label class="text-xs text-slate-400 font-semibold uppercase">Foto & Documenti PDF</label><label class="bg-slate-800 text-xs px-3 py-1.5 rounded-lg cursor-pointer text-slate-200"><i data-lucide="paperclip" class="w-3.5 h-3.5"></i> Allega<input type="file" accept="image/*,.pdf" multiple class="hidden" onchange="handleDocumentUpload(event)"></label></div>
+          <div class="flex justify-between items-center mb-2"><label class="text-xs text-slate-400 font-semibold uppercase">Foto & Documenti</label><label class="bg-slate-800 hover:bg-slate-700 text-xs px-3 py-1.5 rounded-lg cursor-pointer text-slate-200 transition-colors"><i data-lucide="paperclip" class="w-3.5 h-3.5 inline-block"></i> Allega PDF/Foto<input type="file" accept="image/*,.pdf" multiple class="hidden" onchange="handleDocumentUpload(event)"></label></div>
           <div id="attachmentsContainer" class="grid grid-cols-2 md:grid-cols-4 gap-2 bg-slate-950 p-2 rounded-lg border border-slate-800 max-h-36 overflow-y-auto"></div>
         </div>
       </div>
       <div class="p-4 border-t border-slate-800 bg-slate-950 flex justify-between gap-3">
-        <button onclick="playSound('delete'); deleteCurrentCard();" class="bg-red-950/40 text-red-400 border border-red-900/50 px-4 py-2 rounded-lg font-semibold text-xs cursor-pointer">Elimina</button>
+        <button onclick="playSound('delete'); deleteCurrentCard();" class="bg-red-950/40 hover:bg-red-900/60 text-red-400 border border-red-900/50 px-4 py-2 rounded-lg font-semibold text-xs cursor-pointer transition-colors">Elimina</button>
         <div class="flex gap-2">
-          <button onclick="playSound('click'); printCard();" class="bg-slate-800 text-white px-4 py-2 rounded-lg font-semibold text-xs cursor-pointer">Stampa</button>
-          <button onclick="playSound('close'); closeModal('detailModal');" class="bg-indigo-600 text-white px-5 py-2 rounded-lg font-semibold text-xs cursor-pointer">Chiudi</button>
+          <button onclick="playSound('click'); printCard();" class="bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded-lg font-semibold text-xs cursor-pointer transition-colors">Stampa Scheda</button>
+          <button onclick="playSound('close'); closeModal('detailModal');" class="bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-2 rounded-lg font-semibold text-xs cursor-pointer transition-colors shadow">Chiudi Scheda</button>
         </div>
       </div>
     </div>
@@ -241,18 +230,18 @@
   <!-- MODAL NUOVA COMMESSA -->
   <div id="addCardModal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
     <div class="bg-slate-900 border border-slate-800 rounded-xl w-full max-w-md p-5 shadow-2xl max-h-[92vh] overflow-y-auto">
-      <div class="flex justify-between items-center mb-4"><h3 class="font-bold text-lg text-slate-100">Nuova Commessa SGA</h3><button onclick="playSound('close'); closeModal('addCardModal');" class="text-slate-400 bg-slate-800 rounded-full p-1 cursor-pointer"><i data-lucide="x" class="w-4 h-4"></i></button></div>
+      <div class="flex justify-between items-center mb-4"><h3 class="font-bold text-lg text-slate-100">Nuova Commessa</h3><button onclick="playSound('close'); closeModal('addCardModal');" class="text-slate-400 bg-slate-800 rounded-full p-1 cursor-pointer"><i data-lucide="x" class="w-4 h-4"></i></button></div>
       <form id="newCardForm" class="space-y-4 text-sm" onsubmit="createNewCard(event)">
-        <div><label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Cliente / Titolo Progetto</label><input type="text" id="formTitle" required placeholder="Es. Rossi S.r.l." class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none"></div>
+        <div><label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Cliente / Titolo</label><input type="text" id="formTitle" required class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-indigo-500"></div>
         <div class="grid grid-cols-2 gap-3">
-          <div><label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Referente</label><input type="text" id="formClient" placeholder="Es. Mario" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none"></div>
+          <div><label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Referente</label><input type="text" id="formClient" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none"></div>
           <div><label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Tipo</label><select id="formJobType" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none"><option value="Stampa Digitale / Banner">Stampa Digitale / Banner</option><option value="Abbigliamento / Ricamo">Abbigliamento / Ricamo</option><option value="Insegne & Vetrofanie">Insegne & Vetrofanie</option><option value="Etichette & Adesivi">Etichette & Adesivi</option><option value="Grafica / Progettazione">Grafica / Progettazione</option><option value="Altro">Altro</option></select></div>
         </div>
         <div class="grid grid-cols-2 gap-3">
-          <div><label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Stato Iniziale</label><select id="formInitialStage" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none"><option value="prev-da-fare">Prev. da fare</option><option value="prev-inviato">Prev. inviato</option><option value="accettato-mod">Accettato/Modifica</option><option value="da-ordinare">Da ordinare</option><option value="ordinato">Ordinato</option><option value="magazzino">In magazzino</option><option value="da-lavorare">Da lavorare</option><option value="in-lavorazione">In lavorazione</option><option value="lavorato">Lavorato</option><option value="consegnato">Consegnato</option><option value="fatturato">Fatturato</option></select></div>
+          <div><label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Stato</label><select id="formInitialStage" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none"><option value="prev-da-fare">Prev. da fare</option><option value="prev-inviato">Prev. inviato</option><option value="accettato-mod">Accettato/Modifica</option><option value="da-ordinare">Da ordinare</option><option value="ordinato">Ordinato</option><option value="magazzino">In magazzino</option><option value="da-lavorare">Da lavorare</option><option value="in-lavorazione">In lavorazione</option><option value="lavorato">Lavorato</option><option value="consegnato">Consegnato</option><option value="fatturato">Fatturato</option></select></div>
           <div><label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Consegna</label><input type="date" id="formDeliveryDate" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none"></div>
         </div>
-        <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2.5 rounded-lg flex items-center justify-center gap-2 cursor-pointer">Inserisci</button>
+        <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2.5 rounded-lg flex items-center justify-center gap-2 cursor-pointer shadow">Inserisci</button>
       </form>
     </div>
   </div>
@@ -266,7 +255,22 @@
     </div>
   </div>
 
-  <!-- SCRIPT -->
+  <!-- GALLERY -->
+  <div id="galleryModal" class="hidden fixed inset-0 bg-black/95 z-[60] flex flex-col items-center justify-center select-none">
+    <div class="absolute top-0 w-full p-4 flex justify-between items-center z-10 bg-gradient-to-b from-black/80 to-transparent">
+      <div id="galleryCounter" class="text-white font-mono text-sm font-bold bg-black/50 px-3 py-1 rounded-full"></div>
+      <div class="flex gap-4 items-center">
+        <button onclick="playSound('click'); rotateGalleryImage();" class="text-white p-2 bg-slate-800 rounded-full cursor-pointer"><i data-lucide="rotate-cw" class="w-5 h-5"></i></button>
+        <button onclick="playSound('close'); closeGallery();" class="text-white p-2 bg-slate-800 rounded-full cursor-pointer"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+    </div>
+    <div class="relative w-full h-full flex items-center justify-center p-4">
+      <img id="galleryImage" src="" class="max-w-full max-h-[90vh] object-contain bg-white shadow-2xl transition-transform duration-300">
+      <button onclick="playSound('click'); prevGalleryImage();" class="absolute left-4 top-1/2 -translate-y-1/2 text-white p-3 bg-slate-800/80 rounded-full cursor-pointer" id="btnPrevGallery"><i data-lucide="chevron-left" class="w-6 h-6"></i></button>
+      <button onclick="playSound('click'); nextGalleryImage();" class="absolute right-4 top-1/2 -translate-y-1/2 text-white p-3 bg-slate-800/80 rounded-full cursor-pointer" id="btnNextGallery"><i data-lucide="chevron-right" class="w-6 h-6"></i></button>
+    </div>
+  </div>
+
   <script>
     const SHARED_PASSWORD = "sga2026";
     let isMasterMode = false;
@@ -277,27 +281,28 @@
     let masterScrollSpeed = 0.08;
 
     const COLUMNS_CONFIG = [
-      { id: "prev-da-fare", label: "Prev. da fare", color: "bg-orange-600/20 border-orange-500/50 text-orange-400", border: "border-l-4 border-l-orange-500" },
-      { id: "prev-inviato", label: "Prev. inviato", color: "bg-amber-600/20 border-amber-500/50 text-amber-400", border: "border-l-4 border-l-amber-500" },
-      { id: "accettato-mod", label: "Accettato/Modifica", color: "bg-yellow-600/20 border-yellow-500/50 text-yellow-300", border: "border-l-4 border-l-yellow-500" },
-      { id: "da-ordinare", label: "Da ordinare", color: "bg-rose-600/20 border-rose-500/50 text-rose-400", border: "border-l-4 border-l-rose-500" },
-      { id: "ordinato", label: "Ordinato", color: "bg-pink-600/20 border-pink-500/50 text-pink-400", border: "border-l-4 border-l-pink-500" },
-      { id: "magazzino", label: "In magazzino", color: "bg-fuchsia-600/20 border-fuchsia-500/50 text-fuchsia-400", border: "border-l-4 border-l-fuchsia-500" },
-      { id: "da-lavorare", label: "Da lavorare", color: "bg-violet-600/20 border-violet-500/50 text-violet-400", border: "border-l-4 border-l-violet-500" },
-      { id: "in-lavorazione", label: "In lavorazione", color: "bg-cyan-600/20 border-cyan-500/50 text-cyan-400", border: "border-l-4 border-l-cyan-500" },
-      { id: "lavorato", label: "Lavorato", color: "bg-emerald-600/20 border-emerald-500/50 text-emerald-400", border: "border-l-4 border-l-emerald-500" },
-      { id: "consegnato", label: "Consegnato", color: "bg-teal-600/20 border-teal-500/50 text-teal-400", border: "border-l-4 border-l-teal-500" },
-      { id: "fatturato", label: "Fatturato", color: "bg-blue-600/20 border-blue-500/50 text-blue-400", border: "border-l-4 border-l-blue-500" }
+      { id: "prev-da-fare", label: "Prev. da fare", color: "bg-orange-600/20 border-orange-500/50 text-orange-400", border: "border-l-4 border-l-orange-500", hexDefault: "#c2410c" },
+      { id: "prev-inviato", label: "Prev. inviato", color: "bg-amber-600/20 border-amber-500/50 text-amber-400", border: "border-l-4 border-l-amber-500", hexDefault: "#d97706" },
+      { id: "accettato-mod", label: "Accettato/Modifica", color: "bg-yellow-600/20 border-yellow-500/50 text-yellow-300", border: "border-l-4 border-l-yellow-500", hexDefault: "#ca8a04" },
+      { id: "da-ordinare", label: "Da ordinare", color: "bg-rose-600/20 border-rose-500/50 text-rose-400", border: "border-l-4 border-l-rose-500", hexDefault: "#e11d48" },
+      { id: "ordinato", label: "Ordinato", color: "bg-pink-600/20 border-pink-500/50 text-pink-400", border: "border-l-4 border-l-pink-500", hexDefault: "#db2777" },
+      { id: "magazzino", label: "In magazzino", color: "bg-fuchsia-600/20 border-fuchsia-500/50 text-fuchsia-400", border: "border-l-4 border-l-fuchsia-500", hexDefault: "#c026d3" },
+      { id: "da-lavorare", label: "Da lavorare", color: "bg-violet-600/20 border-violet-500/50 text-violet-400", border: "border-l-4 border-l-violet-500", hexDefault: "#7c3aed" },
+      { id: "in-lavorazione", label: "In lavorazione", color: "bg-cyan-600/20 border-cyan-500/50 text-cyan-400", border: "border-l-4 border-l-cyan-500", hexDefault: "#0891b2" },
+      { id: "lavorato", label: "Lavorato", color: "bg-emerald-600/20 border-emerald-500/50 text-emerald-400", border: "border-l-4 border-l-emerald-500", hexDefault: "#059669" },
+      { id: "consegnato", label: "Consegnato", color: "bg-teal-600/20 border-teal-500/50 text-teal-400", border: "border-l-4 border-l-teal-500", hexDefault: "#0d9488" },
+      { id: "fatturato", label: "Fatturato", color: "bg-blue-600/20 border-blue-500/50 text-blue-400", border: "border-l-4 border-l-blue-500", hexDefault: "#2563eb" }
     ];
 
     let state = { cards: [] };
     let activeCardId = null;
     let db = null; 
+    let currentGalleryIndex = 0;
 
     function updateLiveClock() {
       const now = new Date();
       const timeStr = now.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-      const dateStr = now.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' });
+      const dateStr = now.toLocaleDateString('it-IT', { day: '2-digit', month: 'short' });
       
       const timeEl = document.getElementById('headerClockTime');
       const dateEl = document.getElementById('headerClockDate');
@@ -314,14 +319,11 @@
 
     function playSound(type) {
       try {
-        initAudio();
-        if (!audioCtx) return;
+        initAudio(); if (!audioCtx) return;
         const now = audioCtx.currentTime;
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
+        const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
         osc.frequency.setValueAtTime(type === 'success' ? 523 : 440, now);
-        gain.gain.setValueAtTime(0.1, now);
-        gain.gain.linearRampToValueAtTime(0.01, now + 0.1);
+        gain.gain.setValueAtTime(0.1, now); gain.gain.linearRampToValueAtTime(0.01, now + 0.1);
         osc.connect(gain); gain.connect(audioCtx.destination);
         osc.start(now); osc.stop(now + 0.1);
       } catch (e) {}
@@ -335,12 +337,9 @@
     }
 
     function handleLogin(event) {
-      event.preventDefault(); 
-      playSound('success');
+      event.preventDefault(); playSound('success');
       if (document.getElementById('loginPassword').value.trim() === SHARED_PASSWORD) {
-        localStorage.setItem('workflow_sga_auth', 'true');
-        document.getElementById('loginScreen').classList.add('hidden');
-        init();
+        localStorage.setItem('workflow_sga_auth', 'true'); document.getElementById('loginScreen').classList.add('hidden'); init();
       } else { document.getElementById('loginError').classList.remove('hidden'); }
     }
 
@@ -364,31 +363,26 @@
       } else {
         if (defaultIcon) defaultIcon.classList.remove('hidden');
         if (logoImg) logoImg.classList.add('hidden');
-        if (logoContainer) logoContainer.className = "relative group cursor-pointer bg-indigo-600 rounded-lg text-white shadow-lg flex items-center justify-center overflow-hidden shrink-0";
+        if (logoContainer) logoContainer.className = "relative group cursor-pointer bg-indigo-600 rounded-lg text-white shadow flex items-center justify-center overflow-hidden shrink-0";
         if (settingsBox) settingsBox.innerHTML = `<span class="text-[10px] text-slate-500">Nessun Logo</span>`;
       }
     }
 
     function uploadCompanyLogo(event) {
-      const file = event.target.files[0];
-      if (!file) return;
+      const file = event.target.files[0]; if (!file) return;
       const reader = new FileReader();
       reader.onload = function(e) {
         sharedCompanyLogo = e.target.result;
         localStorage.setItem('workflow_sga_company_logo', sharedCompanyLogo);
         loadCompanyLogo();
         if (db) db.collection('workflow_sga_settings').doc('config').set({ companyLogo: sharedCompanyLogo }, { merge: true }).catch(e => console.error(e));
-        alert("Logo caricato e condiviso con successo nel cloud!");
       };
-      reader.readAsDataURL(file);
-      event.target.value = '';
+      reader.readAsDataURL(file); event.target.value = '';
     }
 
     function removeCompanyLogo() {
       if (confirm("Rimuovere il logo?")) {
-        sharedCompanyLogo = "";
-        localStorage.removeItem('workflow_sga_company_logo');
-        loadCompanyLogo();
+        sharedCompanyLogo = ""; localStorage.removeItem('workflow_sga_company_logo'); loadCompanyLogo();
         if (db) db.collection('workflow_sga_settings').doc('config').set({ companyLogo: "" }, { merge: true }).catch(e => console.error(e));
       }
     }
@@ -396,13 +390,10 @@
     function loadUserSettings() {
       const localLogo = localStorage.getItem('workflow_sga_company_logo');
       if (localLogo) sharedCompanyLogo = localLogo;
-
       const savedMasterFont = localStorage.getItem('workflow_sga_master_fontsize_px');
       if (savedMasterFont) applyMasterFontSize(parseInt(savedMasterFont));
-
       const savedAppFont = localStorage.getItem('workflow_sga_app_fontsize_px');
       if (savedAppFont) applyAppFontSize(parseInt(savedAppFont));
-
       loadCompanyLogo();
     }
 
@@ -423,18 +414,15 @@
     function updateMasterSpeed(val) { masterScrollSpeed = parseFloat(val); }
 
     function saveSettings() {
-      localStorage.setItem('workflow_sga_master_fontsize_px', parseInt(document.documentElement.style.getPropertyValue('--master-font-size')) || 32);
+      localStorage.setItem('workflow_sga_master_fontsize_px', parseInt(document.documentElement.style.getPropertyValue('--master-font-size')) || 30);
       localStorage.setItem('workflow_sga_app_fontsize_px', parseInt(document.documentElement.style.getPropertyValue('--app-font-size')) || 15);
-      closeModal('settingsModal');
-      renderBoard();
-      alert("Impostazioni salvate!");
+      closeModal('settingsModal'); renderBoard(); alert("Impostazioni salvate!");
     }
 
     function resetDefaultSettings() {
       if (confirm("Ripristinare i predefiniti?")) {
-        applyMasterFontSize(32); applyAppFontSize(15);
-        localStorage.removeItem('workflow_sga_master_fontsize_px');
-        localStorage.removeItem('workflow_sga_app_fontsize_px');
+        applyMasterFontSize(30); applyAppFontSize(15);
+        localStorage.removeItem('workflow_sga_master_fontsize_px'); localStorage.removeItem('workflow_sga_app_fontsize_px');
         closeModal('settingsModal'); renderBoard();
       }
     }
@@ -442,197 +430,120 @@
     function toggleMasterMode() {
       isMasterMode = !isMasterMode;
       const body = document.body;
-      const board = document.getElementById('board');
       const backBtns = document.querySelectorAll('.master-back-btn');
-      
       if (isMasterMode) {
         body.classList.add('master-mode');
         backBtns.forEach(el => { el.classList.remove('hidden'); el.style.display = 'flex'; });
-        renderBoard();
-        startAutoScroll();
+        renderBoard(); startAutoScroll();
       } else {
         body.classList.remove('master-mode');
         backBtns.forEach(el => { el.classList.add('hidden'); el.style.display = 'none'; });
-        stopAutoScroll();
-        if(board) board.scrollLeft = 0;
-        renderBoard();
+        stopAutoScroll(); document.getElementById('board').scrollLeft = 0; renderBoard();
       }
     }
 
     function startAutoScroll() {
-      stopAutoScroll();
-      autoScrollDir = 1;
-      autoScrollPause = 0;
+      stopAutoScroll(); autoScrollDir = 1; autoScrollPause = 0;
       const board = document.getElementById('board');
-
       function step(timestamp) {
         if (!isMasterMode) return;
         if (!lastScrollTime) lastScrollTime = timestamp;
         const elapsed = timestamp - lastScrollTime;
-
         if (board) {
           const activeCols = board.querySelectorAll('.board-column');
           activeCols.forEach(col => {
             const dropzone = col.querySelector('.card-dropzone');
             if (dropzone && dropzone.scrollHeight > dropzone.clientHeight) {
               dropzone.scrollTop += (autoScrollDir * (masterScrollSpeed * 0.5));
-              if (dropzone.scrollTop >= (dropzone.scrollHeight - dropzone.clientHeight) || dropzone.scrollTop <= 0) {
-                autoScrollPause = 1500;
-              }
+              if (dropzone.scrollTop >= (dropzone.scrollHeight - dropzone.clientHeight) || dropzone.scrollTop <= 0) autoScrollPause = 1500;
             }
           });
-
           if (board.scrollWidth > board.clientWidth) {
-            if (autoScrollPause > 0) {
-              autoScrollPause -= elapsed;
-            } else {
-              const pxToScroll = elapsed * masterScrollSpeed;
-              board.scrollLeft += (pxToScroll * autoScrollDir);
-
-              if (autoScrollDir === 1 && board.scrollLeft >= (board.scrollWidth - board.clientWidth - 2)) {
-                autoScrollDir = -1;
-                autoScrollPause = 2500; 
-              } else if (autoScrollDir === -1 && board.scrollLeft <= 0) {
-                autoScrollDir = 1;
-                autoScrollPause = 2500;
-              }
+            if (autoScrollPause > 0) autoScrollPause -= elapsed;
+            else {
+              board.scrollLeft += (elapsed * masterScrollSpeed * autoScrollDir);
+              if (autoScrollDir === 1 && board.scrollLeft >= (board.scrollWidth - board.clientWidth - 2)) { autoScrollDir = -1; autoScrollPause = 2500; }
+              else if (autoScrollDir === -1 && board.scrollLeft <= 0) { autoScrollDir = 1; autoScrollPause = 2500; }
             }
           }
         }
-        lastScrollTime = timestamp;
-        autoScrollId = requestAnimationFrame(step);
+        lastScrollTime = timestamp; autoScrollId = requestAnimationFrame(step);
       }
       autoScrollId = requestAnimationFrame(step);
     }
-
-    function stopAutoScroll() {
-      if (autoScrollId) cancelAnimationFrame(autoScrollId);
-      autoScrollId = null;
-      lastScrollTime = 0;
-    }
+    function stopAutoScroll() { if (autoScrollId) cancelAnimationFrame(autoScrollId); autoScrollId = null; lastScrollTime = 0; }
 
     function initFirebase() {
-      const cfgStr = localStorage.getItem('workflow_sga_firebase_config');
-      if (!cfgStr) return;
+      const cfgStr = localStorage.getItem('workflow_sga_firebase_config'); if (!cfgStr) return;
       try {
         const config = JSON.parse(cfgStr);
         if (config.apiKey && config.projectId) {
-          if (!firebase.apps.length) {
-            firebase.initializeApp({ apiKey: config.apiKey, authDomain: `${config.projectId}.firebaseapp.com`, projectId: config.projectId });
-          }
+          if (!firebase.apps.length) firebase.initializeApp({ apiKey: config.apiKey, authDomain: `${config.projectId}.firebaseapp.com`, projectId: config.projectId });
           db = firebase.firestore();
           document.getElementById('cloudStatus').innerHTML = `<i data-lucide="wifi" class="w-3 h-3 text-emerald-500"></i> <span class="text-emerald-400 font-semibold">Cloud Attivo</span>`;
-          
           db.collection('workflow_sga_settings').doc('config').onSnapshot((doc) => {
-            if (doc.exists && doc.data().companyLogo) {
-              sharedCompanyLogo = doc.data().companyLogo;
-              localStorage.setItem('workflow_sga_company_logo', sharedCompanyLogo);
-              loadCompanyLogo();
-            }
+            if (doc.exists && doc.data().companyLogo) { sharedCompanyLogo = doc.data().companyLogo; localStorage.setItem('workflow_sga_company_logo', sharedCompanyLogo); loadCompanyLogo(); }
           });
-
           db.collection('workflow_sga_cards').onSnapshot((snapshot) => {
             snapshot.docChanges().forEach((change) => {
               const docData = change.doc.data();
               if (change.type === "added" || change.type === "modified") {
                 const idx = state.cards.findIndex(c => c.id === docData.id);
-                if (idx >= 0) state.cards[idx] = sanitizeCard(docData);
-                else state.cards.push(sanitizeCard(docData));
+                if (idx >= 0) state.cards[idx] = sanitizeCard(docData); else state.cards.push(sanitizeCard(docData));
               }
               if (change.type === "removed") state.cards = state.cards.filter(c => c.id !== docData.id);
             });
-            state.cards.sort((a,b) => (a.order || 0) - (b.order || 0));
-            saveLocal();
+            state.cards.sort((a,b) => (a.order || 0) - (b.order || 0)); saveLocal();
           });
         }
       } catch (e) {}
     }
 
     function saveFirebaseConfig() {
-      const apiKey = document.getElementById('cfgApiKey').value.trim();
-      const projectId = document.getElementById('cfgProjectId').value.trim();
+      const apiKey = document.getElementById('cfgApiKey').value.trim(); const projectId = document.getElementById('cfgProjectId').value.trim();
       if (!apiKey || !projectId) return alert("Inserisci API Key e Project ID");
-      localStorage.setItem('workflow_sga_firebase_config', JSON.stringify({ apiKey, projectId }));
-      location.reload();
+      localStorage.setItem('workflow_sga_firebase_config', JSON.stringify({ apiKey, projectId })); location.reload();
     }
-
-    function resetFirebaseConfig() {
-      localStorage.removeItem('workflow_sga_firebase_config');
-      location.reload();
-    }
-
-    function syncCardToCloud(card) {
-      if (db && card) db.collection('workflow_sga_cards').doc(card.id).set(card).catch(e => console.error(e));
-    }
-
-    function syncDeleteToCloud(cardId) {
-      if (db && cardId) db.collection('workflow_sga_cards').doc(cardId).delete().catch(e => console.error(e));
-    }
+    function resetFirebaseConfig() { localStorage.removeItem('workflow_sga_firebase_config'); location.reload(); }
+    function syncCardToCloud(card) { if (db && card) db.collection('workflow_sga_cards').doc(card.id).set(card).catch(e => console.error(e)); }
+    function syncDeleteToCloud(cardId) { if (db && cardId) db.collection('workflow_sga_cards').doc(cardId).delete().catch(e => console.error(e)); }
 
     function sanitizeCard(card) {
       if (!card) return null;
       if (!Array.isArray(card.photos)) card.photos = [];
-      if (!Array.isArray(card.history)) card.history = [];
       if (!Array.isArray(card.articles)) card.articles = [];
       return card;
     }
 
     function loadState() {
       const saved = localStorage.getItem('workflow_sga_state');
-      if (saved) {
-        try { state.cards = JSON.parse(saved).cards.map(c => sanitizeCard(c)); } catch(e) { state.cards = []; }
-      }
+      if (saved) { try { state.cards = JSON.parse(saved).cards.map(c => sanitizeCard(c)); } catch(e) { state.cards = []; } }
     }
-
-    function saveLocal() {
-      renderBoard();
-      try { localStorage.setItem('workflow_sga_state', JSON.stringify(state)); } catch(e){}
-    }
-
+    function saveLocal() { renderBoard(); try { localStorage.setItem('workflow_sga_state', JSON.stringify(state)); } catch(e){} }
     function exportBackup() {
       const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state));
       const downloadAnchorNode = document.createElement('a');
-      downloadAnchorNode.setAttribute("href", dataStr);
-      downloadAnchorNode.setAttribute("download", "workflow_sga_backup.json");
-      document.body.appendChild(downloadAnchorNode);
-      downloadAnchorNode.click();
-      downloadAnchorNode.remove();
+      downloadAnchorNode.setAttribute("href", dataStr); downloadAnchorNode.setAttribute("download", "workflow_sga_backup.json");
+      document.body.appendChild(downloadAnchorNode); downloadAnchorNode.click(); downloadAnchorNode.remove();
     }
-
     function importBackup(event) {
-      const file = event.target.files[0];
-      if (!file) return;
+      const file = event.target.files[0]; if (!file) return;
       const reader = new FileReader();
       reader.onload = function(e) {
         try {
           const imported = JSON.parse(e.target.result);
-          if (imported && Array.isArray(imported.cards)) {
-            state.cards = imported.cards.map(c => sanitizeCard(c));
-            saveLocal();
-            alert("Backup ripristinato!");
-          }
+          if (imported && Array.isArray(imported.cards)) { state.cards = imported.cards.map(c => sanitizeCard(c)); saveLocal(); alert("Backup ripristinato!"); }
         } catch(err) { alert("Errore file."); }
       };
       reader.readAsText(file);
     }
 
-    function init() {
-      loadUserSettings();
-      loadState();
-      renderBoard();
-      initFirebase();
-      lucide.createIcons();
-      updateLiveClock();
-    }
+    function init() { loadUserSettings(); loadState(); renderBoard(); initFirebase(); lucide.createIcons(); updateLiveClock(); }
 
     function renderBoard() {
-      const board = document.getElementById('board');
-      if (!board) return;
-      board.innerHTML = '';
+      const board = document.getElementById('board'); if (!board) return; board.innerHTML = '';
       let columnsToRender = COLUMNS_CONFIG;
-      if (isMasterMode) {
-        columnsToRender = COLUMNS_CONFIG.filter(col => state.cards.some(c => c && c.stage === col.id));
-      }
+      if (isMasterMode) columnsToRender = COLUMNS_CONFIG.filter(col => state.cards.some(c => c && c.stage === col.id));
 
       columnsToRender.forEach(col => {
         const colCards = state.cards.filter(c => c && c.stage === col.id);
@@ -643,9 +554,9 @@
         colEl.innerHTML = `
           <div class="p-3 border-b border-slate-800 ${col.color} ${col.border} flex justify-between items-center bg-opacity-30">
             <h3 class="font-bold uppercase tracking-wide truncate max-w-[80%]">${col.label}</h3>
-            <span class="font-semibold bg-slate-950/60 px-2 py-0.5 rounded-full">${colCards.length}</span>
+            <span class="font-semibold bg-slate-950/60 px-2 py-0.5 rounded-full shadow-inner">${colCards.length}</span>
           </div>
-          <div class="flex-1 overflow-y-auto p-2 space-y-2 card-dropzone" data-col="${col.id}" ondragover="allowDrop(event)" ondrop="handleDrop(event)">
+          <div class="flex-1 overflow-y-auto p-2.5 space-y-3 card-dropzone" data-col="${col.id}" ondragover="allowDrop(event)" ondrop="handleDrop(event)">
             ${colCards.map(card => createCardHTML(card)).join('')}
           </div>
         `;
@@ -654,93 +565,289 @@
       lucide.createIcons();
     }
 
+    function getJobTypeClass(type) {
+      switch (type) {
+        case 'Stampa Digitale / Banner': return 'bg-blue-900/50 text-blue-300 border border-blue-700';
+        case 'Abbigliamento / Ricamo': return 'bg-purple-900/50 text-purple-300 border border-purple-700';
+        case 'Insegne & Vetrofanie': return 'bg-amber-900/50 text-amber-300 border border-amber-700';
+        case 'Etichette & Adesivi': return 'bg-teal-900/50 text-teal-300 border border-teal-700';
+        case 'Grafica / Progettazione': return 'bg-rose-900/50 text-rose-300 border border-rose-700';
+        default: return 'bg-slate-800 text-slate-300 border border-slate-600';
+      }
+    }
+
+    function getContrastTextColor(hexColor) {
+      if (!hexColor) return '#f8fafc';
+      let c = hexColor.replace('#', '');
+      if (c.length === 3) c = c.split('').map(x => x + x).join('');
+      const r = parseInt(c.substr(0, 2), 16), g = parseInt(c.substr(2, 2), 16), b = parseInt(c.substr(4, 2), 16);
+      return ((r * 299 + g * 587 + b * 114) / 1000) >= 128 ? '#0f172a' : '#f8fafc';
+    }
+
     function createCardHTML(card) {
       if (!card) return '';
+      const badgeStyle = getJobTypeClass(card.jobType);
+      
+      let customCardStyle = '', customTextStyle = '', customSubTextStyle = 'text-slate-400', baseCardClass = 'bg-slate-900 border border-slate-800';
+      if (card.customColor && card.customColor !== '') {
+        const contrastColor = getContrastTextColor(card.customColor);
+        customCardStyle = `background-color: ${card.customColor}; border-color: ${card.customColor};`;
+        customTextStyle = `color: ${contrastColor};`;
+        baseCardClass = 'border shadow-md';
+        customSubTextStyle = contrastColor === '#0f172a' ? 'text-slate-800 font-medium' : 'text-slate-300';
+      }
+
+      const dateObj = card.createdAt ? new Date(card.createdAt) : new Date();
+      const createdAtStr = dateObj.toLocaleDateString('it-IT', {day: 'numeric', month: 'short'});
+
+      const deliveryHTML = card.deliveryDate 
+        ? `<div class="mt-2 text-emerald-400 font-bold show-only-master master-badge hidden items-center gap-2">
+             <i data-lucide="calendar" class="w-5 h-5"></i> Consegna: ${new Date(card.deliveryDate).toLocaleDateString('it-IT')}
+           </div>` : '';
+
+      const thumbnailHTML = card.photos && card.photos.length > 0 
+        ? `<div class="mt-3 flex gap-1.5 overflow-hidden h-12">
+             ${card.photos.map(p => `
+               <div class="w-12 h-12 shrink-0 overflow-hidden rounded bg-slate-800 flex items-center justify-center border border-slate-700">
+                 <img src="${p.image}" class="min-w-full min-h-full object-cover bg-white">
+               </div>`).join('')}
+           </div>` : '';
+
+      const cardIdShort = card.id ? card.id.slice(-4).toUpperCase() : '0000';
+
       return `
         <div draggable="true" ondragstart="handleDragStart(event)" id="card-${card.id}" data-id="${card.id}" onclick="${isMasterMode ? '' : `playSound('click'); openDetail('${card.id}')`}"
-             class="bg-slate-900 border border-slate-800 hover:border-indigo-500/50 p-3.5 rounded-lg shadow-md cursor-pointer transition-all space-y-2.5">
-          <div class="flex justify-between items-start gap-1">
-            <span class="px-2 py-0.5 rounded font-medium bg-slate-800 text-slate-300 text-xs">${card.jobType || 'Generico'}</span>
-            <span class="text-slate-500 text-xs">${card.createdAt ? new Date(card.createdAt).toLocaleDateString('it-IT') : ''}</span>
+             style="${customCardStyle}"
+             class="${baseCardClass} hover:border-indigo-500/50 p-4 rounded-xl shadow-lg cursor-pointer transition-all active:scale-95 flex flex-col group relative">
+             
+          <div class="flex justify-between items-start mb-2">
+            <span class="px-2 py-0.5 rounded text-[10px] md:text-xs font-bold uppercase tracking-wider master-badge ${badgeStyle}">${card.jobType || 'Generico'}</span>
+            <span style="${card.customColor ? customTextStyle : 'color: #94a3b8;'}" class="text-xs font-semibold hide-in-master">${createdAtStr}</span>
           </div>
-          <h4 class="font-bold leading-snug truncate text-slate-100">${card.title || 'Senza Titolo'}</h4>
-          ${card.client ? `<p class="truncate flex items-center gap-1.5 text-slate-400 text-xs"><i data-lucide="user" class="w-3.5 h-3.5"></i> ${card.client}</p>` : ''}
+          
+          <h4 class="font-extrabold text-lg md:text-xl leading-tight truncate transition-colors master-title mb-1.5" style="${card.customColor ? customTextStyle : 'color: #f8fafc;'}">${card.title || 'Senza Titolo'}</h4>
+          
+          ${card.client ? `<p class="truncate flex items-center gap-1.5 text-sm ${customSubTextStyle} font-medium"><i data-lucide="user" class="w-4 h-4"></i> ${card.client}</p>` : ''}
+          
+          ${deliveryHTML}
+          
+          <div class="hide-in-master">
+            ${thumbnailHTML}
+          </div>
+          
+          <div class="pt-3 mt-3 flex justify-between items-center hide-in-master" style="${card.customColor ? 'border-top: 1px solid rgba(0,0,0,0.15);' : 'border-top: 1px solid #334155;'}" onclick="event.stopPropagation()">
+            <div class="flex items-center gap-1">
+              <span class="font-mono text-[11px] font-bold" style="${card.customColor ? customTextStyle : 'color: #64748b;'}">#${cardIdShort}</span>
+              <div class="flex items-center bg-black/30 rounded ml-2 shadow-inner">
+                <button onclick="moveCardVertical('${card.id}', -1)" class="p-1 hover:bg-black/50 rounded cursor-pointer transition-colors" title="Sposta su" style="${card.customColor ? customTextStyle : 'color: #cbd5e1;'}"><i data-lucide="chevron-up" class="w-4 h-4"></i></button>
+                <button onclick="moveCardVertical('${card.id}', 1)" class="p-1 hover:bg-black/50 rounded cursor-pointer transition-colors" title="Sposta giù" style="${card.customColor ? customTextStyle : 'color: #cbd5e1;'}"><i data-lucide="chevron-down" class="w-4 h-4"></i></button>
+              </div>
+            </div>
+            <div class="flex gap-2">
+              <button onclick="moveCardStep('${card.id}', -1)" class="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors cursor-pointer shadow-sm" title="Indietro"><i data-lucide="chevron-left" class="w-4 h-4"></i></button>
+              <button onclick="moveCardStep('${card.id}', 1)" class="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors cursor-pointer shadow-sm" title="Avanti"><i data-lucide="chevron-right" class="w-4 h-4"></i></button>
+            </div>
+          </div>
         </div>
       `;
     }
 
+    function moveCardVertical(cardId, direction) {
+      playSound('click'); const card = state.cards.find(c => c.id === cardId); if (!card) return;
+      const colCards = state.cards.filter(c => c.stage === card.stage); colCards.sort((a, b) => (a.order || 0) - (b.order || 0));
+      const idx = colCards.findIndex(c => c.id === cardId); const tgt = idx + direction;
+      if (tgt >= 0 && tgt < colCards.length) {
+        const tmp = colCards[idx].order; colCards[idx].order = colCards[tgt].order; colCards[tgt].order = tmp;
+        if (colCards[idx].order === colCards[tgt].order) { colCards[idx].order = tgt; colCards[tgt].order = idx; }
+        saveLocal(); syncCardToCloud(colCards[idx]); syncCardToCloud(colCards[tgt]);
+      }
+    }
+
+    function moveCardStep(cardId, direction) {
+      const card = state.cards.find(c => c.id === cardId); if (!card) return;
+      const curIdx = COLUMNS_CONFIG.findIndex(col => col.id === card.stage);
+      const tgtIdx = curIdx + direction;
+      if (tgtIdx >= 0 && tgtIdx < COLUMNS_CONFIG.length) {
+        playSound('click'); card.stage = COLUMNS_CONFIG[tgtIdx].id; card.order = Date.now();
+        saveLocal(); syncCardToCloud(card);
+      }
+    }
+
     function openDetail(id) {
       if (isMasterMode) return;
-      const card = state.cards.find(c => c.id === id);
-      if (!card) return;
-      activeCardId = id;
+      const card = state.cards.find(c => c.id === id); if (!card) return; activeCardId = id;
+      const col = COLUMNS_CONFIG.find(c => c.id === card.stage);
+      document.getElementById('detailBadge').innerText = col ? col.label : 'N/A';
+      document.getElementById('detailBadge').className = `px-2 py-0.5 rounded text-[11px] font-bold text-white uppercase ${col ? col.color.split(' ')[0] : 'bg-slate-700'}`;
+      
       document.getElementById('editTitle').value = card.title || '';
       document.getElementById('editClient').value = card.client || '';
       document.getElementById('editDeliveryDate').value = card.deliveryDate || '';
       document.getElementById('editJobType').value = card.jobType || 'Altro';
-      renderArticlesTable(card);
-      renderAttachments(card);
-      openModal('detailModal');
+      document.getElementById('editCardColor').value = card.customColor || (col ? col.hexDefault : '#4f46e5');
+      
+      renderArticlesTable(card); renderAttachments(card); openModal('detailModal');
     }
 
     function saveCardEdits() {
-      const card = state.cards.find(c => c.id === activeCardId);
-      if (!card) return;
+      const card = state.cards.find(c => c.id === activeCardId); if (!card) return;
       card.title = document.getElementById('editTitle').value.trim();
       card.client = document.getElementById('editClient').value.trim();
       card.deliveryDate = document.getElementById('editDeliveryDate').value;
       card.jobType = document.getElementById('editJobType').value;
+      card.customColor = document.getElementById('editCardColor').value;
+      saveLocal(); syncCardToCloud(card); playSound('success'); alert("Aggiornato!");
+    }
+
+    function resetCardCustomColor() {
+      const card = state.cards.find(c => c.id === activeCardId); if (!card) return;
+      card.customColor = ""; const col = COLUMNS_CONFIG.find(c => c.id === card.stage);
+      document.getElementById('editCardColor').value = col ? col.hexDefault : '#4f46e5';
       saveLocal(); syncCardToCloud(card);
-      playSound('success'); alert("Aggiornato!");
     }
 
     function renderArticlesTable(card) {
-      const tbody = document.getElementById('articlesTableBody');
-      tbody.innerHTML = '';
+      const tbody = document.getElementById('articlesTableBody'); tbody.innerHTML = '';
       if (!card.articles || card.articles.length === 0) card.articles = [{ code: '', desc: '', qty: 1, price: 0, tax: 22 }];
+      let grandSubtotal = 0, grandTax = 0, grandTotalTaxed = 0;
+
       card.articles.forEach((art, idx) => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `<td class="py-1.5 px-2"><input type="text" value="${art.code || ''}" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs"></td><td class="py-1.5 px-2"><input type="text" value="${art.desc || ''}" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs"></td>`;
+        const qty = parseFloat(art.qty) || 0, price = parseFloat(art.price) || 0, taxRate = parseFloat(art.tax) || 22;
+        const sub = qty * price, taxAmt = sub * (taxRate / 100), rowTotalTaxed = sub + taxAmt;
+        grandSubtotal += sub; grandTax += taxAmt; grandTotalTaxed += rowTotalTaxed;
+
+        const tr = document.createElement('tr'); tr.className = "hover:bg-slate-900/50";
+        tr.innerHTML = `
+          <td class="py-1.5 px-1 text-center align-middle">
+            <div class="flex items-center justify-center gap-0.5 bg-slate-900 rounded p-0.5 border border-slate-800">
+              <button onclick="moveArticleRowVertical(${idx}, -1)" class="hover:bg-slate-800 text-slate-300 px-1 rounded cursor-pointer">▲</button>
+              <button onclick="moveArticleRowVertical(${idx}, 1)" class="hover:bg-slate-800 text-slate-300 px-1 rounded cursor-pointer">▼</button>
+            </div>
+          </td>
+          <td class="py-1.5 px-1"><input type="text" value="${art.code || ''}" data-field="code" data-index="${idx}" oninput="updateArticleField(this)" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs font-mono focus:outline-none"></td>
+          <td class="py-1.5 px-1"><input type="text" value="${art.desc || ''}" data-field="desc" data-index="${idx}" oninput="updateArticleField(this)" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs focus:outline-none"></td>
+          <td class="py-1.5 px-1"><input type="number" step="any" value="${art.qty !== undefined ? art.qty : ''}" data-field="qty" data-index="${idx}" oninput="updateArticleField(this)" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-center focus:outline-none"></td>
+          <td class="py-1.5 px-1"><input type="number" step="any" value="${art.price !== undefined ? art.price : ''}" data-field="price" data-index="${idx}" oninput="updateArticleField(this)" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-right focus:outline-none"></td>
+          <td class="py-1.5 px-1"><input type="number" step="any" value="${art.tax !== undefined ? art.tax : 22}" data-field="tax" data-index="${idx}" oninput="updateArticleField(this)" class="w-full bg-slate-900 border border-slate-700 rounded px-1 py-1.5 text-xs text-center focus:outline-none"></td>
+          <td class="py-1.5 px-1 text-right font-mono text-slate-300 align-middle">€ ${(sub).toFixed(2)}</td>
+          <td class="py-1.5 px-1 text-right font-mono text-slate-300 align-middle">€ ${(price * (1 + taxRate/100)).toFixed(2)}</td>
+          <td class="py-1.5 px-2 text-right font-mono font-bold text-slate-300 align-middle">€ ${(rowTotalTaxed).toFixed(2)}</td>
+          <td class="py-1.5 px-1 text-center align-middle"><button onclick="playSound('delete'); removeArticleRow(${idx})" class="text-red-400 hover:text-red-300 p-1 cursor-pointer"><i data-lucide="trash-2" class="w-4 h-4"></i></button></td>
+        `;
         tbody.appendChild(tr);
       });
+      document.getElementById('grandSubtotalDisplay').innerText = `€ ${grandSubtotal.toFixed(2)}`;
+      document.getElementById('grandTaxDisplay').innerText = `€ ${grandTax.toFixed(2)}`;
+      document.getElementById('grandTotalDisplay').innerText = `€ ${grandTotalTaxed.toFixed(2)}`;
+      lucide.createIcons();
     }
 
-    function renderAttachments(card) {}
-    function addArticleRow() {}
-    function saveArticlesEdits() {}
-    function handleDocumentUpload(e) {}
-    function deleteCurrentCard() {
-      if (confirm("Eliminare?")) {
-        state.cards = state.cards.filter(c => c.id !== activeCardId);
-        saveLocal(); syncDeleteToCloud(activeCardId); closeModal('detailModal');
+    function updateArticleField(input) {
+      const idx = parseInt(input.dataset.index), field = input.dataset.field;
+      const card = state.cards.find(c => c.id === activeCardId);
+      if (!card || !card.articles[idx]) return;
+      card.articles[idx][field] = input.value;
+      if (['qty', 'price', 'tax'].includes(field)) renderArticlesTable(card);
+    }
+    function moveArticleRowVertical(idx, direction) {
+      const card = state.cards.find(c => c.id === activeCardId); if (!card || !card.articles) return;
+      const tgt = idx + direction;
+      if (tgt >= 0 && tgt < card.articles.length) {
+        const tmp = card.articles[idx]; card.articles[idx] = card.articles[tgt]; card.articles[tgt] = tmp;
+        renderArticlesTable(card); saveLocal(); syncCardToCloud(card);
       }
     }
-    function printCard() {}
+    function addArticleRow() {
+      const card = state.cards.find(c => c.id === activeCardId); if (!card) return;
+      if (!Array.isArray(card.articles)) card.articles = [];
+      card.articles.push({ code: '', desc: '', qty: 1, price: 0, tax: 22 }); renderArticlesTable(card);
+    }
+    function removeArticleRow(idx) {
+      const card = state.cards.find(c => c.id === activeCardId); if (!card) return;
+      card.articles.splice(idx, 1); renderArticlesTable(card);
+    }
+    function saveArticlesEdits() {
+      const card = state.cards.find(c => c.id === activeCardId); if (!card) return;
+      saveLocal(); syncCardToCloud(card); playSound('success'); alert("Articoli salvati.");
+    }
+
+    function renderAttachments(card) {
+      const container = document.getElementById('attachmentsContainer'); container.innerHTML = '';
+      if (card.photos && card.photos.length > 0) {
+        card.photos.forEach((photoObj, index) => {
+          const thumb = document.createElement('div');
+          thumb.className = "relative group w-full h-24 bg-slate-900 rounded border border-slate-700 overflow-hidden flex items-center justify-center cursor-pointer";
+          thumb.innerHTML = `<img src="${photoObj.image}" onclick="playSound('click'); openGallery(${index})" class="min-w-full min-h-full object-cover bg-white"><button onclick="playSound('delete'); removePhoto(event, ${index})" class="absolute top-1 right-1 bg-red-600 hover:bg-red-500 text-white p-1.5 rounded shadow active:scale-90 opacity-0 group-hover:opacity-100 cursor-pointer"><i data-lucide="trash-2" class="w-4 h-4"></i></button>`;
+          container.appendChild(thumb);
+        });
+        lucide.createIcons();
+      } else {
+        container.innerHTML = `<div class="col-span-2 md:col-span-4 flex flex-col items-center justify-center py-6 text-slate-500 border border-dashed border-slate-800 rounded-lg bg-slate-950/50"><i data-lucide="file-question" class="w-6 h-6 mb-2 opacity-50"></i><span class="text-xs italic">Nessun allegato</span></div>`;
+      }
+    }
+
+    function handleDocumentUpload(event) {
+      const files = Array.from(event.target.files); if (!files || files.length === 0) return;
+      const card = state.cards.find(c => c.id === activeCardId); if (!card) return;
+      if (!card.photos) card.photos = [];
+      files.forEach(file => {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          card.photos.push({ image: e.target.result, rotation: 0 });
+          saveLocal(); renderAttachments(card); syncCardToCloud(card);
+        };
+        reader.readAsDataURL(file);
+      });
+      event.target.value = ''; playSound('success');
+    }
+
+    function removePhoto(event, index) {
+      event.stopPropagation(); const card = state.cards.find(c => c.id === activeCardId);
+      if (card && card.photos && confirm("Eliminare questo allegato?")) {
+        card.photos.splice(index, 1); saveLocal(); renderAttachments(card); syncCardToCloud(card);
+      }
+    }
+
+    function openGallery(index) { currentGalleryIndex = index; updateGalleryView(); openModal('galleryModal'); }
+    function closeGallery() { closeModal('galleryModal'); }
+    function updateGalleryView() {
+      const card = state.cards.find(c => c.id === activeCardId); if (!card || !card.photos) return closeGallery();
+      document.getElementById('galleryImage').src = card.photos[currentGalleryIndex].image;
+      document.getElementById('galleryCounter').innerText = `${currentGalleryIndex + 1} / ${card.photos.length}`;
+      document.getElementById('btnPrevGallery').style.display = currentGalleryIndex === 0 ? 'none' : 'block';
+      document.getElementById('btnNextGallery').style.display = currentGalleryIndex === card.photos.length - 1 ? 'none' : 'block';
+    }
+    function prevGalleryImage() { if (currentGalleryIndex > 0) { currentGalleryIndex--; updateGalleryView(); } }
+    function nextGalleryImage() { const card = state.cards.find(c => c.id === activeCardId); if (card && currentGalleryIndex < card.photos.length - 1) { currentGalleryIndex++; updateGalleryView(); } }
+    function rotateGalleryImage() { /* implementation optional if needed */ }
+
+    function deleteCurrentCard() {
+      if (confirm("Eliminare definitivamente questa commessa?")) {
+        state.cards = state.cards.filter(c => c.id !== activeCardId); saveLocal(); syncDeleteToCloud(activeCardId); closeModal('detailModal');
+      }
+    }
+    function printCard() {
+      const card = state.cards.find(c => c.id === activeCardId); if (!card) return;
+      const printWindow = window.open('', '_blank');
+      printWindow.document.write(`<html><head><title>Commessa</title></head><body style="font-family:sans-serif;"><h2>${card.title}</h2><p>Cliente: ${card.client}</p><script>window.print();<\/script></body></html>`);
+      printWindow.document.close();
+    }
 
     function createNewCard(e) {
-      e.preventDefault();
-      const title = document.getElementById('formTitle').value.trim();
-      if (!title) return;
+      e.preventDefault(); const title = document.getElementById('formTitle').value.trim(); if (!title) return;
       const newCard = {
-        id: 'c' + Date.now().toString(36),
-        title, client: document.getElementById('formClient').value.trim(),
-        jobType: document.getElementById('formJobType').value,
-        deliveryDate: document.getElementById('formDeliveryDate').value,
-        stage: document.getElementById('formInitialStage').value,
-        order: Date.now(), createdAt: new Date().toISOString(), articles: [], photos: [], history: []
+        id: 'c' + Date.now().toString(36), title, client: document.getElementById('formClient').value.trim(),
+        jobType: document.getElementById('formJobType').value, deliveryDate: document.getElementById('formDeliveryDate').value,
+        stage: document.getElementById('formInitialStage').value, order: Date.now(), createdAt: new Date().toISOString(), articles: [], photos: []
       };
-      state.cards.unshift(newCard);
-      saveLocal(); syncCardToCloud(newCard);
-      document.getElementById('newCardForm').reset();
-      closeModal('addCardModal');
+      state.cards.unshift(newCard); saveLocal(); syncCardToCloud(newCard);
+      document.getElementById('newCardForm').reset(); closeModal('addCardModal'); playSound('success');
     }
 
     function allowDrop(ev) { ev.preventDefault(); }
     function handleDragStart(ev) { ev.dataTransfer.setData("text/plain", ev.target.dataset.id); }
     function handleDrop(ev) {
-      ev.preventDefault();
-      const cardId = ev.dataTransfer.getData("text");
-      const targetColId = ev.currentTarget.dataset.col;
+      ev.preventDefault(); const cardId = ev.dataTransfer.getData("text"); const targetColId = ev.currentTarget.dataset.col;
       if (cardId && targetColId) {
         const card = state.cards.find(c => c.id === cardId);
         if (card) { card.stage = targetColId; saveLocal(); syncCardToCloud(card); }
