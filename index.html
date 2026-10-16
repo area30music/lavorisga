@@ -866,7 +866,23 @@
       if (localLogo) sharedCompanyLogo = localLogo;
 
       const savedCols = localStorage.getItem('workflow_sga_columns_config');
-      if (savedCols) { try { COLUMNS_CONFIG = JSON.parse(savedCols); } catch(e){} }
+      if (savedCols) {
+        try { 
+          const parsedCols = JSON.parse(savedCols);
+          // Controllo di compatibilità: se contiene ancora "accettato-mod", "lavorato" o "consegnato", forziamo la nuova struttura
+          const hasOldCols = parsedCols.some(c => c.id === 'accettato-mod' || c.id === 'lavorato' || c.id === 'consegnato');
+          if (hasOldCols) {
+            COLUMNS_CONFIG = JSON.parse(JSON.stringify(DEFAULT_COLUMNS_CONFIG));
+            localStorage.setItem('workflow_sga_columns_config', JSON.stringify(COLUMNS_CONFIG));
+          } else {
+            COLUMNS_CONFIG = parsedCols;
+          }
+        } catch(e) {
+          COLUMNS_CONFIG = JSON.parse(JSON.stringify(DEFAULT_COLUMNS_CONFIG));
+        }
+      } else {
+        COLUMNS_CONFIG = JSON.parse(JSON.stringify(DEFAULT_COLUMNS_CONFIG));
+      }
 
       const savedAlarms = localStorage.getItem('workflow_sga_alarms');
       if (savedAlarms) {
@@ -1449,6 +1465,12 @@
       } else {
         card.articles = card.articles.map(art => { if (art.tax === undefined) art.tax = 22; return art; });
       }
+      
+      // Mappatura di sicurezza automatica per vecchie commesse con ID fasi rimossi/rinominati
+      if (card.stage === 'accettato-mod') card.stage = 'da-ordinare';
+      if (card.stage === 'lavorato') card.stage = 'lavorato-da-bollettare';
+      if (card.stage === 'consegnato') card.stage = 'bollettato-da-consegnare';
+
       return card;
     }
 
