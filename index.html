@@ -145,26 +145,32 @@
         <i data-lucide="arrow-left" class="w-5 h-5"></i> Torna a Programmazione
       </button>
 
-      <div>
+      <!-- NEW: CONTROLLI SCORRIMENTO MASTER VIEW (Play/Pausa e Velocità) -->
+      <div class="show-in-master hidden items-center gap-2 ml-2">
+        <!-- Tasto Play/Pausa -->
+        <button id="masterPlayPauseBtn" onclick="togglePlayPauseMaster(); playSound('click');" class="bg-slate-800 hover:bg-slate-700 text-white px-3 py-2 rounded-lg text-xs md:text-sm font-bold flex items-center gap-1.5 border border-slate-700 shadow-lg cursor-pointer transition-colors" title="Play/Pausa Scorrimento">
+            <i data-lucide="pause" id="masterPlayPauseIcon" class="w-4 h-4 text-amber-400"></i> <span id="masterPlayPauseText">Pausa</span>
+        </button>
+        <!-- Slider Velocità -->
+        <div class="flex items-center gap-2 bg-slate-950 border border-indigo-500/40 px-3 py-1.5 rounded-xl shadow-lg h-[38px]">
+          <i data-lucide="gauge" class="w-4 h-4 text-indigo-400"></i>
+          <span class="text-xs text-slate-300 font-semibold hidden md:inline">Velocità:</span>
+          <input type="range" id="masterSpeedRange" min="0.02" max="0.30" value="0.08" step="0.01" oninput="updateMasterSpeed(this.value)" class="w-20 md:w-28 accent-indigo-500 cursor-pointer h-1.5 bg-slate-900 rounded-lg">
+        </div>
+      </div>
+
+      <div class="hide-in-master">
         <h1 class="font-bold text-sm md:text-base leading-tight text-white flex items-center gap-2">
           Workflow SGA
-          <span class="show-in-master hidden bg-emerald-600/20 border border-emerald-500/50 text-emerald-400 px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider animate-pulse">Monitor Attivo</span>
         </h1>
-        <p id="cloudStatus" onclick="if(!isMasterMode) { playSound('click'); openModal('cloudModal'); }" class="text-[11px] flex items-center gap-1 cursor-pointer transition-colors mt-0.5" title="Clicca per impostazioni Cloud">
+        <p id="cloudStatus" onclick="playSound('click'); openModal('cloudModal');" class="text-[11px] flex items-center gap-1 cursor-pointer transition-colors mt-0.5" title="Clicca per impostazioni Cloud">
           <i data-lucide="hard-drive" class="w-3 h-3 text-slate-400"></i> <span class="text-slate-400 hover:text-slate-200">Modalità Locale</span>
         </p>
       </div>
     </div>
     
     <div class="flex space-x-2 md:space-x-3 items-center flex-wrap">
-      <!-- CONTROLLO VELOCITA' MASTER VIEW (VISIBILE SOLO IN MASTER) -->
-      <div class="show-in-master hidden items-center gap-2 bg-slate-950 border border-indigo-500/40 px-3 py-1.5 rounded-xl shadow-lg">
-        <i data-lucide="gauge" class="w-4 h-4 text-indigo-400"></i>
-        <span class="text-xs text-slate-300 font-semibold">Velocità:</span>
-        <input type="range" id="masterSpeedRange" min="0.02" max="0.25" value="0.08" step="0.01" oninput="updateMasterSpeed(this.value)" class="w-20 md:w-28 accent-indigo-500 cursor-pointer h-1.5 bg-slate-900 rounded-lg">
-      </div>
-
-      <!-- WIDGET DATA E ORA (INGRANDITO E OTTIMIZZATO ANCHE PER IPAD) -->
+      <!-- WIDGET DATA E ORA -->
       <div id="liveClockWidget" class="flex items-center gap-2 bg-slate-950 border border-slate-700 px-3 md:px-4 py-1.5 rounded-xl text-sm md:text-base font-mono text-emerald-400 font-bold shadow-lg">
         <i data-lucide="clock" class="w-4 h-4 md:w-5 md:h-5 text-indigo-400 animate-pulse"></i>
         <span id="headerClockTime" class="tracking-wider">--:--:--</span>
@@ -599,6 +605,7 @@
     let autoScrollDir = 1;
     let autoScrollPause = 0;
     let lastScrollTime = 0;
+    let isAutoScrollPaused = false; // FLAG PER PLAY/PAUSA DELLA MASTER VIEW
     let arcadeTimer = null;
     let sirenInterval = null;
     let masterScrollSpeed = 0.08; // Velocità personalizzabile via slider
@@ -1093,6 +1100,21 @@
       if (arcadeTimer) { clearTimeout(arcadeTimer); arcadeTimer = null; }
     }
 
+    // --- PLAY/PAUSA MASTER VIEW LOGIC ---
+    function togglePlayPauseMaster() {
+        isAutoScrollPaused = !isAutoScrollPaused;
+        const icon = document.getElementById('masterPlayPauseIcon');
+        const text = document.getElementById('masterPlayPauseText');
+        if (isAutoScrollPaused) {
+            if(icon) { icon.setAttribute('data-lucide', 'play'); icon.classList.replace('text-amber-400', 'text-emerald-400'); }
+            if(text) text.innerText = 'Play';
+        } else {
+            if(icon) { icon.setAttribute('data-lucide', 'pause'); icon.classList.replace('text-emerald-400', 'text-amber-400'); }
+            if(text) text.innerText = 'Pausa';
+        }
+        lucide.createIcons();
+    }
+
     // --- MASTER VIEW CON SCORRIMENTO VERTICALE AUTOMATICO (PAUSA PER SCHEDE LUNGHE) ---
     function toggleMasterMode() {
       isMasterMode = !isMasterMode;
@@ -1103,6 +1125,14 @@
       if (isMasterMode) {
         body.classList.add('master-mode');
         backBtns.forEach(el => { el.classList.remove('hidden'); el.style.display = 'flex'; });
+        
+        // Reset pulsante Play/Pausa
+        isAutoScrollPaused = false;
+        const icon = document.getElementById('masterPlayPauseIcon');
+        const text = document.getElementById('masterPlayPauseText');
+        if(icon) { icon.setAttribute('data-lucide', 'pause'); icon.className = 'w-4 h-4 text-amber-400'; }
+        if(text) text.innerText = 'Pausa';
+
         renderBoard();
         startAutoScroll();
       } else {
@@ -1124,6 +1154,13 @@
         if (!isMasterMode) return;
         if (!lastScrollTime) lastScrollTime = timestamp;
         const elapsed = timestamp - lastScrollTime;
+
+        // Se lo scorrimento è in pausa dall'utente, aggiorno solo il tempo e skippo la logica di movimento
+        if (isAutoScrollPaused) {
+            lastScrollTime = timestamp;
+            autoScrollId = requestAnimationFrame(step);
+            return;
+        }
 
         if (board) {
           // Controllo scorrimento verticale automatico delle colonne lunghe
