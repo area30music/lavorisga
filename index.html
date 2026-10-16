@@ -150,7 +150,7 @@
         <i data-lucide="arrow-left" class="w-5 h-5"></i> Torna a Programmazione
       </button>
 
-      <!-- CONTROLLI SCORRIMENTO MASTER VIEW (Play/Pausa e Velocità) -->
+      <!-- CONTROLLI SCORRIMENTO MASTER VIEW -->
       <div class="show-in-master hidden items-center gap-2 ml-2">
         <button id="masterPlayPauseBtn" onclick="togglePlayPauseMaster(); playSound('click');" class="bg-slate-800 hover:bg-slate-700 text-white px-3 py-2 rounded-lg text-xs md:text-sm font-bold flex items-center gap-1.5 border border-slate-700 shadow-lg cursor-pointer transition-colors" title="Play/Pausa Scorrimento">
             <i data-lucide="pause" id="masterPlayPauseIcon" class="w-4 h-4 text-amber-400"></i> <span id="masterPlayPauseText">Pausa</span>
@@ -226,7 +226,7 @@
       <div class="p-5 overflow-y-auto space-y-6 flex-1 text-sm">
         <div class="bg-slate-950 p-4 rounded-lg border border-slate-800 space-y-3">
           <h4 class="text-xs font-bold text-indigo-400 uppercase tracking-wider">Logo Aziendale Condiviso (Database)</h4>
-          <p class="text-xs text-slate-400">Carica il logo in PNG trasparente: verrà salvato nel database Cloud e sarà visibile automaticamente su tutti i dispositivi (iPad, PC, ecc.).</p>
+          <p class="text-xs text-slate-400">Carica il logo in PNG trasparente: verrà salvato nel database Cloud e sarà visibile automaticamente su tutti i dispositivi.</p>
           <div class="flex items-center gap-4">
             <div id="settingsLogoPreviewBox" class="w-28 h-12 bg-slate-900 border border-slate-700 rounded flex items-center justify-center overflow-hidden">
               <span class="text-[10px] text-slate-500">Nessun Logo</span>
@@ -246,11 +246,11 @@
         <div class="bg-slate-950 p-4 rounded-lg border border-slate-800 space-y-3">
           <div class="flex justify-between items-center">
             <h4 class="text-xs font-bold text-indigo-400 uppercase tracking-wider flex items-center gap-1.5">
-              <i data-lucide="type" class="w-4 h-4"></i> Zoom Carattere Programmazione (Interfaccia)
+              <i data-lucide="type" class="w-4 h-4"></i> Zoom Carattere Programmazione
             </h4>
             <span id="appFontSizeVal" class="font-mono text-indigo-400 font-bold text-sm bg-slate-900 px-3 py-1 rounded border border-slate-800">15px</span>
           </div>
-          <p class="text-xs text-slate-400">Regola la dimensione in pixel dei caratteri per la schermata di programmazione (ottimale per iPad Air 2 o schermi touch).</p>
+          <p class="text-xs text-slate-400">Regola la dimensione in pixel dei caratteri per la schermata principale.</p>
           <div class="flex items-center gap-4 pt-1">
             <input type="range" id="appFontRange" min="12" max="24" value="15" step="1" oninput="previewAppFontSize(this.value)" class="w-full accent-indigo-500 cursor-pointer h-2 bg-slate-900 rounded-lg">
             <button onclick="resetAppFont()" class="text-xs bg-slate-900 hover:bg-slate-800 text-slate-300 px-3 py-1.5 rounded border border-slate-700 cursor-pointer shrink-0">Default (15px)</button>
@@ -260,7 +260,7 @@
         <div class="bg-slate-950 p-4 rounded-lg border border-slate-800 space-y-3">
           <div class="flex justify-between items-center">
             <h4 class="text-xs font-bold text-indigo-400 uppercase tracking-wider flex items-center gap-1.5">
-              <i data-lucide="monitor" class="w-4 h-4"></i> Zoom Carattere Master View (Proiettore)
+              <i data-lucide="monitor" class="w-4 h-4"></i> Zoom Carattere Master View
             </h4>
             <span id="masterFontSizeVal" class="font-mono text-emerald-400 font-bold text-sm bg-slate-900 px-3 py-1 rounded border border-slate-800">24px</span>
           </div>
@@ -277,7 +277,7 @@
               <h4 class="text-xs font-bold text-indigo-400 uppercase tracking-wider flex items-center gap-1.5">
                 <i data-lucide="alarm-clock" class="w-4 h-4"></i> Gestione Sveglie Alert Scadenze
               </h4>
-              <p class="text-xs text-slate-400 mt-0.5">Crea più sveglie, imposta l'orario e seleziona i giorni della settimana in stile iPhone.</p>
+              <p class="text-xs text-slate-400 mt-0.5">Crea più sveglie per visualizzare l'avviso delle scadenze.</p>
             </div>
             <button onclick="playSound('click'); addAlarmRule();" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs px-3 py-1.5 rounded font-semibold flex items-center gap-1 cursor-pointer transition-colors shadow">
               <i data-lucide="plus" class="w-3.5 h-3.5"></i> Aggiungi Sveglia
@@ -413,7 +413,7 @@
 
         <div>
           <div class="flex justify-between items-center mb-2">
-            <label class="text-xs text-slate-400 font-semibold uppercase tracking-wider block">Foto & Documenti PDF (Auto-compilazione da Aruba)</label>
+            <label class="text-xs text-slate-400 font-semibold uppercase tracking-wider block">Foto & Documenti PDF</label>
             <label id="uploadLabelBtn" class="bg-slate-800 hover:bg-slate-700 text-xs px-3 py-1.5 rounded-lg cursor-pointer flex items-center gap-1.5 text-slate-200 transition-colors">
               <span id="uploadLabelIcon"><i data-lucide="paperclip" class="w-3.5 h-3.5"></i></span>
               <span id="uploadLabelText">Allega Foto / PDF</span>
@@ -508,7 +508,6 @@
 
         <div class="bg-slate-950 p-3 rounded-lg border border-slate-800 space-y-2">
           <label class="block text-xs font-bold uppercase tracking-wider text-indigo-400">Allega Preventivo PDF o Foto Iniziale</label>
-          <p class="text-[10px] text-slate-400 leading-tight">Se alleghi il preventivo PDF Aruba, gli articoli verranno letti e compilati automaticamente.</p>
           <label class="w-full bg-slate-900 hover:bg-slate-800 border border-dashed border-slate-700 rounded-lg p-3 flex items-center justify-center gap-2 cursor-pointer text-xs text-slate-300 transition-colors">
             <i data-lucide="paperclip" class="w-4 h-4 text-indigo-400"></i>
             <span id="formFileLabel">Seleziona PDF o Foto (Opzionale)</span>
@@ -538,16 +537,15 @@
       
       <div class="space-y-4 text-sm">
         <div class="bg-slate-950 p-3 rounded-lg border border-slate-800">
-          <h4 class="text-xs font-bold text-indigo-400 mb-2 uppercase tracking-wider">1. Firebase (Sincronizzazione Testi & Logo)</h4>
+          <h4 class="text-xs font-bold text-indigo-400 mb-2 uppercase tracking-wider">1. Firebase</h4>
           <div class="space-y-2">
-            <input type="text" id="cfgApiKey" placeholder="API Key Firebase (Es. AIzaSy...)" class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-slate-200 focus:outline-none focus:border-indigo-500 font-mono text-xs">
-            <input type="text" id="cfgProjectId" placeholder="Project ID (Es. workflow-sga-123)" class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-slate-200 focus:outline-none focus:border-indigo-500 font-mono text-xs">
+            <input type="text" id="cfgApiKey" placeholder="API Key Firebase" class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-slate-200 focus:outline-none focus:border-indigo-500 font-mono text-xs">
+            <input type="text" id="cfgProjectId" placeholder="Project ID" class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-slate-200 focus:outline-none focus:border-indigo-500 font-mono text-xs">
           </div>
         </div>
 
         <div class="bg-slate-950 p-3 rounded-lg border border-slate-800">
           <h4 class="text-xs font-bold text-emerald-400 mb-1 uppercase tracking-wider">2. ImgBB (Immagini 4K Gratuite)</h4>
-          <p class="text-[10px] text-slate-400 mb-2 leading-tight">Crea un account gratuito su <b>api.imgbb.com</b> e inserisci qui la tua API Key.</p>
           <input type="text" id="cfgImgbbKey" placeholder="ImgBB API Key (Opzionale)" class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-slate-200 focus:outline-none focus:border-emerald-500 font-mono text-xs">
         </div>
 
@@ -597,6 +595,10 @@
     let lastScrollTime = 0;
     let isAutoScrollPaused = false;
     let masterScrollSpeed = 0.08;
+    
+    // DICHIARAZIONE VARIABILI MANCANTI PER L'ALERT ARCADE
+    let arcadeTimer = null;
+    let sirenInterval = null;
 
     const DEFAULT_COLUMNS_CONFIG = [
       { id: "prev-da-fare", label: "Prev. da fare", color: "bg-orange-600/20 border-orange-500/50 text-orange-400", border: "border-l-4 border-l-orange-500", hexDefault: "#c2410c" },
@@ -869,7 +871,6 @@
       if (savedCols) {
         try { 
           const parsedCols = JSON.parse(savedCols);
-          // Controllo di compatibilità: se contiene ancora "accettato-mod", "lavorato" o "consegnato", forziamo la nuova struttura
           const hasOldCols = parsedCols.some(c => c.id === 'accettato-mod' || c.id === 'lavorato' || c.id === 'consegnato');
           if (hasOldCols) {
             COLUMNS_CONFIG = JSON.parse(JSON.stringify(DEFAULT_COLUMNS_CONFIG));
@@ -1466,7 +1467,6 @@
         card.articles = card.articles.map(art => { if (art.tax === undefined) art.tax = 22; return art; });
       }
       
-      // Mappatura di sicurezza automatica per vecchie commesse con ID fasi rimossi/rinominati
       if (card.stage === 'accettato-mod') card.stage = 'da-ordinare';
       if (card.stage === 'lavorato') card.stage = 'lavorato-da-bollettare';
       if (card.stage === 'consegnato') card.stage = 'bollettato-da-consegnare';
