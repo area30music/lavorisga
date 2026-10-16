@@ -1393,8 +1393,19 @@
           return;
         }
 
+        let needsMigration = false;
         snapshot.docChanges().forEach((change) => {
-          const docData = change.doc.data();
+          let docData = change.doc.data();
+          
+          // MIGRAZIONE AUTOMATICA VECCHI STATI DA CLOUD
+          if (docData.stage === 'lavorato') {
+            docData.stage = 'lavorato-da-bollettare';
+            needsMigration = true;
+          } else if (docData.stage === 'consegnato') {
+            docData.stage = 'bollettato-da-consegnare';
+            needsMigration = true;
+          }
+
           if (change.type === "added" || change.type === "modified") {
             const existingIndex = state.cards.findIndex(c => c.id === docData.id);
             if (existingIndex >= 0) state.cards[existingIndex] = sanitizeCard(docData);
@@ -1408,7 +1419,12 @@
         state.cards.sort((a,b) => (a.order || 0) - (b.order || 0) || new Date(b.createdAt) - new Date(a.createdAt));
         const board = document.getElementById('board');
         const currentScroll = board ? board.scrollLeft : 0;
+        
         saveLocal(); 
+        if (needsMigration) {
+          state.cards.forEach(c => syncCardToCloud(c));
+        }
+
         if (isMasterMode && board) board.scrollLeft = currentScroll;
       });
     }
@@ -1541,6 +1557,11 @@
       });
       if (!Array.isArray(card.history)) card.history = [];
       if (card.order === undefined) card.order = 0;
+      
+      // MIGRAZIONE STATI VECCHI (lavorato -> lavorato-da-bollettare, consegnato -> bollettato-da-consegnare)
+      if (card.stage === 'lavorato') card.stage = 'lavorato-da-bollettare';
+      if (card.stage === 'consegnato') card.stage = 'bollettato-da-consegnare';
+
       if (!Array.isArray(card.articles)) {
         card.articles = [];
         if (card.notes && card.notes.trim()) card.articles.push({ code: '', desc: card.notes, qty: 1, price: 0, tax: 22 });
@@ -1610,7 +1631,20 @@
     function init() {
       loadUserSettings();
       loadState();
+      
+      // Controllo migrazione e risalvataggio in caso di vecchi stati locali
+      let localMigrated = false;
+      state.cards.forEach(c => {
+        if (c.stage === 'lavorato') { c.stage = 'lavorato-da-bollettare'; localMigrated = true; }
+        if (c.stage === 'consegnato') { c.stage = 'bollettato-da-consegnare'; localMigrated = true; }
+      });
+
       state.cards.sort((a,b) => (a.order || 0) - (b.order || 0));
+      saveLocal();
+      if (localMigrated) {
+        state.cards.forEach(c => syncCardToCloud(c));
+      }
+
       renderBoard();
       initFirebase();
       lucide.createIcons();
