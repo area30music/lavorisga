@@ -282,7 +282,7 @@
             </div>
             <div>
               <h4 class="font-bold text-slate-200 text-sm">Testo Notifiche</h4>
-              <p class="text-xs text-slate-400 mt-0.5">Personalizza messaggi WhatsApp ed Email.</p>
+              <p class="text-xs text-slate-400 mt-0.5">Personalizza messaggi WhatsApp ed Email sincronizzati in Cloud.</p>
             </div>
           </div>
           <div onclick="playSound('click'); openSubSettings('machines');" class="bg-slate-950 hover:bg-slate-850 border border-slate-800 hover:border-cyan-500/50 p-4 rounded-xl cursor-pointer transition-all flex items-start gap-3.5 group">
@@ -742,6 +742,8 @@
       { id: "fatturato", label: "Fatturato", color: "bg-blue-600/20 border-blue-500/50 text-blue-400", border: "border-l-4 border-l-blue-500", hexDefault: "#2563eb" }
     ];
 
+    const DEFAULT_MSG_TEMPLATE = `Buongiorno {SALUTO},\n\nquesto è il sistema di automazione di SGA Studio Grafico Associato.\n\nVolevamo comunicarle che l'ordine da lei effettuato ("{TITOLO}"){ARTICOLI}\n\nè pronto per il ritiro.\n\nCordiali saluti,\nSGA Studio Grafico Associato`;
+
     let COLUMNS_CONFIG = JSON.parse(JSON.stringify(DEFAULT_COLUMNS_CONFIG));
     let USER_ALARMS = []; 
     let CLIENTS_DB = [];
@@ -749,6 +751,7 @@
     let masterFontSizePx = 24; 
     let appFontSizePx = 15;
     let sharedCompanyLogo = "";
+    let sharedMsgTemplate = "";
     let activeSubSettingsType = null;
     let globalSearchQuery = "";
     let globalFilterJobType = "";
@@ -996,6 +999,10 @@
     function loadUserSettings() {
       const localLogo = localStorage.getItem('workflow_sga_company_logo');
       if (localLogo) sharedCompanyLogo = localLogo;
+
+      const localMsg = localStorage.getItem('workflow_sga_msg_template');
+      if (localMsg) sharedMsgTemplate = localMsg;
+      else sharedMsgTemplate = DEFAULT_MSG_TEMPLATE;
 
       const savedCols = localStorage.getItem('workflow_sga_columns_config');
       if (savedCols) {
@@ -1270,17 +1277,15 @@
       } else if (type === 'messages') {
         titleEl.innerHTML = `<i data-lucide="message-square" class="w-5 h-5 text-pink-400"></i> Testo Notifiche (WhatsApp / Email)`;
         
-        let defaultMsg = localStorage.getItem('workflow_sga_msg_template') || `Buongiorno {SALUTO},\n\nquesto è il sistema di automazione di SGA Studio Grafico Associato.\n\nVolevamo comunicarle che l'ordine da lei effettuato ("{TITOLO}"){ARTICOLI}\n\nè pronto per il ritiro.\n\nCordiali saluti,\nSGA Studio Grafico Associato`;
-
         contentEl.innerHTML = `
           <div class="space-y-4">
-            <p class="text-xs text-slate-400">Personalizza il testo inviato ai clienti per il ritiro merce. Usa queste <strong class="text-pink-400">variabili magiche</strong> (verranno sostituite in automatico con i veri dati della commessa):</p>
+            <p class="text-xs text-slate-400">Personalizza il testo inviato ai clienti per il ritiro merce. La modifica viene salvata <strong class="text-pink-400">su Cloud</strong> ed è attiva su tutti i dispositivi. Usa le variabili magiche:</p>
             <div class="bg-slate-950 p-3 rounded-lg border border-slate-800 space-y-1.5 font-mono text-[11px] text-indigo-300">
               <div><strong class="text-pink-400 text-xs">{SALUTO}</strong> -> "Nome Referente della ditta Azienda"</div>
               <div><strong class="text-pink-400 text-xs">{TITOLO}</strong> -> Titolo della commessa</div>
-              <div><strong class="text-pink-400 text-xs">{ARTICOLI}</strong> -> Elenco articoli in lista (se presenti)</div>
+              <div><strong class="text-pink-400 text-xs">{ARTICOLI}</strong> -> Elenco articoli in lista (es: "- 2 pezzi Stampa Banner")</div>
             </div>
-            <textarea id="msgTemplateText" rows="10" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-xs text-slate-200 focus:outline-none focus:border-pink-500 font-sans leading-relaxed">${defaultMsg}</textarea>
+            <textarea id="msgTemplateText" rows="10" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-xs text-slate-200 focus:outline-none focus:border-pink-500 font-sans leading-relaxed">${sharedMsgTemplate}</textarea>
           </div>
         `;
       } else if (type === 'machines') {
@@ -1487,7 +1492,12 @@
         localStorage.setItem('workflow_sga_master_fontsize_px', masterFontSizePx);
         localStorage.setItem('workflow_sga_app_fontsize_px', appFontSizePx);
       } else if (activeSubSettingsType === 'messages') {
-        localStorage.setItem('workflow_sga_msg_template', document.getElementById('msgTemplateText').value);
+        const newTemplate = document.getElementById('msgTemplateText').value;
+        sharedMsgTemplate = newTemplate;
+        localStorage.setItem('workflow_sga_msg_template', sharedMsgTemplate);
+        if (db) {
+          db.collection('workflow_sga_settings').doc('config').set({ msgTemplate: sharedMsgTemplate }, { merge: true }).catch(e => console.error(e));
+        }
       }
       playSound('success');
       closeSubSettings();
@@ -1500,6 +1510,7 @@
         USER_ALARMS = [];
         masterFontSizePx = 24;
         appFontSizePx = 15;
+        sharedMsgTemplate = DEFAULT_MSG_TEMPLATE;
         localStorage.removeItem('workflow_sga_columns_config');
         localStorage.removeItem('workflow_sga_alarms');
         localStorage.removeItem('workflow_sga_master_fontsize_px');
@@ -1735,6 +1746,12 @@
             sharedCompanyLogo = data.companyLogo;
             localStorage.setItem('workflow_sga_company_logo', sharedCompanyLogo);
             loadCompanyLogo();
+          }
+          if (data.msgTemplate !== undefined && data.msgTemplate !== sharedMsgTemplate) {
+            sharedMsgTemplate = data.msgTemplate;
+            localStorage.setItem('workflow_sga_msg_template', sharedMsgTemplate);
+            const msgArea = document.getElementById('msgTemplateText');
+            if (msgArea) msgArea.value = sharedMsgTemplate;
           }
         }
       });
@@ -2261,37 +2278,36 @@
     }
 
     // Costruisce il messaggio leggendo il template salvato
-  function getNotificationMessage(card) {
-  let template = localStorage.getItem('workflow_sga_msg_template');
-  if (!template) {
-    template = `Buongiorno {SALUTO},\n\nquesto è il sistema di automazione di SGA Studio Grafico Associato.\n\nVolevamo comunicarle che l'ordine da lei effettuato ("{TITOLO}"){ARTICOLI}\n\nè pronto per il ritiro.\n\nCordiali saluti,\nSGA Studio Grafico Associato`;
-  }
+    function getNotificationMessage(card) {
+      let template = sharedMsgTemplate || DEFAULT_MSG_TEMPLATE;
 
-  let saluto = "";
-  if (card.referent && card.client) {
-    saluto = `${card.referent} della ditta ${card.client}`;
-  } else if (card.referent) {
-    saluto = `${card.referent}`;
-  } else if (card.client) {
-    saluto = `ditta ${card.client}`;
-  } else {
-    saluto = `Cliente`;
-  }
+      // Costruisce il saluto dinamicamente
+      let saluto = "";
+      if (card.referent && card.client) {
+        saluto = `${card.referent} della ditta ${card.client}`;
+      } else if (card.referent) {
+        saluto = `${card.referent}`;
+      } else if (card.client) {
+        saluto = `ditta ${card.client}`;
+      } else {
+        saluto = `Cliente`;
+      }
 
-  let articlesList = "";
-  if (card.articles && card.articles.length > 0) {
-    const validArticles = card.articles.filter(a => a.desc && a.desc.trim() !== "");
-    if (validArticles.length > 0) {
-      // Tolto "contenente:" e aggiunto "pezzi" dopo la quantità
-      articlesList = "\n" + validArticles.map(a => `- ${a.qty || 1} pezzi ${a.desc.trim()}`).join('\n');
+      // Costruisce l'elenco degli articoli
+      let articlesList = "";
+      if (card.articles && card.articles.length > 0) {
+        const validArticles = card.articles.filter(a => a.desc && a.desc.trim() !== "");
+        if (validArticles.length > 0) {
+          articlesList = "\n" + validArticles.map(a => `- ${a.qty || 1} pezzi ${a.desc.trim()}`).join('\n');
+        }
+      }
+
+      // Sostituisce le variabili nel template
+      return template
+        .replace(/{SALUTO}/g, saluto)
+        .replace(/{TITOLO}/g, card.title || '')
+        .replace(/{ARTICOLI}/g, articlesList);
     }
-  }
-
-  return template
-    .replace(/{SALUTO}/g, saluto)
-    .replace(/{TITOLO}/g, card.title || '')
-    .replace(/{ARTICOLI}/g, articlesList);
-}
 
     // GESTIONE MESSAGGIO WHATSAPP
     function sendWhatsAppNotification() {
