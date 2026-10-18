@@ -1745,7 +1745,6 @@
     function splitLabelRow(index) {
       playSound('click');
       const item = window.tempLabelArticles[index];
-      // Aggiungi una copia esatta della riga subito dopo, spostando di 1 il numero del collo
       const newItem = { desc: item.desc, qty: item.qty, packageNum: item.packageNum + 1 };
       window.tempLabelArticles.splice(index + 1, 0, newItem);
       renderLabelArticlesTable();
@@ -1783,42 +1782,46 @@
       const printWindow = window.open('', '_blank');
       let labelsHtml = '';
       
-      // Dati mittente estratti graficamente dall'immagine fornita
-      const senderText = "<strong>Studio Grafico Associato di Gastaldi Antonio Francesco</strong><br>Via Mario Groppo 4<br>12048 - Sommariva del Bosco (CN)<br>Tel: 02 1234567<br>www.studiograficoassociato.it<br>info@studiograficoassociato.com";
+      const senderText = "<strong>Studio Grafico Associato di Gastaldi Antonio Francesco</strong><br>Via Mario Groppo 4<br>12048 - Sommariva del Bosco (CN)<br>Tel: 0172 560087<br>www.studiograficoassociato.it<br>info@studiograficoassociato.com";
+
+      let logoHtml = '';
+      if (sharedCompanyLogo) {
+        logoHtml = `<img src="\${sharedCompanyLogo}" class="print-logo">`;
+      } else {
+        logoHtml = `<div class="logo-area">SGA</div><div class="logo-sub">STUDIO GRAFICO ASSOCIATO</div>`;
+      }
 
       packageNumbers.forEach((pkgNum, idx) => {
         const currentPkgIndex = idx + 1;
         const articlesInPkg = packages[pkgNum];
-        const articlesListHtml = articlesInPkg.map(a => `<tr><td style="width: 40px; font-weight: bold; text-align: center;">${a.qty}x</td><td>${a.desc}</td></tr>`).join('');
+        const articlesListHtml = articlesInPkg.map(a => `<tr><td style="width: 40px; font-weight: bold; text-align: center;">\${a.qty}x</td><td>\${a.desc}</td></tr>`).join('');
         
         labelsHtml += `
           <div class="label-page">
             <div class="top-row">
               <div class="logo-box">
-                <div class="logo-area">SGA</div>
-                <div class="logo-sub">STUDIO GRAFICO ASSOCIATO</div>
+                \${logoHtml}
               </div>
-              <!-- Placeholder QR Code -->
               <div class="qr-code">
-                <svg viewBox="0 0 100 100" style="width: 100%; height: 100%;"><rect width="100" height="100" fill="#000"/><rect x="10" y="10" width="80" height="80" fill="#fff"/><rect x="20" y="20" width="20" height="20" fill="#000"/><rect x="60" y="20" width="20" height="20" fill="#000"/><rect x="20" y="60" width="20" height="20" fill="#000"/><rect x="50" y="50" width="30" height="30" fill="#000"/><rect x="60" y="60" width="10" height="10" fill="#fff"/></svg>
+                <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://www.studiograficoassociato.it" alt="QR Code" style="width: 100%; height: 100%; object-fit: contain;">
               </div>
             </div>
             
             <div class="box mittente-box">
               <div class="box-header">MITTENTE</div>
-              <div class="box-body">${senderText}</div>
+              <div class="box-body">\${senderText}</div>
             </div>
 
             <div class="middle-row">
               <div class="box dest-box">
                 <div class="box-header">DESTINATARIO</div>
                 <div class="box-body" style="font-size: 14px; font-weight: bold;">
-                  ${card.client || 'Cliente N/D'}<br>
-                  <span style="font-weight: normal; font-size: 11px;">${card.referent ? 'Rif: ' + card.referent : ''}</span>
+                  \${card.client || 'Cliente N/D'}<br>
+                  <span style="font-weight: normal; font-size: 11px;">\${card.referent ? 'Rif: ' + card.referent : ''}</span>
                 </div>
               </div>
               <div class="collo-box">
-                Collo ${currentPkgIndex} di ${totalPackages}
+                Collo \${currentPkgIndex} di \${totalPackages}
               </div>
             </div>
 
@@ -1827,7 +1830,7 @@
               <div style="flex: 1; display: flex; flex-direction: column;">
                 <table class="content-table">
                   <thead><tr><th style="width: 40px; text-align: center;">NR.</th><th>DESCRIZIONE.</th></tr></thead>
-                  <tbody>${articlesListHtml}</tbody>
+                  <tbody>\${articlesListHtml}</tbody>
                 </table>
               </div>
             </div>
@@ -1836,7 +1839,7 @@
       });
       
       printWindow.document.write(`
-        <html><head><title>Stampa Etichette Colli - ${card.title}</title>
+        <html><head><title>Stampa Etichette Colli - \${card.title}</title>
         <style>
           @page { size: A6 landscape; margin: 4mm; }
           body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; margin: 0; padding: 0; background: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
@@ -1853,10 +1856,11 @@
           }
           
           .top-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2mm; height: 18mm; }
-          .logo-box { padding-left: 2mm; }
+          .logo-box { padding-left: 2mm; flex: 1; display: flex; flex-direction: column; justify-content: center;}
+          .print-logo { max-height: 16mm; max-width: 65mm; object-fit: contain; filter: brightness(0); object-position: left center;}
           .logo-area { font-weight: 900; font-size: 34px; line-height: 0.9; letter-spacing: -2px; color: #000; display: flex; align-items: center; }
           .logo-sub { font-size: 9px; font-weight: bold; letter-spacing: 0.5px; text-transform: uppercase; margin-top: 1px;}
-          .qr-code { width: 18mm; height: 18mm; border: 2px solid #333; padding: 1px; border-radius: 4px;}
+          .qr-code { width: 18mm; height: 18mm; border: 2px solid #333; padding: 1px; border-radius: 4px; flex-shrink: 0;}
           
           .box { border: 2px solid #444; border-radius: 6px; overflow: hidden; display: flex; flex-direction: column;}
           .box-header { background: #666; color: #fff; font-weight: bold; font-size: 10px; padding: 2px 6px; text-transform: uppercase; letter-spacing: 0.5px;}
@@ -1878,8 +1882,8 @@
           .content-table tr:nth-child(even) td { background: #E1DECD; }
         </style>
         </head><body>
-          ${labelsHtml}
-          <script>window.onload = function(){ setTimeout(function(){ window.print(); window.close(); }, 800); };<\/script>
+          \${labelsHtml}
+          <script>window.onload = function(){ setTimeout(function(){ window.print(); window.close(); }, 1000); };<\/script>
         </body></html>
       `);
       printWindow.document.close();
@@ -1889,7 +1893,7 @@
     function printCard() {
       const card = state.cards.find(c => c.id === activeCardId); if (!card) return; const printWindow = window.open('', '_blank');
       const deliveryStr = card.deliveryDate ? new Date(card.deliveryDate).toLocaleDateString('it-IT') : 'Non specificata';
-      const historyHtml = (card.history || []).map((h, i) => { return `<div style="margin-bottom: 8px; padding-left: 12px; border-left: 2px solid #cbd5e1; position: relative;"><div style="position: absolute; left: -5px; top: 2px; width: 8px; height: 8px; border-radius: 50%; background: #475569;"></div><div style="font-weight: bold; font-size: 11px; color: #1e293b;">Passaggio #${i+1}: ${h.label}</div><div style="font-size: 9px; color: #64748b;">Data: ${new Date(h.timestamp).toLocaleString('it-IT')}</div></div>`; }).join('');
+      const historyHtml = (card.history || []).map((h, i) => { return `<div style="margin-bottom: 8px; padding-left: 12px; border-left: 2px solid #cbd5e1; position: relative;"><div style="position: absolute; left: -5px; top: 2px; width: 8px; height: 8px; border-radius: 50%; background: #475569;"></div><div style="font-weight: bold; font-size: 11px; color: #1e293b;">Passaggio #\${i+1}: \${h.label}</div><div style="font-size: 9px; color: #64748b;">Data: \${new Date(h.timestamp).toLocaleString('it-IT')}</div></div>`; }).join('');
 
       let articlesRowsHtml = ''; let grandSubtotal = 0; let grandTax = 0; let grandTotalTaxed = 0;
       if (card.articles && card.articles.length > 0) {
@@ -1897,19 +1901,19 @@
           const qty = parseFloat(art.qty) || 0; const price = parseFloat(art.price) || 0; const taxRate = parseFloat(art.tax) !== undefined ? parseFloat(art.tax) : 22;
           const sub = qty * price; const taxAmt = sub * (taxRate / 100); const rowTotalTaxed = sub + taxAmt; const unitTaxed = price * (1 + taxRate / 100);
           grandSubtotal += sub; grandTax += taxAmt; grandTotalTaxed += rowTotalTaxed;
-          articlesRowsHtml += `<tr style="border-bottom: 1px solid #e2e8f0;"><td style="padding: 8px; font-family: monospace; font-size: 11px; color: #334155;">${art.code || '-'}</td><td style="padding: 8px; font-size: 11px; color: #0f172a;">${art.desc || '-'}</td><td style="padding: 8px; text-align: center; font-size: 11px; color: #334155;">${art.qty !== undefined && art.qty !== '' ? art.qty : '-'}</td><td style="padding: 8px; text-align: right; font-size: 11px; color: #334155;">${art.price !== undefined && art.price !== '' ? '€ ' + parseFloat(art.price).toFixed(2) : '-'}</td><td style="padding: 8px; text-align: center; font-size: 11px; color: #334155;">${taxRate}%</td><td style="padding: 8px; text-align: right; font-size: 11px; color: #334155;">${(art.qty !== undefined && art.price !== undefined && art.qty !== '' && art.price !== '') ? '€ ' + unitTaxed.toFixed(2) : '-'}</td><td style="padding: 8px; text-align: right; font-size: 11px; font-weight: bold; color: #0f172a;">${(art.qty !== undefined && art.price !== undefined && art.qty !== '' && art.price !== '') ? '€ ' + rowTotalTaxed.toFixed(2) : '-'}</td></tr>`;
+          articlesRowsHtml += `<tr style="border-bottom: 1px solid #e2e8f0;"><td style="padding: 8px; font-family: monospace; font-size: 11px; color: #334155;">\${art.code || '-'}</td><td style="padding: 8px; font-size: 11px; color: #0f172a;">\${art.desc || '-'}</td><td style="padding: 8px; text-align: center; font-size: 11px; color: #334155;">\${art.qty !== undefined && art.qty !== '' ? art.qty : '-'}</td><td style="padding: 8px; text-align: right; font-size: 11px; color: #334155;">\${art.price !== undefined && art.price !== '' ? '€ ' + parseFloat(art.price).toFixed(2) : '-'}</td><td style="padding: 8px; text-align: center; font-size: 11px; color: #334155;">\${taxRate}%</td><td style="padding: 8px; text-align: right; font-size: 11px; color: #334155;">\${(art.qty !== undefined && art.price !== undefined && art.qty !== '' && art.price !== '') ? '€ ' + unitTaxed.toFixed(2) : '-'}</td><td style="padding: 8px; text-align: right; font-size: 11px; font-weight: bold; color: #0f172a;">\${(art.qty !== undefined && art.price !== undefined && art.qty !== '' && art.price !== '') ? '€ ' + rowTotalTaxed.toFixed(2) : '-'}</td></tr>`;
         });
       } else { articlesRowsHtml = `<tr><td colspan="7" style="padding: 10px; text-align: center; color: #64748b; font-size: 11px;">Nessun articolo inserito</td></tr>`; }
 
       let attachmentsPrintHtml = '';
-      if (card.photos && card.photos.length > 0) { attachmentsPrintHtml = card.photos.map((p, idx) => { return `<div class="print-page"><img src="${p.image}" style="transform: rotate(${p.rotation || 0}deg);"></div>`; }).join(''); }
+      if (card.photos && card.photos.length > 0) { attachmentsPrintHtml = card.photos.map((p, idx) => { return `<div class="print-page"><img src="\${p.image}" style="transform: rotate(\${p.rotation || 0}deg);"></div>`; }).join(''); }
 
       printWindow.document.write(`
-        <html><head><title>Commessa SGA #${card.id.slice(-4).toUpperCase()}</title><style>
+        <html><head><title>Commessa SGA #\${card.id.slice(-4).toUpperCase()}</title><style>
           @page { size: auto; margin: 0mm; } body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; margin: 0; padding: 0; color: #0f172a; background: white; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
           .sheet { width: 100%; min-height: 100vh; padding: 12mm 15mm; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between; } .header { border-bottom: 3px solid #4f46e5; padding-bottom: 12mm; margin-bottom: 20px; } .logo-text { font-size: 12px; color: #64748b; font-weight: bold; letter-spacing: 1px; margin-bottom: 3px; } .title { font-size: 22px; font-weight: 800; margin: 0 0 5px; color: #1e293b; text-transform: uppercase; } .badge { font-size: 10px; font-weight: bold; background: #e0e7ff; color: #4338ca; padding: 3px 8px; border-radius: 4px; display: inline-block; } .section-title { font-size: 11px; font-weight: bold; text-transform: uppercase; color: #475569; margin-top: 15px; margin-bottom: 8px; border-bottom: 1px solid #e2e8f0; padding-bottom: 3px; } .details { display: grid; grid-template-columns: 1fr 1fr; gap: 12mm; margin-bottom: 10px; } .details div { background: #f8fafc; padding: 8px 10px; border-radius: 6px; border: 1px solid #e2e8f0; } .details label { font-size: 9px; color: #64748b; font-weight: bold; display: block; text-transform: uppercase; margin-bottom: 2px; } .details strong { font-size: 12px; color: #0f172a; } table.articles { width: 100%; border-collapse: collapse; margin-top: 5px; } table.articles th { background: #f1f5f9; color: #334155; font-size: 10px; text-transform: uppercase; padding: 6px 8px; text-align: left; border-bottom: 2px solid #cbd5e1; } .print-page { page-break-before: always; break-before: page; width: 100%; height: 98vh; display: block; text-align: center; padding: 0; margin: 0; box-sizing: border-box; } .print-page img { max-width: 100%; max-height: 100%; object-fit: contain; display: block; margin: 0 auto; }
         </style></head><body>
-          <div class="sheet"><div><div class="header"><div style="display: flex; justify-content: space-between; align-items: start;"><div><div class="logo-text">SGA STUDIO GRAFICO ASSOCIATO</div><h1 class="title">SCHEDA COMMESSA</h1><span class="badge">STATO: ${COLUMNS_CONFIG.find(col => col.id === card.stage)?.label.toUpperCase() || card.stage}</span></div><div style="text-align: right; font-size: 11px; color: #64748b; line-height: 1.3;">Rif. Ordine: <strong style="color: #0f172a;">#${card.id.slice(-4).toUpperCase()}</strong><br>Data: <strong style="color: #0f172a;">${new Date(card.createdAt).toLocaleDateString('it-IT')}</strong></div></div></div><div class="details"><div><label>Cliente / Azienda</label><strong>${card.title}</strong></div><div><label>Tipo Lavorazione</label><strong>${card.jobType} ${card.machine ? ' | Macchina: ' + card.machine : ''}</strong></div><div><label>Referente & Contatti</label><strong>${card.client || 'N/D'} ${card.referent ? '(' + card.referent + ')' : ''}</strong></div><div><label>Data di Consegna</label><strong style="color: #ea580c;">${deliveryStr}</strong></div></div><div class="section-title">Articoli & Specifiche Lavorazione</div><table class="articles"><thead><tr><th style="width: 20%;">Codice</th><th>Descrizione</th><th style="width: 10%; text-align: center;">Q.tà</th><th style="width: 13%; text-align: right;">Prezzo Un.</th><th style="width: 8%; text-align: center;">IVA</th><th style="width: 13%; text-align: right;">Pr. Ivato</th><th style="width: 15%; text-align: right;">Tot. Ivato</th></tr></thead><tbody>${articlesRowsHtml}</tbody></table><div style="text-align: right; margin-top: 10px; font-size: 12px; color: #475569;">Imponibile: € ${grandSubtotal.toFixed(2)} &nbsp;|&nbsp; Totale IVA: € ${grandTax.toFixed(2)}</div><div style="text-align: right; margin-top: 4px; font-size: 14px;"><strong>Totale Ordine Ivato: <span style="color: #059669;">€ ${grandTotalTaxed.toFixed(2)}</span></strong></div></div><div><div class="section-title">Storyboard Lavorazione</div><div style="background: #f8fafc; padding: 10px; border-radius: 6px; border: 1px solid #e2e8f0;">${historyHtml}</div></div></div>${attachmentsPrintHtml}
+          <div class="sheet"><div><div class="header"><div style="display: flex; justify-content: space-between; align-items: start;"><div><div class="logo-text">SGA STUDIO GRAFICO ASSOCIATO</div><h1 class="title">SCHEDA COMMESSA</h1><span class="badge">STATO: \${COLUMNS_CONFIG.find(col => col.id === card.stage)?.label.toUpperCase() || card.stage}</span></div><div style="text-align: right; font-size: 11px; color: #64748b; line-height: 1.3;">Rif. Ordine: <strong style="color: #0f172a;">#\${card.id.slice(-4).toUpperCase()}</strong><br>Data: <strong style="color: #0f172a;">\${new Date(card.createdAt).toLocaleDateString('it-IT')}</strong></div></div></div><div class="details"><div><label>Cliente / Azienda</label><strong>\${card.title}</strong></div><div><label>Tipo Lavorazione</label><strong>\${card.jobType} \${card.machine ? ' | Macchina: ' + card.machine : ''}</strong></div><div><label>Referente & Contatti</label><strong>\${card.client || 'N/D'} \${card.referent ? '(' + card.referent + ')' : ''}</strong></div><div><label>Data di Consegna</label><strong style="color: #ea580c;">\${deliveryStr}</strong></div></div><div class="section-title">Articoli & Specifiche Lavorazione</div><table class="articles"><thead><tr><th style="width: 20%;">Codice</th><th>Descrizione</th><th style="width: 10%; text-align: center;">Q.tà</th><th style="width: 13%; text-align: right;">Prezzo Un.</th><th style="width: 8%; text-align: center;">IVA</th><th style="width: 13%; text-align: right;">Pr. Ivato</th><th style="width: 15%; text-align: right;">Tot. Ivato</th></tr></thead><tbody>\${articlesRowsHtml}</tbody></table><div style="text-align: right; margin-top: 10px; font-size: 12px; color: #475569;">Imponibile: € \${grandSubtotal.toFixed(2)} &nbsp;|&nbsp; Totale IVA: € \${grandTax.toFixed(2)}</div><div style="text-align: right; margin-top: 4px; font-size: 14px;"><strong>Totale Ordine Ivato: <span style="color: #059669;">€ \${grandTotalTaxed.toFixed(2)}</span></strong></div></div><div><div class="section-title">Storyboard Lavorazione</div><div style="background: #f8fafc; padding: 10px; border-radius: 6px; border: 1px solid #e2e8f0;">\${historyHtml}</div></div></div>\${attachmentsPrintHtml}
           <script>window.onload = function(){ setTimeout(function(){ window.print(); }, 800); };<\/script>
         </body></html>
       `);
