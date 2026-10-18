@@ -123,6 +123,55 @@
     </div>
   </div>
 
+  <!-- MODAL: STAMPA ETICHETTE COLLI -->
+  <div id="labelPrintModal" class="hidden fixed inset-0 bg-slate-950/85 backdrop-blur-md z-[160] flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-blue-500/50 rounded-2xl w-full max-w-3xl p-6 shadow-2xl flex flex-col max-h-[90vh]">
+      <div class="flex items-center justify-between mb-4 border-b border-slate-800 pb-3">
+        <div class="flex items-center gap-3">
+          <div class="bg-blue-600/20 text-blue-400 p-2 rounded-xl border border-blue-500/30">
+            <i data-lucide="printer" class="w-6 h-6"></i>
+          </div>
+          <div>
+            <h3 class="font-bold text-lg text-white">Stampa Etichette Colli</h3>
+            <p class="text-xs text-slate-400">Organizza gli articoli nei colli per la spedizione o il ritiro</p>
+          </div>
+        </div>
+        <button onclick="closeModal('labelPrintModal')" class="text-slate-400 hover:text-slate-200 bg-slate-800 rounded-full p-1.5 cursor-pointer">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div class="overflow-y-auto flex-1 pr-2 space-y-4">
+        <div class="bg-slate-950 p-3.5 rounded-xl border border-slate-800 space-y-2 text-sm">
+          <div><strong class="text-slate-400">Cliente / Azienda:</strong> <span id="labelClientName" class="text-slate-200 font-semibold">--</span></div>
+          <div><strong class="text-slate-400">Rif. Commessa:</strong> <span id="labelTaskTitle" class="text-slate-200 font-semibold">--</span></div>
+        </div>
+        
+        <div class="bg-slate-950 p-3.5 rounded-xl border border-slate-800">
+          <table class="w-full text-left text-xs">
+            <thead>
+              <tr class="border-b border-slate-800 text-slate-400 uppercase text-[10px]">
+                <th class="py-2 px-2">Descrizione Articolo</th>
+                <th class="py-2 px-2 w-16 text-center">Q.tà</th>
+                <th class="py-2 px-2 w-32 text-center" title="Scrivi 1 se tutto va nel primo collo, oppure 2, 3 ecc. per suddividere in più pacchi">Assegna a Collo N°</th>
+              </tr>
+            </thead>
+            <tbody id="labelArticlesBody" class="divide-y divide-slate-900">
+              <!-- Articoli popolati via JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="pt-4 mt-2 border-t border-slate-800 flex justify-between gap-3">
+        <button onclick="closeModal('labelPrintModal')" class="bg-slate-800 hover:bg-slate-700 text-white font-bold py-2.5 px-6 rounded-xl transition-colors cursor-pointer text-sm">Annulla</button>
+        <button onclick="generateAndPrintLabels()" class="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-bold py-2.5 px-4 rounded-xl flex items-center justify-center gap-2 text-sm shadow-lg shadow-blue-900/30 active:scale-95 transition-transform cursor-pointer">
+          <i data-lucide="printer" class="w-4 h-4"></i> Genera e Stampa Etichette
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- MODAL: NOTIFICA CLIENTE PRONTO -->
   <div id="clientNotifyModal" class="hidden fixed inset-0 bg-slate-950/85 backdrop-blur-md z-[150] flex items-center justify-center p-4">
     <div class="bg-slate-900 border border-emerald-500/50 rounded-2xl w-full max-w-md p-6 shadow-2xl space-y-5">
@@ -753,6 +802,7 @@
     
     let arcadeTimer = null;
     let sirenInterval = null;
+    let activeLabelCardId = null;
 
     const DEFAULT_COLUMNS_CONFIG = [
       { id: "prev-da-fare", label: "Prev. da fare", color: "bg-orange-600/20 border-orange-500/50 text-orange-400", border: "border-l-4 border-l-orange-500", hexDefault: "#c2410c" },
@@ -2193,6 +2243,11 @@
         ? `<button onclick="event.stopPropagation(); triggerNotifyById('${card.id}')" class="ml-2 p-1 bg-emerald-500/20 hover:bg-emerald-500/50 text-emerald-400 rounded cursor-pointer transition-colors" title="Invia Notifica Pronto Ritiro"><i data-lucide="mail" class="w-3.5 h-3.5"></i></button>`
         : '';
 
+      // NUOVO: Icona di stampa per commesse lavorate
+      const printLabelIconHTML = (card.stage === 'lavorato-da-bollettare')
+        ? `<button onclick="event.stopPropagation(); openLabelPrintModal('${card.id}')" class="ml-2 p-1 bg-blue-500/20 hover:bg-blue-500/50 text-blue-400 rounded cursor-pointer transition-colors" title="Stampa Etichette Colli"><i data-lucide="printer" class="w-3.5 h-3.5"></i></button>`
+        : '';
+
       return `
         <div draggable="true" ondragstart="handleDragStart(event)" id="card-${card.id}" data-id="${card.id}" onclick="${isMasterMode ? '' : `playSound('click'); openDetail('${card.id}')`}"
              style="${customCardStyle}"
@@ -2210,6 +2265,7 @@
             <div class="flex items-center gap-1">
               <span class="font-mono text-[11px]" style="${card.customColor ? customTextStyle : 'color: #475569;'}">#${cardIdShort}</span>
               ${notifyIconHTML}
+              ${printLabelIconHTML}
               <div class="hide-in-master flex items-center bg-black/20 rounded ml-2">
                 <button onclick="moveCardVertical('${card.id}', -1)" class="p-0.5 hover:bg-black/30 rounded px-1.5 cursor-pointer" title="Sposta su" style="${card.customColor ? customTextStyle : 'color: #cbd5e1;'}">▲</button>
                 <button onclick="moveCardVertical('${card.id}', 1)" class="p-0.5 hover:bg-black/30 rounded px-1.5 cursor-pointer" title="Sposta giù" style="${card.customColor ? customTextStyle : 'color: #cbd5e1;'}">▼</button>
@@ -2776,6 +2832,215 @@
         closeModal('detailModal');
         populateGlobalFilterDropdown();
       });
+    }
+
+    // ============================================
+    // NUOVE FUNZIONI PER STAMPA ETICHETTE COLLI
+    // ============================================
+    function openLabelPrintModal(cardId) {
+      playSound('click');
+      const card = state.cards.find(c => c.id === cardId);
+      if (!card) return;
+      activeLabelCardId = cardId;
+      
+      document.getElementById('labelClientName').innerText = card.client || 'N/D';
+      document.getElementById('labelTaskTitle').innerText = card.title || 'Senza Titolo';
+      
+      const tbody = document.getElementById('labelArticlesBody');
+      tbody.innerHTML = '';
+      
+      if (!card.articles || card.articles.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="3" class="py-4 text-center text-slate-500 italic">Nessun articolo associato a questa commessa.</td></tr>`;
+      } else {
+        card.articles.forEach((art, idx) => {
+          if(!art.desc || art.desc.trim() === '') return;
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td class="py-2 px-2 text-slate-200">${art.desc}</td>
+            <td class="py-2 px-2 text-center text-slate-300 font-mono">${art.qty || 1}</td>
+            <td class="py-2 px-2 text-center">
+              <input type="number" min="1" value="1" id="package-input-${idx}" class="w-16 bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-sm text-center focus:outline-none focus:border-blue-500">
+            </td>
+          `;
+          tbody.appendChild(tr);
+        });
+      }
+      
+      openModal('labelPrintModal');
+      lucide.createIcons();
+    }
+
+    function generateAndPrintLabels() {
+      const card = state.cards.find(c => c.id === activeLabelCardId);
+      if (!card) return;
+      
+      // Raccoglie gli articoli per ciascun collo specificato nell'input
+      const packages = {};
+      let hasValidArticles = false;
+
+      if (card.articles && card.articles.length > 0) {
+        card.articles.forEach((art, idx) => {
+          if(!art.desc || art.desc.trim() === '') return;
+          const inputEl = document.getElementById(`package-input-${idx}`);
+          if (!inputEl) return;
+          const pkgNum = parseInt(inputEl.value) || 1;
+          if (!packages[pkgNum]) packages[pkgNum] = [];
+          packages[pkgNum].push({ desc: art.desc, qty: art.qty || 1 });
+          hasValidArticles = true;
+        });
+      } 
+      
+      if (!hasValidArticles) {
+         packages[1] = [{desc: 'Materiale Commessa (Varie)', qty: 1}];
+      }
+      
+      const packageNumbers = Object.keys(packages).map(Number).sort((a, b) => a - b);
+      const totalPackages = packageNumbers.length;
+      
+      if (totalPackages === 0) {
+        alert("Nessun articolo selezionato per i colli.");
+        return;
+      }
+      
+      playSound('success');
+      const printWindow = window.open('', '_blank');
+      let labelsHtml = '';
+      
+      packageNumbers.forEach((pkgNum, idx) => {
+        const currentPkgIndex = idx + 1;
+        const articlesInPkg = packages[pkgNum];
+        const articlesListHtml = articlesInPkg.map(a => `<div style="font-size: 14px; margin-bottom: 6px; border-bottom: 1px dashed #ccc; padding-bottom: 3px;">• ${a.qty}x ${a.desc}</div>`).join('');
+        
+        labelsHtml += `
+          <div class="label-page">
+            <div class="label-container">
+              <div class="header">
+                <div class="sender">
+                  <strong>Mittente:</strong><br>
+                  SGA Studio Grafico Associato<br>
+                  Via Mario Groppo 4, Sommariva del Bosco
+                </div>
+                <div class="package-count">
+                  COLLO<br>
+                  <span class="count">${currentPkgIndex} / ${totalPackages}</span>
+                </div>
+              </div>
+              
+              <div class="recipient">
+                <div class="recipient-label">Destinatario / Ritiro presso sede:</div>
+                <div class="recipient-name">${card.client || 'Cliente N/D'}</div>
+                ${card.referent ? `<div class="recipient-ref">Riferimento: ${card.referent}</div>` : ''}
+              </div>
+              
+              <div class="task-info">
+                <strong>Rif. Commessa:</strong> #${card.id.slice(-4).toUpperCase()} - ${card.title}
+              </div>
+              
+              <div class="contents">
+                <div class="contents-label">Contenuto Collo:</div>
+                ${articlesListHtml}
+              </div>
+            </div>
+          </div>
+        `;
+      });
+      
+      printWindow.document.write(`
+        <html><head><title>Stampa Etichette Colli - ${card.title}</title>
+        <style>
+          @page { size: A4; margin: 0; }
+          body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; margin: 0; padding: 0; background: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+          .label-page { 
+            page-break-after: always; 
+            width: 100vw; 
+            height: 100vh; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            background: white;
+            box-sizing: border-box;
+          }
+          .label-container {
+            width: 160mm;
+            min-height: 120mm;
+            border: 2px solid #000;
+            border-radius: 8px;
+            padding: 12mm;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+          }
+          .header {
+            display: flex;
+            justify-content: space-between;
+            border-bottom: 2px solid #000;
+            padding-bottom: 15px;
+            margin-bottom: 15px;
+          }
+          .sender {
+            font-size: 13px;
+            line-height: 1.5;
+            color: #333;
+          }
+          .package-count {
+            text-align: center;
+            font-weight: bold;
+            font-size: 14px;
+          }
+          .package-count .count {
+            font-size: 32px;
+            display: block;
+            margin-top: 5px;
+          }
+          .recipient {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f8fafc;
+            border: 2px solid #e2e8f0;
+            border-radius: 6px;
+          }
+          .recipient-label {
+            font-size: 12px;
+            font-weight: bold;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            color: #64748b;
+          }
+          .recipient-name {
+            font-size: 24px;
+            font-weight: bold;
+            color: #0f172a;
+          }
+          .recipient-ref {
+            font-size: 16px;
+            margin-top: 5px;
+            color: #334155;
+          }
+          .task-info {
+            font-size: 16px;
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #cbd5e1;
+            color: #1e293b;
+          }
+          .contents {
+            flex-grow: 1;
+          }
+          .contents-label {
+            font-size: 12px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            color: #64748b;
+          }
+        </style>
+        </head><body>
+          ${labelsHtml}
+          <script>window.onload = function(){ setTimeout(function(){ window.print(); window.close(); }, 800); };<\/script>
+        </body></html>
+      `);
+      printWindow.document.close();
+      closeModal('labelPrintModal');
     }
 
     function printCard() {
