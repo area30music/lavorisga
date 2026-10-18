@@ -955,29 +955,48 @@
       const logoImg = document.getElementById('logoImageDisplay');
       const logoContainer = document.getElementById('companyLogoContainer');
       
-      // --- INIZIO GESTIONE FAVICON (Icona scheda Chrome) ---
+      // --- Gestione Favicon ---
       let faviconLink = document.querySelector("link[rel~='icon']");
       if (!faviconLink) {
           faviconLink = document.createElement('link');
           faviconLink.rel = 'icon';
           document.head.appendChild(faviconLink);
       }
-      // --- FINE GESTIONE FAVICON ---
 
       if (sharedCompanyLogo) {
         if (defaultIcon) defaultIcon.classList.add('hidden');
         if (logoImg) { logoImg.src = sharedCompanyLogo; logoImg.classList.remove('hidden'); }
         if (logoContainer) { logoContainer.classList.remove('bg-indigo-600'); logoContainer.style.background = 'transparent'; }
         
-        // Imposta il logo caricato come Favicon!
-        faviconLink.href = sharedCompanyLogo;
+        // --- INIZIO: Disegna la favicon proporzionata ---
+        const img = new Image();
+        img.onload = function() {
+          const canvas = document.createElement('canvas');
+          const size = 64; // Dimensione quadrata per la favicon
+          canvas.width = size;
+          canvas.height = size;
+          const ctx = canvas.getContext('2d');
+          
+          // Calcola il fattore di scala per far stare l'immagine nel quadrato senza deformarla
+          const scale = Math.min(size / img.width, size / img.height);
+          const x = (size / 2) - ((img.width * scale) / 2);
+          const y = (size / 2) - ((img.height * scale) / 2);
+          
+          // Disegna il logo centrato e proporzionato
+          ctx.drawImage(img, x, y, img.width * scale, img.height * scale);
+          
+          // Esporta il canvas come immagine e impostalo come favicon
+          faviconLink.href = canvas.toDataURL('image/png');
+        };
+        img.src = sharedCompanyLogo;
+        // --- FINE: Disegna la favicon proporzionata ---
         
       } else {
         if (defaultIcon) defaultIcon.classList.remove('hidden');
         if (logoImg) logoImg.classList.add('hidden');
         if (logoContainer) logoContainer.className = "relative group cursor-pointer bg-indigo-600 rounded-lg text-white shadow-lg shadow-indigo-900/20 flex items-center justify-center overflow-hidden shrink-0";
         
-        // Se non hai caricato il logo, mette un'icona di default (ho messo una stampantina 🖨️ ma puoi cambiarla)
+        // Icona di default (stampante) se non c'è il logo
         faviconLink.href = "data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🖨️</text></svg>";
       }
     }
