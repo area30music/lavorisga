@@ -1787,7 +1787,9 @@
       }
       
       let labelsHtml = '';
-      const senderText = "<strong>Studio Grafico Associato di Gastaldi Antonio Francesco</strong><br>Via Mario Groppo 4<br>12048 - Sommariva del Bosco (CN)<br>Tel: 0172 560087<br>www.studiograficoassociato.com<br>info@studiograficoassociato.com";
+      
+      // Dati mittente compattati per l'intestazione
+      const senderText = "<strong style='font-size: 9px;'>Studio Grafico Associato di Gastaldi Antonio Francesco</strong><br>Via Mario Groppo 4 - 12048 Sommariva del Bosco (CN)<br>Tel: 0172 560087 - www.studiograficoassociato.com<br>info@studiograficoassociato.com";
 
       let logoHtml = '';
       if (sharedCompanyLogo) {
@@ -1799,24 +1801,25 @@
       packageNumbers.forEach((pkgNum, idx) => {
         const currentPkgIndex = idx + 1;
         const articlesInPkg = packages[pkgNum];
-        const articlesListHtml = articlesInPkg.map(a => `<tr><td style="width: 40px; font-weight: bold; text-align: center;">${a.qty}x</td><td>${a.desc}</td></tr>`).join('');
+        const articlesListHtml = articlesInPkg.map(a => `<tr><td style="width: 40px; font-weight: bold; text-align: center; vertical-align: top;">${a.qty}x</td><td style="padding-bottom: 3px;">${a.desc}</td></tr>`).join('');
         
         labelsHtml += `
           <div class="label-page">
+            
+            <!-- INTESTAZIONE COMPATTA: Logo - Dati - QR -->
             <div class="top-row">
               <div class="logo-box">
                 ${logoHtml}
+              </div>
+              <div class="sender-info">
+                ${senderText}
               </div>
               <div class="qr-code">
                 <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://www.studiograficoassociato.com" alt="QR Code" style="width: 100%; height: 100%; object-fit: contain;">
               </div>
             </div>
-            
-            <div class="box mittente-box">
-              <div class="box-header">MITTENTE</div>
-              <div class="box-body">${senderText}</div>
-            </div>
 
+            <!-- RIGA DESTINATARIO E COLLO -->
             <div class="middle-row">
               <div class="box dest-box">
                 <div class="box-header">DESTINATARIO</div>
@@ -1830,9 +1833,10 @@
               </div>
             </div>
 
+            <!-- CONTENUTO IN ESPANSIONE -->
             <div class="box content-box">
               <div class="box-header">CONTENUTO:</div>
-              <div style="flex: 1; display: flex; flex-direction: column;">
+              <div class="box-body" style="padding: 0; display: flex; flex-direction: column;">
                 <table class="content-table">
                   <thead><tr><th style="width: 40px; text-align: center;">NR.</th><th>DESCRIZIONE.</th></tr></thead>
                   <tbody>${articlesListHtml}</tbody>
@@ -1849,24 +1853,60 @@
         <style>
           @page { size: A6 landscape; margin: 4mm; }
           body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; margin: 0; padding: 0; background: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-          .label-page { width: 140mm; height: 97mm; page-break-after: always; display: flex; flex-direction: column; box-sizing: border-box; background: white; padding: 2mm; }
-          .top-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2mm; height: 18mm; }
-          .logo-box { padding-left: 2mm; flex: 1; display: flex; flex-direction: column; justify-content: center;}
-          .print-logo { max-height: 16mm; max-width: 65mm; object-fit: contain; filter: brightness(0); object-position: left center;}
-          .logo-area { font-weight: 900; font-size: 34px; line-height: 0.9; letter-spacing: -2px; color: #000; display: flex; align-items: center; }
-          .logo-sub { font-size: 9px; font-weight: bold; letter-spacing: 0.5px; text-transform: uppercase; margin-top: 1px;}
-          .qr-code { width: 18mm; height: 18mm; border: 2px solid #333; padding: 1px; border-radius: 4px; flex-shrink: 0;}
+          
+          .label-page { 
+            width: 140mm; 
+            height: 97mm; 
+            page-break-after: always; 
+            display: flex; 
+            flex-direction: column; 
+            box-sizing: border-box; 
+            background: white; 
+            padding: 2mm; 
+          }
+          
+          /* Layout Intestazione */
+          .top-row { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            margin-bottom: 3mm; 
+            padding-bottom: 2mm; 
+            border-bottom: 2px solid #444; 
+          }
+          .logo-box { width: 35mm; display: flex; flex-direction: column; justify-content: center; }
+          .print-logo { max-height: 14mm; max-width: 100%; object-fit: contain; filter: brightness(0); object-position: left center; }
+          .logo-area { font-weight: 900; font-size: 28px; line-height: 0.9; letter-spacing: -2px; color: #000; display: flex; align-items: center; }
+          .logo-sub { font-size: 8px; font-weight: bold; letter-spacing: 0.5px; text-transform: uppercase; margin-top: 1px;}
+          
+          .sender-info { 
+            flex: 1; 
+            text-align: center; 
+            font-size: 8.5px; 
+            line-height: 1.3; 
+            color: #000; 
+            padding: 0 3mm; 
+          }
+          
+          .qr-code { width: 17mm; height: 17mm; border: 1.5px solid #444; padding: 1px; border-radius: 4px; flex-shrink: 0;}
+          
+          /* Box Generali */
           .box { border: 2px solid #444; border-radius: 6px; overflow: hidden; display: flex; flex-direction: column;}
           .box-header { background: #666; color: #fff; font-weight: bold; font-size: 10px; padding: 2px 6px; text-transform: uppercase; letter-spacing: 0.5px;}
           .box-body { background: #EBE8D8; padding: 5px 6px; font-size: 10.5px; line-height: 1.2; color: #000; flex: 1; }
-          .mittente-box { height: 26mm; margin-bottom: 2mm;}
+          
+          /* Riga Centrale Destinatario */
           .middle-row { display: flex; gap: 2mm; height: 16mm; margin-bottom: 2mm;}
           .dest-box { flex: 1; }
           .dest-box .box-header { background: #555; }
           .collo-box { width: 38mm; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: bold; background: #EBE8D8; border: 2px solid #444; border-radius: 6px; color: #000;}
-          .content-box { flex: 1; }
+          
+          /* Riga Contenuto espandibile */
+          .content-box { flex: 1; } /* flex: 1 fa riempire tutto lo spazio rimanente al box contenuto */
           .content-box .box-header { background: #fff; color: #000; border-bottom: 1px solid #444;}
-          .content-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+          
+          /* Tabella */
+          .content-table { width: 100%; border-collapse: collapse; font-size: 11.5px; }
           .content-table th { background: #CFCFCF; border-bottom: 1px solid #999; text-align: left; padding: 3px 5px; font-size: 10px; font-weight: bold;}
           .content-table td { padding: 4px 5px; border-bottom: 1px solid #ddd; background: #EBE8D8;}
           .content-table tr:nth-child(even) td { background: #E1DECD; }
@@ -1884,7 +1924,7 @@
       }, 800);
       closeModal('labelPrintModal');
     }
-
+    
     function printCard() {
       const card = state.cards.find(c => c.id === activeCardId); 
       if (!card) return; 
