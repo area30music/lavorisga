@@ -1789,7 +1789,7 @@
       let labelsHtml = '';
       
       // Dati mittente compattati per l'intestazione
-      const senderText = "<strong style='font-size: 9px;'>Studio Grafico Associato di Gastaldi Antonio Francesco</strong><br>Via Mario Groppo 4 - 12048 Sommariva del Bosco (CN)<br>Tel: 0172 560087 - www.studiograficoassociato.com<br>info@studiograficoassociato.com";
+      const senderText = "<strong style='font-size: 9px;'>Studio Grafico Associato di Gastaldi Antonio Francesco</strong><br>Via Mario Groppo 4 - 12048 Sommariva del Bosco (CN)<br>Tel: 0172 560087 - info@studiograficoassociato.com<br>www.studiograficoassociato.com";
 
       let logoHtml = '';
       if (sharedCompanyLogo) {
@@ -1924,7 +1924,7 @@
       }, 800);
       closeModal('labelPrintModal');
     }
-    
+
     function printCard() {
       const card = state.cards.find(c => c.id === activeCardId); 
       if (!card) return; 
