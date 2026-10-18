@@ -950,18 +950,35 @@
       lucide.createIcons();
     }
 
-    function loadCompanyLogo() {
+   function loadCompanyLogo() {
       const defaultIcon = document.getElementById('logoDefaultIcon');
       const logoImg = document.getElementById('logoImageDisplay');
       const logoContainer = document.getElementById('companyLogoContainer');
+      
+      // --- INIZIO GESTIONE FAVICON (Icona scheda Chrome) ---
+      let faviconLink = document.querySelector("link[rel~='icon']");
+      if (!faviconLink) {
+          faviconLink = document.createElement('link');
+          faviconLink.rel = 'icon';
+          document.head.appendChild(faviconLink);
+      }
+      // --- FINE GESTIONE FAVICON ---
+
       if (sharedCompanyLogo) {
         if (defaultIcon) defaultIcon.classList.add('hidden');
         if (logoImg) { logoImg.src = sharedCompanyLogo; logoImg.classList.remove('hidden'); }
         if (logoContainer) { logoContainer.classList.remove('bg-indigo-600'); logoContainer.style.background = 'transparent'; }
+        
+        // Imposta il logo caricato come Favicon!
+        faviconLink.href = sharedCompanyLogo;
+        
       } else {
         if (defaultIcon) defaultIcon.classList.remove('hidden');
         if (logoImg) logoImg.classList.add('hidden');
         if (logoContainer) logoContainer.className = "relative group cursor-pointer bg-indigo-600 rounded-lg text-white shadow-lg shadow-indigo-900/20 flex items-center justify-center overflow-hidden shrink-0";
+        
+        // Se non hai caricato il logo, mette un'icona di default (ho messo una stampantina 🖨️ ma puoi cambiarla)
+        faviconLink.href = "data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🖨️</text></svg>";
       }
     }
 
