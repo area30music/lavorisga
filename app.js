@@ -8,14 +8,8 @@ const firebaseConfig = {
   storageBucket: "workflow-sga.firebasestorage.app"
 };
 
-// ==========================================
-// CHIAVE IMGBB (FOTO 4K)
-// ==========================================
 const IMGBB_API_KEY = "4452dd184d4f0efb701cba820e8c8f81";
 
-// ==========================================
-// STILI DINAMICI PER ZOOM TESTO FLUIDO
-// ==========================================
 const zoomStyles = document.createElement('style');
 zoomStyles.innerHTML = `
   body:not(.master-mode) .card-dropzone { font-size: var(--app-font-size, 15px); }
@@ -37,9 +31,6 @@ if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
 const db = firebase.firestore();
 const auth = firebase.auth();
 
-// ==========================================
-// VARIABILI GLOBALI E CONFIGURAZIONE COLONNE
-// ==========================================
 let isMasterMode = false;
 let autoScrollId = null;
 let autoScrollDir = 1;
@@ -94,9 +85,6 @@ const COLOR_OPTIONS = [
   { label: "Grigio Neutro", value: "bg-slate-800/60 border-slate-700 text-slate-300", border: "border-l-4 border-l-slate-500" }
 ];
 
-// ==========================================
-// AUTENTICAZIONE E AVVIO
-// ==========================================
 auth.onAuthStateChanged((user) => {
   const loginScreen = document.getElementById('loginScreen');
   if (user) { loginScreen.classList.add('hidden'); init(); } 
@@ -145,9 +133,6 @@ function init() {
   if (cfgImgbbKeyInput && IMGBB_API_KEY !== "INSERISCI_QUI_LA_TUA_CHIAVE_IMGBB") { cfgImgbbKeyInput.value = IMGBB_API_KEY; cfgImgbbKeyInput.disabled = true; }
 }
 
-// ==========================================
-// FUNZIONI CORE (Orologio, Suoni, Avvisi)
-// ==========================================
 function updateLiveClock() {
   const now = new Date();
   const timeStr = now.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
@@ -731,14 +716,11 @@ function nextGalleryImage() { const card = state.cards.find(c => c.id === active
 function rotateGalleryImage() { const card = state.cards.find(c => c.id === activeCardId); if (!card || !card.photos) return; const item = card.photos[currentGalleryIndex]; item.rotation = ((item.rotation || 0) + 90) % 360; saveLocal(); updateGalleryView(); renderAttachments(card); syncCardToCloud(card); }
 function deleteCurrentCard() { const card = state.cards.find(c => c.id === activeCardId); if (!card) return; confirmDeletion(`Commessa: ${card.title || 'Senza Nome'}`, () => { state.cards = state.cards.filter(c => c.id !== activeCardId); saveLocal(); syncDeleteToCloud(activeCardId); closeModal('detailModal'); populateGlobalFilterDropdown(); }); }
 
-// ============================================
-// STAMPA ETICHETTE COLLI (A6 Landscape Puro 148x105mm)
-// ============================================
 function openLabelPrintModal(cardId) {
   playSound('click'); const card = state.cards.find(c => c.id === cardId); if (!card) return; activeLabelCardId = cardId;
   document.getElementById('labelClientName').innerText = card.client || 'N/D'; document.getElementById('labelTaskTitle').innerText = card.title || 'Senza Titolo';
   const notesInput = document.getElementById('labelNotesInput');
-  if (notesInput) { if (card.labelNotes) notesInput.value = card.labelNotes; else if (card.customerRef) notesInput.value = `Rif. Ordine: ${card.customerRef}`; else notesInput.value = ''; }
+  if (notesInput) { if (card.labelNotes !== undefined) notesInput.value = card.labelNotes; else if (card.customerRef) notesInput.value = `Rif. Ordine: ${card.customerRef}`; else notesInput.value = ''; }
   window.tempLabelArticles = [];
   if (card.labelArticles && card.labelArticles.length > 0) { window.tempLabelArticles = JSON.parse(JSON.stringify(card.labelArticles)); } 
   else if (card.articles && card.articles.length > 0) { card.articles.forEach(art => { if(!art.desc || art.desc.trim() === '') return; window.tempLabelArticles.push({ code: art.code || '', desc: art.desc, qty: art.qty || 1, packageNum: 1 }); }); }
@@ -751,10 +733,10 @@ function renderLabelArticlesTable() {
   else {
     window.tempLabelArticles.forEach((art, idx) => {
       const tr = document.createElement('tr'); tr.className = "hover:bg-slate-900/50 transition-colors";
-      // Layout corretto UI: Descrizione(grande) | Codice(piccolo) | Q.tà | Collo | Azioni
+      // LAYOUT CORRETTO: Codice | Descrizione Articolo | Q.tà in questo collo | Assegna a collo N° | Azioni
       tr.innerHTML = `
-        <td class="py-2 px-2 w-2/5"><input type="text" value="${art.desc || ''}" onchange="updateLabelRow(${idx}, 'desc', this.value)" class="w-full bg-transparent border-b border-slate-700 text-slate-200 text-xs focus:outline-none focus:border-blue-500" placeholder="Descrizione Articolo"></td>
         <td class="py-2 px-2 w-1/5"><input type="text" value="${art.code || ''}" onchange="updateLabelRow(${idx}, 'code', this.value)" class="w-full bg-transparent border-b border-slate-700 text-slate-200 text-xs font-mono focus:outline-none focus:border-blue-500" placeholder="Codice"></td>
+        <td class="py-2 px-2 w-2/5"><input type="text" value="${art.desc || ''}" onchange="updateLabelRow(${idx}, 'desc', this.value)" class="w-full bg-transparent border-b border-slate-700 text-slate-200 text-xs focus:outline-none focus:border-blue-500" placeholder="Descrizione"></td>
         <td class="py-2 px-2 text-center w-20"><input type="number" min="1" value="${art.qty}" onchange="updateLabelRow(${idx}, 'qty', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded px-1 py-1 text-slate-200 text-sm text-center focus:outline-none focus:border-blue-500"></td>
         <td class="py-2 px-2 text-center w-20"><input type="number" min="1" value="${art.packageNum}" onchange="updateLabelRow(${idx}, 'packageNum', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded px-1 py-1 text-slate-200 text-sm text-center focus:outline-none focus:border-blue-500"></td>
         <td class="py-2 px-2 text-center w-16 flex items-center justify-center gap-2"><button onclick="splitLabelRow(${idx})" class="p-1.5 bg-slate-800 hover:bg-blue-900/50 text-blue-400 rounded cursor-pointer transition-colors" title="Dividi Riga"><i data-lucide="split-square-vertical" class="w-4 h-4"></i></button><button onclick="removeLabelRow(${idx})" class="p-1.5 bg-slate-800 hover:bg-red-900/50 text-red-400 rounded cursor-pointer transition-colors" title="Rimuovi"><i data-lucide="trash-2" class="w-4 h-4"></i></button></td>
@@ -788,11 +770,9 @@ async function generateAndPrintLabels() {
 
   packageNumbers.forEach((pkgNum, idx) => {
     const currentPkgIndex = idx + 1; const articlesInPkg = packages[pkgNum];
-    // Formato STAMPA identico: Q.TÀ | DESCRIZIONE MATERIALE | CODICE
     const articlesListHtml = articlesInPkg.map(a => `<tr><td style="width: 45px; font-weight: bold; text-align: center; vertical-align: top;">${a.qty}x</td><td style="padding-bottom: 4px; vertical-align: top;">${a.desc}</td><td style="width: 80px; font-family: monospace; font-size: 11px; padding-bottom: 4px; vertical-align: top;">${a.code}</td></tr>`).join('');
-    const notesBoxHtml = labelNotes ? `<div class="box notes-box" style="margin-top: 3mm; height: 18mm; flex-shrink: 0;"><div class="box-header" style="background: #555;">NOTE / RIFERIMENTI:</div><div class="box-body" style="font-size: 12px;">${labelNotes.replace(/\n/g, '<br>')}</div></div>` : '';
     
-    labelsHtml += `<div class="label-page"><div class="top-row"><div class="logo-box">${logoHtml}</div><div class="sender-info">${senderText}</div><div class="qr-code"><img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://www.studiograficoassociato.com" alt="QR Code" style="width: 100%; height: 100%; object-fit: contain;"></div></div><div class="middle-row"><div class="box dest-box"><div class="box-header">DESTINATARIO:</div><div class="box-body" style="font-size: 16px; font-weight: bold; padding-top: 6px;">${card.client || 'Cliente N/D'}<br><span style="font-weight: normal; font-size: 12px;">${card.referent ? 'Rif: ' + card.referent : ''}</span></div></div><div class="collo-box">Collo ${currentPkgIndex} di ${totalPackages}</div></div><div class="box content-box" style="flex: 1; display: flex; flex-direction: column;"><div class="box-header">CONTENUTO DEL COLLO:</div><div class="box-body" style="padding: 0; flex: 1;"><table class="content-table"><thead><tr><th style="width: 45px; text-align: center;">Q.TÀ</th><th>DESCRIZIONE MATERIALE</th><th style="width: 80px;">CODICE</th></tr></thead><tbody>${articlesListHtml}</tbody></table></div></div>${notesBoxHtml}</div>`;
+    labelsHtml += `<div class="label-page"><div class="top-row"><div class="logo-box">${logoHtml}</div><div class="sender-info">${senderText}</div><div class="qr-code"><img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://www.studiograficoassociato.com" alt="QR Code" style="width: 100%; height: 100%; object-fit: contain;"></div></div><div class="middle-row"><div class="box dest-box"><div class="box-header">DESTINATARIO:</div><div class="box-body" style="font-size: 16px; font-weight: bold; padding-top: 6px;">${card.client || 'Cliente N/D'}<br><span style="font-weight: normal; font-size: 12px;">${card.referent ? 'Rif: ' + card.referent : ''}</span></div></div><div class="collo-box">Collo ${currentPkgIndex} di ${totalPackages}</div></div><div class="box content-box" style="flex: 1; display: flex; flex-direction: column;"><div class="box-header">CONTENUTO DEL COLLO:</div><div class="box-body" style="padding: 0; flex: 1;"><table class="content-table"><thead><tr><th style="width: 45px; text-align: center;">Q.TÀ</th><th>DESCRIZIONE MATERIALE</th><th style="width: 80px;">CODICE</th></tr></thead><tbody>${articlesListHtml}</tbody></table></div></div>${labelNotes ? `<div class="box notes-box" style="margin-top: 3mm; height: 18mm; flex-shrink: 0;"><div class="box-header" style="background: #555;">NOTE / RIFERIMENTI:</div><div class="box-body" style="font-size: 12px;">${labelNotes.replace(/\n/g, '<br>')}</div></div>` : ''}</div>`;
   });
 
   const fullHtml = `<!DOCTYPE html><html><head><title>Etichette_${card.title}</title><style>
@@ -803,7 +783,6 @@ async function generateAndPrintLabels() {
   alert("✅ File etichetta generato a dimensione reale A6 e modifiche salvate!"); 
   closeModal('labelPrintModal');
 
-  // SPOStAMENTO AUTOMATICO A BOLLETTATO DA CONSEGNARE DOPO LA STAMPA
   if (card.stage !== 'bollettato-da-consegnare' && card.stage !== 'fatturato' && card.stage !== 'archiviato') {
     card.stage = 'bollettato-da-consegnare';
     card.order = Date.now();
@@ -813,9 +792,6 @@ async function generateAndPrintLabels() {
   saveLocal(); syncCardToCloud(card);
 }
 
-// ============================================
-// STAMPA SCHEDA COMPLETA
-// ============================================
 function printCard() {
   const card = state.cards.find(c => c.id === activeCardId); if (!card) return; 
   const printWindow = window.open('', '_blank'); if (!printWindow) { alert("⚠️ ATTENZIONE: Il pop-up per la stampa è stato bloccato dal browser."); return; }
@@ -858,9 +834,6 @@ function renderAlarmsList() {
 function openModal(modalId) { document.getElementById(modalId).classList.remove('hidden'); }
 function closeModal(modalId) { document.getElementById(modalId).classList.add('hidden'); }
 
-// ============================================
-// GESTIONE ARCHIVIO AVANZATA: ELIMINAZIONE, REPORT E SPAZIO
-// ============================================
 function deleteArchivedCard(cardId) { const card = state.cards.find(c => c.id === cardId); if (!card) return; confirmDeletion(`Sei sicuro di voler eliminare DEFINITIVAMENTE l'ordine "${card.title}" dall'archivio? Questa operazione non è reversibile.`, () => { state.cards = state.cards.filter(c => c.id !== cardId); saveLocal(); syncDeleteToCloud(cardId); const searchInput = document.getElementById('archiveSearchInput'); filterArchive(searchInput ? searchInput.value : ''); updateStorageIndicator(); }); }
 
 function updateStorageIndicator() {
