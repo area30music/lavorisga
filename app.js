@@ -43,6 +43,7 @@ window.tempLabelArticles = [];
 let arcadeTimer = null;
 let sirenInterval = null;
 let activeLabelCardId = null;
+let currentSettingsView = 'main';
 
 const DEFAULT_COLUMNS_CONFIG = [
   { id: "prev-da-fare", label: "Prev. da fare", color: "bg-orange-600/20 border-orange-500/50 text-orange-400", border: "border-l-4 border-l-orange-500", hexDefault: "#c2410c" },
@@ -66,7 +67,6 @@ let masterFontSizePx = 24;
 let appFontSizePx = 15;
 let sharedCompanyLogo = "";
 let sharedMsgTemplate = "";
-let activeSubSettingsType = null;
 let globalSearchQuery = "";
 let globalFilterJobType = "";
 let activeNotifyCard = null;
@@ -128,9 +128,6 @@ function init() {
   
   checkAutoArchive(); setInterval(checkAutoArchive, 60 * 60 * 1000);
   renderBoard(); updateCloudStatus(true); listenToCloudUpdates(); lucide.createIcons(); 
-  
-  const cfgImgbbKeyInput = document.getElementById('cfgImgbbKey');
-  if (cfgImgbbKeyInput && IMGBB_API_KEY !== "INSERISCI_QUI_LA_TUA_CHIAVE_IMGBB") { cfgImgbbKeyInput.value = IMGBB_API_KEY; cfgImgbbKeyInput.disabled = true; }
 }
 
 function updateLiveClock() {
@@ -298,51 +295,122 @@ function populateGlobalFilterDropdown() {
 function handleGlobalSearch(val) { globalSearchQuery = val.trim().toLowerCase(); const clearBtn = document.getElementById('btnClearSearch'); if (clearBtn) { if (globalSearchQuery) clearBtn.classList.remove('hidden'); else clearBtn.classList.add('hidden'); } renderBoard(); }
 function handleGlobalFilterChange() { globalFilterJobType = document.getElementById('globalFilterType').value; renderBoard(); }
 function clearGlobalSearch() { document.getElementById('globalSearchInput').value = ''; globalSearchQuery = ''; document.getElementById('btnClearSearch').classList.add('hidden'); renderBoard(); }
-function openSettingsModal() { openModal('settingsModal'); }
 
-function renderArchiveList(query = '') {
-  const q = query.toLowerCase().trim(); let archived = state.cards.filter(c => c.stage === 'archiviato');
-  if (q) archived = archived.filter(c => (c.title||'').toLowerCase().includes(q) || (c.client||'').toLowerCase().includes(q));
-  archived.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
-  if (archived.length === 0) return '<p class="text-xs text-slate-500 italic py-4 text-center">Nessuna commessa in archivio.</p>';
-  return archived.map(c => `<div class="bg-slate-950 p-3 rounded-lg border border-slate-800 hover:border-slate-500/50 transition-colors group flex justify-between items-center"><div onclick="openDetail('${c.id}')" class="flex-1 cursor-pointer"><h5 class="text-sm font-bold text-slate-200 group-hover:text-white transition-colors">${c.title}</h5><div class="text-[10px] text-slate-400 mt-0.5">Cliente: <span class="text-indigo-300 font-semibold">${c.client || 'N/D'}</span> | Inserimento: ${new Date(c.createdAt).toLocaleDateString('it-IT')}</div></div><div class="flex items-center gap-2"><button onclick="openDetail('${c.id}')" class="text-slate-600 hover:text-indigo-400 p-1.5 transition-colors cursor-pointer" title="Apri Dettaglio"><i data-lucide="external-link" class="w-4 h-4"></i></button><button onclick="deleteArchivedCard('${c.id}')" class="text-slate-600 hover:text-red-400 p-1.5 transition-colors cursor-pointer" title="Elimina Definitivamente"><i data-lucide="trash-2" class="w-4 h-4"></i></button></div></div>`).join('');
-}
-function filterArchive(val) { const list = document.getElementById('archiveSettingsList'); if (list) { list.innerHTML = renderArchiveList(val); lucide.createIcons(); } }
+function openSettingsModal() { currentSettingsView = 'main'; renderSettingsContent(); openModal('settingsModal'); }
 
-function openSubSettings(type) {
-  activeSubSettingsType = type; const titleEl = document.getElementById('subSettingsTitle'); const contentEl = document.getElementById('subSettingsContent'); contentEl.innerHTML = '';
-  if (type === 'crm') {
-    window.editingClientId = null; titleEl.innerHTML = `<i data-lucide="users" class="w-5 h-5 text-indigo-400"></i> Gestione Clienti (CRM)`;
-    contentEl.innerHTML = `<div class="space-y-4"><p class="text-xs text-slate-400">Gestisci l'anagrafica clienti con azienda, referente, email e WhatsApp:</p><div class="bg-slate-950 p-3 rounded-lg border border-slate-800 space-y-2.5"><h5 class="text-xs font-bold text-indigo-400 uppercase">Aggiungi / Modifica Cliente</h5><div class="grid grid-cols-2 gap-2"><input type="text" id="crmModalName" placeholder="Azienda / Cliente *" class="bg-slate-900 border border-slate-700 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"><input type="text" id="crmModalRef" placeholder="Referente" class="bg-slate-900 border border-slate-700 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"></div><div class="grid grid-cols-2 gap-2"><input type="email" id="crmModalEmail" placeholder="Email" class="bg-slate-900 border border-slate-700 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"><input type="text" id="crmModalWa" placeholder="WhatsApp" class="bg-slate-900 border border-slate-700 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"></div><button type="button" id="btnSaveCrmClient" onclick="addClientFromSettings()" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs px-3 py-2 rounded font-semibold w-full cursor-pointer transition-colors">Salva Cliente in Archivio</button></div><div id="settingsClientsList" class="space-y-1.5 max-h-44 overflow-y-auto pr-1">${renderCrmSettingsList()}</div></div>`;
-  } else if (type === 'archive') {
-    titleEl.innerHTML = `<i data-lucide="archive" class="w-5 h-5 text-slate-400"></i> Archivio Commesse`;
-    contentEl.innerHTML = `<div class="space-y-4"><div class="bg-slate-950 p-3 rounded-lg border border-slate-800 flex justify-between items-center gap-2 flex-wrap"><div><p class="text-xs font-bold text-slate-200 uppercase tracking-wider">Gestione Dati & Report</p><p class="text-[10px] text-slate-400 mt-0.5">Memoria Locale Usata: <span id="storageUsageIndicator" class="font-mono font-bold text-emerald-400">Calcolo...</span></p></div><button onclick="playSound('click'); printArchiveReport();" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs px-3 py-2 rounded-lg font-semibold flex items-center gap-1.5 cursor-pointer shadow-lg active:scale-95 transition-transform"><i data-lucide="printer" class="w-4 h-4"></i> Stampa Report Fatturato</button></div><div class="relative w-full"><i data-lucide="search" class="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-slate-400"></i><input type="text" id="archiveSearchInput" oninput="filterArchive(this.value)" placeholder="Cerca nell'archivio..." class="w-full bg-slate-950 border border-slate-700 rounded-lg pl-8 pr-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-slate-500"></div><div id="archiveSettingsList" class="space-y-2 max-h-[400px] overflow-y-auto pr-1">${renderArchiveList()}</div></div>`;
-    setTimeout(() => { updateStorageIndicator(); lucide.createIcons(); }, 50);
-  } else if (type === 'messages') {
-    titleEl.innerHTML = `<i data-lucide="message-square" class="w-5 h-5 text-pink-400"></i> Testo Notifiche (WhatsApp / Email)`;
-    contentEl.innerHTML = `<div class="space-y-4"><p class="text-xs text-slate-400">Personalizza il testo inviato ai clienti per il ritiro merce. La modifica viene salvata <strong class="text-pink-400">su Cloud</strong> ed è attiva su tutti i dispositivi. Usa le variabili magiche:</p><div class="bg-slate-950 p-3 rounded-lg border border-slate-800 space-y-1.5 font-mono text-[11px] text-indigo-300"><div><strong class="text-pink-400 text-xs">{SALUTO}</strong> -> "Nome Referente della ditta Azienda"</div><div><strong class="text-pink-400 text-xs">{TITOLO}</strong> -> Titolo della commessa</div><div><strong class="text-pink-400 text-xs">{ARTICOLI}</strong> -> Elenco articoli in lista</div></div><textarea id="msgTemplateText" rows="10" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-xs text-slate-200 focus:outline-none focus:border-pink-500 font-sans leading-relaxed">${sharedMsgTemplate}</textarea></div>`;
-  } else if (type === 'machines') {
-    titleEl.innerHTML = `<i data-lucide="cpu" class="w-5 h-5 text-cyan-400"></i> Gestione Macchinari`;
-    contentEl.innerHTML = `<div class="space-y-3"><p class="text-xs text-slate-400">Aggiungi o rimuovi i macchinari utilizzati in tipografia o laboratorio:</p><div class="flex gap-2"><input type="text" id="newMachineInput" placeholder="Nuovo macchinario..." class="flex-1 bg-slate-950 border border-slate-700 rounded px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-cyan-500"><button type="button" onclick="addMachine()" class="bg-cyan-600 hover:bg-cyan-500 text-white text-xs px-3 py-2 rounded font-semibold cursor-pointer">Aggiungi</button></div><div id="settingsMachinesList" class="space-y-1.5 max-h-56 overflow-y-auto pr-1">${MACHINES_DB.map((m, idx) => `<div class="flex items-center justify-between bg-slate-950 p-2 rounded border border-slate-800 text-xs"><span class="text-slate-200 font-medium">${m}</span><button onclick="removeMachine(${idx})" class="text-red-400 hover:text-red-300 p-1 cursor-pointer"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button></div>`).join('')}</div></div>`;
-  } else if (type === 'logo') {
-    titleEl.innerHTML = `<i data-lucide="image" class="w-5 h-5 text-indigo-400"></i> Logo Aziendale`;
-    contentEl.innerHTML = `<div class="space-y-3"><p class="text-xs text-slate-400">Carica il logo in PNG trasparente: verrà salvato nel Cloud e visibile su tutti i dispositivi.</p><div class="flex items-center gap-4"><div id="subSettingsLogoBox" class="w-32 h-14 bg-slate-950 border border-slate-700 rounded flex items-center justify-center overflow-hidden">${sharedCompanyLogo ? `<img src="${sharedCompanyLogo}" class="max-h-full max-w-full object-contain">` : '<span class="text-[10px] text-slate-500">Nessun Logo</span>'}</div><div class="flex gap-2"><label class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs px-3 py-2 rounded font-semibold cursor-pointer transition-colors flex items-center gap-1.5"><i data-lucide="upload" class="w-3.5 h-3.5"></i> Carica Logo PNG<input type="file" accept="image/png, image/jpeg" class="hidden" onchange="uploadCompanyLogo(event); openSubSettings('logo');"></label><button onclick="removeCompanyLogo();" class="bg-slate-800 hover:bg-slate-700 text-red-400 text-xs px-3 py-2 rounded font-semibold transition-colors cursor-pointer">Rimuovi</button></div></div></div>`;
-  } else if (type === 'alarms') {
-    titleEl.innerHTML = `<i data-lucide="alarm-clock" class="w-5 h-5 text-indigo-400"></i> Gestione Sveglie Alert Scadenze`;
-    contentEl.innerHTML = `<div class="space-y-3"><div class="flex justify-between items-center"><p class="text-xs text-slate-400">Crea sveglie per visualizzare l'avviso delle scadenze.</p><button onclick="playSound('click'); addAlarmRule(); openSubSettings('alarms');" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs px-3 py-1.5 rounded font-semibold flex items-center gap-1 cursor-pointer"><i data-lucide="plus" class="w-3.5 h-3.5"></i> Aggiungi Sveglia</button></div><div id="alarmsListContainer" class="space-y-3 max-h-60 overflow-y-auto pr-1"></div></div>`;
-    setTimeout(renderAlarmsList, 50);
-  } else if (type === 'colors') {
-    titleEl.innerHTML = `<i data-lucide="palette" class="w-5 h-5 text-indigo-400"></i> Colori delle Fasi / Colonne`;
-    contentEl.innerHTML = `<div class="space-y-2"><p class="text-xs text-slate-400 mb-2">Personalizza la colorazione di ciascuna colonna del workflow:</p><div id="columnsColorSettingsList" class="space-y-2 max-h-60 overflow-y-auto pr-2"></div></div>`;
-    setTimeout(() => { const container = document.getElementById('columnsColorSettingsList'); if (container) { container.innerHTML = ''; COLUMNS_CONFIG.forEach(col => { const row = document.createElement('div'); row.className = "flex items-center justify-between bg-slate-950 p-2.5 rounded border border-slate-800 gap-3"; let optionsHtml = COLOR_OPTIONS.map(opt => `<option value="${opt.label}" ${opt.value === col.color ? 'selected' : ''}>${opt.label}</option>`).join(''); row.innerHTML = `<div class="font-semibold text-xs text-slate-200 truncate w-1/3">${col.label}</div><div class="w-2/3"><select id="colColorSelect-${col.id}" class="w-full bg-slate-900 border border-slate-700 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">${optionsHtml}</select></div>`; container.appendChild(row); }); } }, 50);
-  } else if (type === 'zoom') {
-    titleEl.innerHTML = `<i data-lucide="type" class="w-5 h-5 text-indigo-400"></i> Visualizzazione & Zoom Caratteri`;
-    contentEl.innerHTML = `<div class="space-y-5"><div class="bg-slate-950 p-3.5 rounded-lg border border-slate-800 space-y-2"><div class="flex justify-between items-center"><h4 class="text-xs font-bold text-indigo-400 uppercase tracking-wider">Zoom Programmazione</h4><span id="appFontSizeVal" class="font-mono text-indigo-400 font-bold text-xs bg-slate-900 px-2.5 py-1 rounded border border-slate-800">${appFontSizePx}px</span></div><input type="range" id="appFontRange" min="12" max="24" value="${appFontSizePx}" step="1" oninput="previewAppFontSize(this.value)" class="w-full accent-indigo-500 cursor-pointer h-2 bg-slate-900 rounded-lg"></div><div class="bg-slate-950 p-3.5 rounded-lg border border-slate-800 space-y-2"><div class="flex justify-between items-center"><h4 class="text-xs font-bold text-emerald-400 uppercase tracking-wider">Zoom Master View</h4><span id="masterFontSizeVal" class="font-mono text-emerald-400 font-bold text-xs bg-slate-900 px-2.5 py-1 rounded border border-slate-800">${masterFontSizePx}px</span></div><input type="range" id="masterFontRange" min="16" max="50" value="${masterFontSizePx}" step="1" oninput="previewMasterFontSize(this.value)" class="w-full accent-indigo-500 cursor-pointer h-2 bg-slate-900 rounded-lg"></div></div>`;
+function renderSettingsContent() {
+  const titleEl = document.getElementById('settingsModalTitle');
+  const backBtn = document.getElementById('settingsBackBtn');
+  const bodyEl = document.getElementById('settingsModalBody');
+
+  if (currentSettingsView === 'main') {
+    if (backBtn) backBtn.classList.add('hidden');
+    titleEl.innerHTML = `<i data-lucide="settings" class="w-4 h-4 text-indigo-400"></i> Impostazioni di Sistema & Archivio`;
+    bodyEl.innerHTML = `
+      <div onclick="openSubSettings('crm')" class="bg-slate-950 p-3.5 rounded-xl border border-slate-800 hover:border-indigo-500/50 cursor-pointer transition-colors flex items-center justify-between group">
+        <div class="flex items-center gap-3"><div class="p-2 bg-indigo-950 text-indigo-400 rounded-lg"><i data-lucide="users" class="w-5 h-5"></i></div><div><h4 class="text-xs font-bold text-white group-hover:text-indigo-400 transition-colors">Gestione Clienti (CRM)</h4><p class="text-[10px] text-slate-400">Anagrafica aziende, referenti, email e WhatsApp</p></div></div>
+        <i data-lucide="chevron-right" class="w-4 h-4 text-slate-600 group-hover:text-white transition-colors"></i>
+      </div>
+      <div onclick="openSubSettings('archive')" class="bg-slate-950 p-3.5 rounded-xl border border-slate-800 hover:border-indigo-500/50 cursor-pointer transition-colors flex items-center justify-between group">
+        <div class="flex items-center gap-3"><div class="p-2 bg-slate-900 text-slate-300 rounded-lg"><i data-lucide="archive" class="w-5 h-5"></i></div><div><h4 class="text-xs font-bold text-white group-hover:text-indigo-400 transition-colors">Archivio Commesse & Fatturato</h4><p class="text-[10px] text-slate-400">Storico commesse archiviate automaticamente</p></div></div>
+        <i data-lucide="chevron-right" class="w-4 h-4 text-slate-600 group-hover:text-white transition-colors"></i>
+      </div>
+      <div onclick="openSubSettings('messages')" class="bg-slate-950 p-3.5 rounded-xl border border-slate-800 hover:border-pink-500/50 cursor-pointer transition-colors flex items-center justify-between group">
+        <div class="flex items-center gap-3"><div class="p-2 bg-pink-950 text-pink-400 rounded-lg"><i data-lucide="message-square" class="w-5 h-5"></i></div><div><h4 class="text-xs font-bold text-white group-hover:text-pink-400 transition-colors">Testo Notifiche WhatsApp / Email</h4><p class="text-[10px] text-slate-400">Personalizza il messaggio di pronto ritiro</p></div></div>
+        <i data-lucide="chevron-right" class="w-4 h-4 text-slate-600 group-hover:text-white transition-colors"></i>
+      </div>
+      <div onclick="openSubSettings('machines')" class="bg-slate-950 p-3.5 rounded-xl border border-slate-800 hover:border-cyan-500/50 cursor-pointer transition-colors flex items-center justify-between group">
+        <div class="flex items-center gap-3"><div class="p-2 bg-cyan-950 text-cyan-400 rounded-lg"><i data-lucide="cpu" class="w-5 h-5"></i></div><div><h4 class="text-xs font-bold text-white group-hover:text-cyan-400 transition-colors">Gestione Macchinari</h4><p class="text-[10px] text-slate-400">Stampanti, plotter e macchine da laboratorio</p></div></div>
+        <i data-lucide="chevron-right" class="w-4 h-4 text-slate-600 group-hover:text-white transition-colors"></i>
+      </div>
+      <div onclick="openSubSettings('logo')" class="bg-slate-950 p-3.5 rounded-xl border border-slate-800 hover:border-indigo-500/50 cursor-pointer transition-colors flex items-center justify-between group">
+        <div class="flex items-center gap-3"><div class="p-2 bg-indigo-950 text-indigo-400 rounded-lg"><i data-lucide="image" class="w-5 h-5"></i></div><div><h4 class="text-xs font-bold text-white group-hover:text-indigo-400 transition-colors">Logo Aziendale</h4><p class="text-[10px] text-slate-400">Carica il logo in PNG trasparente</p></div></div>
+        <i data-lucide="chevron-right" class="w-4 h-4 text-slate-600 group-hover:text-white transition-colors"></i>
+      </div>
+      <div onclick="openSubSettings('alarms')" class="bg-slate-950 p-3.5 rounded-xl border border-slate-800 hover:border-indigo-500/50 cursor-pointer transition-colors flex items-center justify-between group">
+        <div class="flex items-center gap-3"><div class="p-2 bg-indigo-950 text-indigo-400 rounded-lg"><i data-lucide="alarm-clock" class="w-5 h-5"></i></div><div><h4 class="text-xs font-bold text-white group-hover:text-indigo-400 transition-colors">Sveglie Alert Scadenze</h4><p class="text-[10px] text-slate-400">Configura orari per avvisi scadenze urgenti</p></div></div>
+        <i data-lucide="chevron-right" class="w-4 h-4 text-slate-600 group-hover:text-white transition-colors"></i>
+      </div>
+      <div onclick="openSubSettings('colors')" class="bg-slate-950 p-3.5 rounded-xl border border-slate-800 hover:border-indigo-500/50 cursor-pointer transition-colors flex items-center justify-between group">
+        <div class="flex items-center gap-3"><div class="p-2 bg-indigo-950 text-indigo-400 rounded-lg"><i data-lucide="palette" class="w-5 h-5"></i></div><div><h4 class="text-xs font-bold text-white group-hover:text-indigo-400 transition-colors">Colori Fasi / Colonne</h4><p class="text-[10px] text-slate-400">Personalizza la colorazione del workflow</p></div></div>
+        <i data-lucide="chevron-right" class="w-4 h-4 text-slate-600 group-hover:text-white transition-colors"></i>
+      </div>
+      <div onclick="openSubSettings('zoom')" class="bg-slate-950 p-3.5 rounded-xl border border-slate-800 hover:border-indigo-500/50 cursor-pointer transition-colors flex items-center justify-between group">
+        <div class="flex items-center gap-3"><div class="p-2 bg-indigo-950 text-indigo-400 rounded-lg"><i data-lucide="type" class="w-5 h-5"></i></div><div><h4 class="text-xs font-bold text-white group-hover:text-indigo-400 transition-colors">Visualizzazione & Zoom Caratteri</h4><p class="text-[10px] text-slate-400">Regola la dimensione del testo della board</p></div></div>
+        <i data-lucide="chevron-right" class="w-4 h-4 text-slate-600 group-hover:text-white transition-colors"></i>
+      </div>
+
+      <div class="pt-3 border-t border-slate-800 grid grid-cols-2 gap-2">
+        <button onclick="exportBackup()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs py-2 px-3 rounded-lg font-semibold flex items-center justify-center gap-1.5 cursor-pointer"><i data-lucide="download" class="w-3.5 h-3.5 text-indigo-400"></i> Esporta Backup</button>
+        <label class="bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs py-2 px-3 rounded-lg font-semibold flex items-center justify-center gap-1.5 cursor-pointer">
+          <i data-lucide="upload" class="w-3.5 h-3.5 text-emerald-400"></i> Importa Backup <input type="file" accept=".json" onchange="importBackup(event)" class="hidden">
+        </label>
+      </div>
+      <div class="pt-2"><button onclick="resetDefaultSettings()" class="w-full text-center text-[11px] text-red-400 hover:text-red-300 py-1">Ripristina tutte le impostazioni predefinite</button></div>
+    `;
+  } else {
+    if (backBtn) backBtn.classList.remove('hidden');
+    if (currentSettingsView === 'crm') {
+      titleEl.innerHTML = `<i data-lucide="users" class="w-5 h-5 text-indigo-400"></i> Gestione Clienti (CRM)`;
+      bodyEl.innerHTML = `<div class="space-y-4"><p class="text-xs text-slate-400">Gestisci l'anagrafica clienti con azienda, referente, email e WhatsApp:</p><div class="bg-slate-950 p-3 rounded-lg border border-slate-800 space-y-2.5"><h5 class="text-xs font-bold text-indigo-400 uppercase">Aggiungi / Modifica Cliente</h5><div class="grid grid-cols-2 gap-2"><input type="text" id="crmModalName" placeholder="Azienda / Cliente *" class="bg-slate-900 border border-slate-700 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"><input type="text" id="crmModalRef" placeholder="Referente" class="bg-slate-900 border border-slate-700 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"></div><div class="grid grid-cols-2 gap-2"><input type="email" id="crmModalEmail" placeholder="Email" class="bg-slate-900 border border-slate-700 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"><input type="text" id="crmModalWa" placeholder="WhatsApp" class="bg-slate-900 border border-slate-700 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"></div><button type="button" id="btnSaveCrmClient" onclick="addClientFromSettings()" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs px-3 py-2 rounded font-semibold w-full cursor-pointer transition-colors">Salva Cliente in Archivio</button></div><div id="settingsClientsList" class="space-y-1.5 max-h-56 overflow-y-auto pr-1">${renderCrmSettingsList()}</div></div>`;
+    } else if (currentSettingsView === 'archive') {
+      titleEl.innerHTML = `<i data-lucide="archive" class="w-5 h-5 text-slate-400"></i> Archivio Commesse`;
+      bodyEl.innerHTML = `<div class="space-y-4"><div class="bg-slate-950 p-3 rounded-lg border border-slate-800 flex justify-between items-center gap-2 flex-wrap"><div><p class="text-xs font-bold text-slate-200 uppercase tracking-wider">Gestione Dati & Report</p><p class="text-[10px] text-slate-400 mt-0.5">Memoria Locale Usata: <span id="storageUsageIndicator" class="font-mono font-bold text-emerald-400">Calcolo...</span></p></div><button onclick="playSound('click'); printArchiveReport();" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs px-3 py-2 rounded-lg font-semibold flex items-center gap-1.5 cursor-pointer shadow-lg active:scale-95 transition-transform"><i data-lucide="printer" class="w-4 h-4"></i> Stampa Report Fatturato</button></div><div class="relative w-full"><i data-lucide="search" class="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-slate-400"></i><input type="text" id="archiveSearchInput" oninput="filterArchive(this.value)" placeholder="Cerca nell'archivio..." class="w-full bg-slate-950 border border-slate-700 rounded-lg pl-8 pr-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-slate-500"></div><div id="archiveSettingsList" class="space-y-2 max-h-[350px] overflow-y-auto pr-1">${renderArchiveList()}</div></div>`;
+      setTimeout(() => { updateStorageIndicator(); }, 50);
+    } else if (currentSettingsView === 'messages') {
+      titleEl.innerHTML = `<i data-lucide="message-square" class="w-5 h-5 text-pink-400"></i> Testo Notifiche (WhatsApp / Email)`;
+      bodyEl.innerHTML = `<div class="space-y-4"><p class="text-xs text-slate-400">Personalizza il testo inviato ai clienti per il ritiro merce. La modifica viene salvata <strong class="text-pink-400">su Cloud</strong> ed è attiva su tutti i dispositivi. Usa le variabili magiche:</p><div class="bg-slate-950 p-3 rounded-lg border border-slate-800 space-y-1.5 font-mono text-[11px] text-indigo-300"><div><strong class="text-pink-400 text-xs">{SALUTO}</strong> -> "Nome Referente della ditta Azienda"</div><div><strong class="text-pink-400 text-xs">{TITOLO}</strong> -> Titolo della commessa</div><div><strong class="text-pink-400 text-xs">{ARTICOLI}</strong> -> Elenco articoli in lista</div></div><textarea id="msgTemplateText" rows="8" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-xs text-slate-200 focus:outline-none focus:border-pink-500 font-sans leading-relaxed">${sharedMsgTemplate}</textarea><button onclick="saveSubSettingsAction('messages')" class="bg-pink-600 hover:bg-pink-500 text-white text-xs px-4 py-2 rounded font-semibold w-full cursor-pointer shadow">Salva Modifiche Testo</button></div>`;
+    } else if (currentSettingsView === 'machines') {
+      titleEl.innerHTML = `<i data-lucide="cpu" class="w-5 h-5 text-cyan-400"></i> Gestione Macchinari`;
+      bodyEl.innerHTML = `<div class="space-y-3"><p class="text-xs text-slate-400">Aggiungi o rimuovi i macchinari utilizzati in tipografia o laboratorio:</p><div class="flex gap-2"><input type="text" id="newMachineInput" placeholder="Nuovo macchinario..." class="flex-1 bg-slate-950 border border-slate-700 rounded px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-cyan-500"><button type="button" onclick="addMachine()" class="bg-cyan-600 hover:bg-cyan-500 text-white text-xs px-3 py-2 rounded font-semibold cursor-pointer">Aggiungi</button></div><div id="settingsMachinesList" class="space-y-1.5 max-h-56 overflow-y-auto pr-1">${MACHINES_DB.map((m, idx) => `<div class="flex items-center justify-between bg-slate-950 p-2 rounded border border-slate-800 text-xs"><span class="text-slate-200 font-medium">${m}</span><button onclick="removeMachine(${idx})" class="text-red-400 hover:text-red-300 p-1 cursor-pointer"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button></div>`).join('')}</div></div>`;
+    } else if (currentSettingsView === 'logo') {
+      titleEl.innerHTML = `<i data-lucide="image" class="w-5 h-5 text-indigo-400"></i> Logo Aziendale`;
+      bodyEl.innerHTML = `<div class="space-y-3"><p class="text-xs text-slate-400">Carica il logo in PNG trasparente: verrà salvato nel Cloud e visibile su tutti i dispositivi.</p><div class="flex items-center gap-4"><div class="w-32 h-14 bg-slate-950 border border-slate-700 rounded flex items-center justify-center overflow-hidden">${sharedCompanyLogo ? `<img src="${sharedCompanyLogo}" class="max-h-full max-w-full object-contain">` : '<span class="text-[10px] text-slate-500">Nessun Logo</span>'}</div><div class="flex gap-2"><label class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs px-3 py-2 rounded font-semibold cursor-pointer transition-colors flex items-center gap-1.5"><i data-lucide="upload" class="w-3.5 h-3.5"></i> Carica Logo PNG<input type="file" accept="image/png, image/jpeg" class="hidden" onchange="uploadCompanyLogo(event); openSubSettings('logo');"></label><button onclick="removeCompanyLogo();" class="bg-slate-800 hover:bg-slate-700 text-red-400 text-xs px-3 py-2 rounded font-semibold transition-colors cursor-pointer">Rimuovi</button></div></div></div>`;
+    } else if (currentSettingsView === 'alarms') {
+      titleEl.innerHTML = `<i data-lucide="alarm-clock" class="w-5 h-5 text-indigo-400"></i> Gestione Sveglie Alert Scadenze`;
+      bodyEl.innerHTML = `<div class="space-y-3"><div class="flex justify-between items-center"><p class="text-xs text-slate-400">Crea sveglie per visualizzare l'avviso delle scadenze.</p><button onclick="playSound('click'); addAlarmRule(); openSubSettings('alarms');" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs px-3 py-1.5 rounded font-semibold flex items-center gap-1 cursor-pointer"><i data-lucide="plus" class="w-3.5 h-3.5"></i> Aggiungi Sveglia</button></div><div id="alarmsListContainer" class="space-y-3 max-h-60 overflow-y-auto pr-1"></div><button onclick="saveSubSettingsAction('alarms')" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs px-4 py-2 rounded font-semibold w-full cursor-pointer shadow mt-2">Salva Sveglie</button></div>`;
+      setTimeout(renderAlarmsList, 50);
+    } else if (currentSettingsView === 'colors') {
+      titleEl.innerHTML = `<i data-lucide="palette" class="w-5 h-5 text-indigo-400"></i> Colori delle Fasi / Colonne`;
+      bodyEl.innerHTML = `<div class="space-y-3"><p class="text-xs text-slate-400 mb-2">Personalizza la colorazione di ciascuna colonna del workflow:</p><div id="columnsColorSettingsList" class="space-y-2 max-h-52 overflow-y-auto pr-2"></div><button onclick="saveSubSettingsAction('colors')" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs px-4 py-2 rounded font-semibold w-full cursor-pointer shadow mt-2">Salva Colori</button></div>`;
+      setTimeout(() => {
+        const container = document.getElementById('columnsColorSettingsList');
+        if (container) {
+          container.innerHTML = '';
+          COLUMNS_CONFIG.forEach(col => {
+            const row = document.createElement('div');
+            row.className = "flex items-center justify-between bg-slate-950 p-2.5 rounded border border-slate-800 gap-3";
+            let optionsHtml = COLOR_OPTIONS.map(opt => `<option value="${opt.label}" ${opt.value === col.color ? 'selected' : ''}>${opt.label}</option>`).join('');
+            row.innerHTML = `<div class="font-semibold text-xs text-slate-200 truncate w-1/3">${col.label}</div><div class="w-2/3"><select id="colColorSelect-${col.id}" class="w-full bg-slate-900 border border-slate-700 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">${optionsHtml}</select></div>`;
+            container.appendChild(row);
+          });
+        }
+      }, 50);
+    } else if (currentSettingsView === 'zoom') {
+      titleEl.innerHTML = `<i data-lucide="type" class="w-5 h-5 text-indigo-400"></i> Visualizzazione & Zoom Caratteri`;
+      bodyEl.innerHTML = `<div class="space-y-5"><div class="bg-slate-950 p-3.5 rounded-lg border border-slate-800 space-y-2"><div class="flex justify-between items-center"><h4 class="text-xs font-bold text-indigo-400 uppercase tracking-wider">Zoom Programmazione</h4><span id="appFontSizeVal" class="font-mono text-indigo-400 font-bold text-xs bg-slate-900 px-2.5 py-1 rounded border border-slate-800">${appFontSizePx}px</span></div><input type="range" id="appFontRange" min="12" max="24" value="${appFontSizePx}" step="1" oninput="previewAppFontSize(this.value)" class="w-full accent-indigo-500 cursor-pointer h-2 bg-slate-900 rounded-lg"></div><div class="bg-slate-950 p-3.5 rounded-lg border border-slate-800 space-y-2"><div class="flex justify-between items-center"><h4 class="text-xs font-bold text-emerald-400 uppercase tracking-wider">Zoom Master View</h4><span id="masterFontSizeVal" class="font-mono text-emerald-400 font-bold text-xs bg-slate-900 px-2.5 py-1 rounded border border-slate-800">${masterFontSizePx}px</span></div><input type="range" id="masterFontRange" min="16" max="50" value="${masterFontSizePx}" step="1" oninput="previewMasterFontSize(this.value)" class="w-full accent-indigo-500 cursor-pointer h-2 bg-slate-900 rounded-lg"></div><button onclick="saveSubSettingsAction('zoom')" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs px-4 py-2 rounded font-semibold w-full cursor-pointer shadow">Salva Zoom</button></div>`;
+    }
   }
-  openModal('subSettingsModal'); lucide.createIcons();
+  lucide.createIcons();
 }
 
-function closeSubSettings() { closeModal('subSettingsModal'); activeSubSettingsType = null; }
+function openSubSettings(type) { playSound('click'); currentSettingsView = type; renderSettingsContent(); }
+function backToMainSettings() { playSound('click'); currentSettingsView = 'main'; renderSettingsContent(); }
+
+function saveSubSettingsAction(type) {
+  if (type === 'colors') {
+    COLUMNS_CONFIG.forEach(col => { const select = document.getElementById(`colColorSelect-${col.id}`); if (select) { const matchedOpt = COLOR_OPTIONS.find(o => o.label === select.value); if (matchedOpt) { col.color = matchedOpt.value; col.border = matchedOpt.border; } } });
+    localStorage.setItem('workflow_sga_columns_config', JSON.stringify(COLUMNS_CONFIG)); renderBoard();
+  } else if (type === 'alarms') {
+    localStorage.setItem('workflow_sga_alarms', JSON.stringify(USER_ALARMS));
+  } else if (type === 'zoom') {
+    localStorage.setItem('workflow_sga_master_fontsize_px', masterFontSizePx); localStorage.setItem('workflow_sga_app_fontsize_px', appFontSizePx);
+  } else if (type === 'messages') {
+    const newTemplate = document.getElementById('msgTemplateText').value; sharedMsgTemplate = newTemplate; localStorage.setItem('workflow_sga_msg_template', sharedMsgTemplate);
+    if (db) db.collection('workflow_sga_settings').doc('config').set({ msgTemplate: sharedMsgTemplate }, { merge: true }).catch(e => console.error(e));
+  }
+  playSound('success'); alert("Impostazioni salvate con successo!"); backToMainSettings();
+}
 
 function renderCrmSettingsList() { return CLIENTS_DB.length === 0 ? '<p class="text-xs text-slate-500 italic py-2">Nessun cliente in archivio.</p>' : CLIENTS_DB.map(c => `<div onclick="loadClientForEdit('${c.id}')" class="flex items-center justify-between bg-slate-950 p-2.5 rounded border border-slate-800 text-xs hover:border-indigo-500/50 cursor-pointer transition-colors group"><div><span class="text-white font-bold">${c.name}</span> ${c.referent ? `<span class="text-indigo-300">(${c.referent})</span>` : ''}<div class="text-[10px] text-slate-400">${c.email ? 'Email: ' + c.email : ''} ${c.whatsapp ? '| WA: ' + c.whatsapp : ''}</div></div><button onclick="event.stopPropagation(); removeClient('${c.id}')" class="text-slate-600 group-hover:text-red-400 hover:!text-red-300 p-1 cursor-pointer transition-colors"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button></div>`).join(''); }
 
@@ -359,21 +427,13 @@ function addClientFromSettings() {
   if (isDuplicate) { playSound('alert'); return alert(`ATTENZIONE: Esiste già il referente "${ref || 'Nessuno'}" per l'azienda "${name}".\nModifica la voce esistente per non creare duplicati.`); }
   if (window.editingClientId) { const idx = CLIENTS_DB.findIndex(c => c.id === window.editingClientId); if(idx >= 0) CLIENTS_DB[idx] = { id: window.editingClientId, name, referent: ref, email, whatsapp: wa }; CLIENTS_DB.sort((a,b) => a.name.localeCompare(b.name)); localStorage.setItem('workflow_sga_clients_db', JSON.stringify(CLIENTS_DB)); window.editingClientId = null; populateClientSelectors(); syncClientsToCloud(); } 
   else { registerClientAdvanced(name, ref, email, wa); }
-  openSubSettings('crm'); playSound('success');
+  renderSettingsContent(); playSound('success');
 }
 
-function removeClient(clientId) { const c = CLIENTS_DB.find(client => client.id === clientId); if(!c) return; confirmDeletion(`Cliente dal CRM: ${c.name}`, () => { CLIENTS_DB = CLIENTS_DB.filter(client => client.id !== clientId); localStorage.setItem('workflow_sga_clients_db', JSON.stringify(CLIENTS_DB)); populateClientSelectors(); syncClientsToCloud(); openSubSettings('crm'); }); }
+function removeClient(clientId) { const c = CLIENTS_DB.find(client => client.id === clientId); if(!c) return; confirmDeletion(`Cliente dal CRM: ${c.name}`, () => { CLIENTS_DB = CLIENTS_DB.filter(client => client.id !== clientId); localStorage.setItem('workflow_sga_clients_db', JSON.stringify(CLIENTS_DB)); populateClientSelectors(); syncClientsToCloud(); renderSettingsContent(); }); }
 
-function addMachine() { const input = document.getElementById('newMachineInput'); if (!input || !input.value.trim()) return; const mName = input.value.trim(); if (!MACHINES_DB.includes(mName)) { MACHINES_DB.push(mName); localStorage.setItem('workflow_sga_machines_db', JSON.stringify(MACHINES_DB)); populateMachinesDropdowns(); openSubSettings('machines'); playSound('success'); } input.value = ''; }
-function removeMachine(idx) { const m = MACHINES_DB[idx]; confirmDeletion(`Macchinario: ${m}`, () => { MACHINES_DB.splice(idx, 1); localStorage.setItem('workflow_sga_machines_db', JSON.stringify(MACHINES_DB)); populateMachinesDropdowns(); openSubSettings('machines'); }); }
-
-function saveSubSettings() {
-  if (activeSubSettingsType === 'colors') { COLUMNS_CONFIG.forEach(col => { const select = document.getElementById(`colColorSelect-${col.id}`); if (select) { const matchedOpt = COLOR_OPTIONS.find(o => o.label === select.value); if (matchedOpt) { col.color = matchedOpt.value; col.border = matchedOpt.border; } } }); localStorage.setItem('workflow_sga_columns_config', JSON.stringify(COLUMNS_CONFIG)); renderBoard(); } 
-  else if (activeSubSettingsType === 'alarms') { localStorage.setItem('workflow_sga_alarms', JSON.stringify(USER_ALARMS)); }
-  else if (activeSubSettingsType === 'zoom') { localStorage.setItem('workflow_sga_master_fontsize_px', masterFontSizePx); localStorage.setItem('workflow_sga_app_fontsize_px', appFontSizePx); }
-  else if (activeSubSettingsType === 'messages') { const newTemplate = document.getElementById('msgTemplateText').value; sharedMsgTemplate = newTemplate; localStorage.setItem('workflow_sga_msg_template', sharedMsgTemplate); if (db) { db.collection('workflow_sga_settings').doc('config').set({ msgTemplate: sharedMsgTemplate }, { merge: true }).catch(e => console.error(e)); } }
-  playSound('success'); closeSubSettings(); alert("Impostazioni salvate con successo!");
-}
+function addMachine() { const input = document.getElementById('newMachineInput'); if (!input || !input.value.trim()) return; const mName = input.value.trim(); if (!MACHINES_DB.includes(mName)) { MACHINES_DB.push(mName); localStorage.setItem('workflow_sga_machines_db', JSON.stringify(MACHINES_DB)); populateMachinesDropdowns(); renderSettingsContent(); playSound('success'); } input.value = ''; }
+function removeMachine(idx) { const m = MACHINES_DB[idx]; confirmDeletion(`Macchinario: ${m}`, () => { MACHINES_DB.splice(idx, 1); localStorage.setItem('workflow_sga_machines_db', JSON.stringify(MACHINES_DB)); populateMachinesDropdowns(); renderSettingsContent(); }); }
 
 function resetDefaultSettings() { if (confirm("Vuoi ripristinare tutti i valori predefiniti?")) { COLUMNS_CONFIG = JSON.parse(JSON.stringify(DEFAULT_COLUMNS_CONFIG)); USER_ALARMS = []; masterFontSizePx = 24; appFontSizePx = 15; sharedMsgTemplate = DEFAULT_MSG_TEMPLATE; localStorage.removeItem('workflow_sga_columns_config'); localStorage.removeItem('workflow_sga_alarms'); localStorage.removeItem('workflow_sga_master_fontsize_px'); localStorage.removeItem('workflow_sga_app_fontsize_px'); localStorage.removeItem('workflow_sga_msg_template'); applyMasterFontSize(24); applyAppFontSize(15); closeModal('settingsModal'); renderBoard(); alert("Ripristino completato."); } }
 
@@ -425,7 +485,7 @@ function updateCloudStatus(isOnline) {
 function listenToCloudUpdates() {
   if (!db) return;
   db.collection('workflow_sga_settings').doc('config').onSnapshot((doc) => { if (doc.exists) { const data = doc.data(); if (data.companyLogo !== undefined && data.companyLogo !== sharedCompanyLogo) { sharedCompanyLogo = data.companyLogo; localStorage.setItem('workflow_sga_company_logo', sharedCompanyLogo); loadCompanyLogo(); } if (data.msgTemplate !== undefined && data.msgTemplate !== sharedMsgTemplate) { sharedMsgTemplate = data.msgTemplate; localStorage.setItem('workflow_sga_msg_template', sharedMsgTemplate); const msgArea = document.getElementById('msgTemplateText'); if (msgArea) msgArea.value = sharedMsgTemplate; } } });
-  db.collection('workflow_sga_settings').doc('clients').onSnapshot((doc) => { if (doc.exists) { const data = doc.data(); if (data.db && Array.isArray(data.db)) { CLIENTS_DB = data.db; localStorage.setItem('workflow_sga_clients_db', JSON.stringify(CLIENTS_DB)); populateClientSelectors(); if (activeSubSettingsType === 'crm') { openSubSettings('crm'); } } } else { syncClientsToCloud(); } });
+  db.collection('workflow_sga_settings').doc('clients').onSnapshot((doc) => { if (doc.exists) { const data = doc.data(); if (data.db && Array.isArray(data.db)) { CLIENTS_DB = data.db; localStorage.setItem('workflow_sga_clients_db', JSON.stringify(CLIENTS_DB)); populateClientSelectors(); if (currentSettingsView === 'crm') { renderSettingsContent(); } } } else { syncClientsToCloud(); } });
   db.collection('workflow_sga_cards').onSnapshot((snapshot) => {
     if (snapshot.empty && state.cards.length > 0) { state.cards.forEach(card => syncCardToCloud(card)); return; }
     let needsMigration = false;
@@ -510,7 +570,9 @@ function renderBoard() {
     if (globalSearchQuery) { colCards = colCards.filter(c => { const t = (c.title || '').toLowerCase(); const cl = (c.client || '').toLowerCase(); const ref = (c.referent || '').toLowerCase(); const jt = (c.jobType || '').toLowerCase(); const mach = (c.machine || '').toLowerCase(); const idMatch = c.id && c.id.toLowerCase().includes(globalSearchQuery); return t.includes(globalSearchQuery) || cl.includes(globalSearchQuery) || ref.includes(globalSearchQuery) || jt.includes(globalSearchQuery) || mach.includes(globalSearchQuery) || idMatch; }); }
     if (globalFilterJobType) { colCards = colCards.filter(c => c.jobType === globalFilterJobType); }
     colCards.sort((a,b) => (a.order || 0) - (b.order || 0));
-    const colEl = document.createElement('div'); colEl.className = `board-column flex flex-col h-full bg-slate-900/60 rounded-xl border border-slate-800 shrink-0 overflow-hidden`;
+    const colEl = document.createElement('div'); 
+    // RIPRISTINATE LE LARGHEZZE FISSE ORIGINARIE W-80 E SHRINK-0 PER COLONNE E COMMESSE UGUALI
+    colEl.className = `board-column flex flex-col h-full bg-slate-900/60 rounded-xl border border-slate-800 w-80 shrink-0 overflow-hidden`;
     colEl.innerHTML = `<div class="p-3 border-b border-slate-800 ${col.color} ${col.border} flex justify-between items-center bg-opacity-30"><h3 class="font-bold uppercase tracking-wide truncate max-w-[80%]">${col.label}</h3><span class="font-semibold bg-slate-950/60 px-2 py-0.5 rounded-full shadow-inner">${colCards.length}</span></div><div class="flex-1 overflow-y-auto p-2 space-y-2 card-dropzone" data-col="${col.id}" ondragover="allowDrop(event)" ondrop="handleDrop(event)">${colCards.map(card => createCardHTML(card)).join('')}</div>`;
     board.appendChild(colEl);
   });
@@ -692,7 +754,7 @@ function openDetail(id) {
   openModal('detailModal');
 }
 
-function restoreCardFromArchive() { const card = state.cards.find(c => c.id === activeCardId); if (card && card.stage === 'archiviato') { playSound('success'); card.stage = 'fatturato'; card.history.push({ stage: 'fatturato', label: 'Ripristinata dall\'archivio in Fatturato', timestamp: new Date().toISOString() }); saveLocal(); syncCardToCloud(card); closeModal('detailModal'); if (activeSubSettingsType === 'archive') { const list = document.getElementById('archiveSettingsList'); if (list) { list.innerHTML = renderArchiveList(); lucide.createIcons(); } } } }
+function restoreCardFromArchive() { const card = state.cards.find(c => c.id === activeCardId); if (card && card.stage === 'archiviato') { playSound('success'); card.stage = 'fatturato'; card.history.push({ stage: 'fatturato', label: 'Ripristinata dall\'archivio in Fatturato', timestamp: new Date().toISOString() }); saveLocal(); syncCardToCloud(card); closeModal('detailModal'); if (currentSettingsView === 'archive') { const list = document.getElementById('archiveSettingsList'); if (list) { list.innerHTML = renderArchiveList(); lucide.createIcons(); } } } }
 
 function renderAttachments(card) {
   const container = document.getElementById('attachmentsContainer'); container.innerHTML = '';
@@ -733,7 +795,6 @@ function renderLabelArticlesTable() {
   else {
     window.tempLabelArticles.forEach((art, idx) => {
       const tr = document.createElement('tr'); tr.className = "hover:bg-slate-900/50 transition-colors";
-      // LAYOUT CORRETTO: Codice | Descrizione Articolo | Q.tà in questo collo | Assegna a collo N° | Azioni
       tr.innerHTML = `
         <td class="py-2 px-2 w-1/5"><input type="text" value="${art.code || ''}" onchange="updateLabelRow(${idx}, 'code', this.value)" class="w-full bg-transparent border-b border-slate-700 text-slate-200 text-xs font-mono focus:outline-none focus:border-blue-500" placeholder="Codice"></td>
         <td class="py-2 px-2 w-2/5"><input type="text" value="${art.desc || ''}" onchange="updateLabelRow(${idx}, 'desc', this.value)" class="w-full bg-transparent border-b border-slate-700 text-slate-200 text-xs focus:outline-none focus:border-blue-500" placeholder="Descrizione"></td>
@@ -841,6 +902,16 @@ function updateStorageIndicator() {
   for (let x in localStorage) { if (!localStorage.hasOwnProperty(x)) continue; lsTotal += ((localStorage[x].length + x.length) * 2); }
   const kbTotal = (lsTotal / 1024).toFixed(2); const maxKb = 5120; const percentage = ((kbTotal / maxKb) * 100).toFixed(1); indicator.innerText = `${percentage}% (${kbTotal} KB)`;
   if (percentage > 80) { indicator.classList.replace('text-emerald-400', 'text-red-500'); indicator.classList.add('animate-pulse'); } else if (percentage > 50) { indicator.classList.replace('text-emerald-400', 'text-yellow-400'); } else { indicator.classList.replace('text-red-500', 'text-emerald-400'); indicator.classList.replace('text-yellow-400', 'text-emerald-400'); indicator.classList.remove('animate-pulse'); }
+}
+
+function filterArchive(val) { const list = document.getElementById('archiveSettingsList'); if (list) { list.innerHTML = renderArchiveList(val); lucide.createIcons(); } }
+
+function renderArchiveList(query = '') {
+  const q = query.toLowerCase().trim(); let archived = state.cards.filter(c => c.stage === 'archiviato');
+  if (q) archived = archived.filter(c => (c.title||'').toLowerCase().includes(q) || (c.client||'').toLowerCase().includes(q));
+  archived.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
+  if (archived.length === 0) return '<p class="text-xs text-slate-500 italic py-4 text-center">Nessuna commessa in archivio.</p>';
+  return archived.map(c => `<div class="bg-slate-950 p-3 rounded-lg border border-slate-800 hover:border-slate-500/50 transition-colors group flex justify-between items-center"><div onclick="openDetail('${c.id}')" class="flex-1 cursor-pointer"><h5 class="text-sm font-bold text-slate-200 group-hover:text-white transition-colors">${c.title}</h5><div class="text-[10px] text-slate-400 mt-0.5">Cliente: <span class="text-indigo-300 font-semibold">${c.client || 'N/D'}</span> | Inserimento: ${new Date(c.createdAt).toLocaleDateString('it-IT')}</div></div><div class="flex items-center gap-2"><button onclick="openDetail('${c.id}')" class="text-slate-600 hover:text-indigo-400 p-1.5 transition-colors cursor-pointer" title="Apri Dettaglio"><i data-lucide="external-link" class="w-4 h-4"></i></button><button onclick="deleteArchivedCard('${c.id}')" class="text-slate-600 hover:text-red-400 p-1.5 transition-colors cursor-pointer" title="Elimina Definitivamente"><i data-lucide="trash-2" class="w-4 h-4"></i></button></div></div>`).join('');
 }
 
 function printArchiveReport() {
