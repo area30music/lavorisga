@@ -781,7 +781,44 @@ function calculateGrandTotals() {
 
 function addArticleRow() { const card = state.cards.find(c => c.id === activeCardId); if (!card) return; if (!Array.isArray(card.articles)) card.articles = []; card.articles.push({ code: '', desc: '', qty: 1, price: 0, tax: 22 }); renderArticlesTable(card); }
 function removeArticleRow(idx) { const card = state.cards.find(c => c.id === activeCardId); if (!card || !card.articles || !card.articles[idx]) return; const artName = card.articles[idx].desc || "Riga Vuota"; confirmDeletion(`Articolo: ${artName}`, () => { card.articles.splice(idx, 1); renderArticlesTable(card); saveLocal(); syncCardToCloud(card); }); }
-function saveArticlesEdits() { const card = state.cards.find(c => c.id === activeCardId); if (!card) return; saveLocal(); syncCardToCloud(card); playSound('success'); alert("Articoli salvati."); }
+
+// MODIFICA APPLICATA QUI: Cattura istantaneamente tutti i valori modificati dagli input prima di persistere
+function saveArticlesEdits() { 
+  const card = state.cards.find(c => c.id === activeCardId); 
+  if (!card) return; 
+  
+  // Sincronizza lo stato degli articoli leggendo direttamente dai campi input della tabella
+  const tbody = document.getElementById('articlesTableBody');
+  if (tbody) {
+    const rows = tbody.querySelectorAll('tr');
+    let updatedArticles = [];
+    rows.forEach(row => {
+      const codeInput = row.querySelector('[data-field="code"]');
+      const descInput = row.querySelector('[data-field="desc"]');
+      const qtyInput = row.querySelector('[data-field="qty"]');
+      const priceInput = row.querySelector('[data-field="price"]');
+      const taxInput = row.querySelector('[data-field="tax"]');
+      
+      if (codeInput || descInput || qtyInput || priceInput) {
+        updatedArticles.push({
+          code: codeInput ? codeInput.value : '',
+          desc: descInput ? descInput.value : '',
+          qty: qtyInput ? qtyInput.value : 1,
+          price: priceInput ? priceInput.value : 0,
+          tax: taxInput ? taxInput.value : 22
+        });
+      }
+    });
+    if (updatedArticles.length > 0) {
+      card.articles = updatedArticles;
+    }
+  }
+
+  saveLocal(); 
+  syncCardToCloud(card); 
+  playSound('success'); 
+  alert("Articoli salvati e sincronizzati con successo per la stampa etichette e colli!"); 
+}
 
 function openDetail(id) {
   if (isMasterMode) return; const card = state.cards.find(c => c.id === id); if (!card) return; activeCardId = id;
