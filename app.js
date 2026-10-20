@@ -144,7 +144,7 @@ function logoutApp() {
   }
 }
 
-// Controllo Archivio Automatico: sposta in archivio le commesse in "Fatturato" da oltre 7 giorni
+// Controllo Archivio Automatico
 function checkAutoArchive() {
   const now = Date.now();
   const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;
@@ -153,7 +153,6 @@ function checkAutoArchive() {
   state.cards.forEach(card => {
     if (card.stage === 'fatturato') {
       let fatturatoTime = card.createdAt; 
-      // Cerca nel log quando è entrata in 'fatturato'
       if (card.history && card.history.length > 0) {
         const lastFatturato = [...card.history].reverse().find(h => h.stage === 'fatturato');
         if (lastFatturato && lastFatturato.timestamp) {
@@ -185,7 +184,6 @@ function init() {
   state.cards.sort((a,b) => (a.order || 0) - (b.order || 0)); 
   if (localMigrated) { saveLocal(); state.cards.forEach(c => syncCardToCloud(c)); }
   
-  // Esegui scansione per archiviare vecchie fatture all'avvio e ogni ora
   checkAutoArchive();
   setInterval(checkAutoArchive, 60 * 60 * 1000);
 
@@ -515,7 +513,7 @@ function clearGlobalSearch() { document.getElementById('globalSearchInput').valu
 
 function openSettingsModal() { openModal('settingsModal'); }
 
-// Rendering della Lista Archivio (CON TASTO ELIMINA)
+// Rendering della Lista Archivio
 function renderArchiveList(query = '') {
   const q = query.toLowerCase().trim();
   let archived = state.cards.filter(c => c.stage === 'archiviato');
@@ -1117,7 +1115,6 @@ function openDetail(id) {
   const timeline = document.getElementById('storyboardTimeline'); timeline.innerHTML = '';
   if (Array.isArray(card.history)) { card.history.forEach((h, idx) => { const hStageObj = COLUMNS_CONFIG.find(col => col.id === h.stage); const circleBg = hStageObj ? hStageObj.color.split(' ')[0] : (h.stage === 'archiviato' ? 'bg-slate-600' : 'bg-slate-700'); const item = document.createElement('div'); item.className = "flex items-start gap-3 relative"; item.innerHTML = `<div class="absolute -left-[23px] mt-1.5 w-4.5 h-4.5 rounded-full border border-slate-900 ${circleBg} flex items-center justify-center text-[8px] font-bold text-slate-100 shadow-sm">${idx+1}</div><div class="flex-1 bg-slate-950/40 p-2.5 rounded border border-slate-800/80"><div class="flex justify-between items-center mb-0.5"><span class="font-bold text-xs text-slate-200 uppercase">${h.label}</span><span class="text-[10px] text-slate-500">${new Date(h.timestamp).toLocaleString('it-IT')}</span></div></div>`; timeline.appendChild(item); }); }
   
-  // Mostra/Nascondi pulsante ripristino per commesse archiviate
   const restoreBtn = document.getElementById('restoreCardBtnContainer');
   if (restoreBtn) {
     if (card.stage === 'archiviato') restoreBtn.classList.remove('hidden');
@@ -1137,7 +1134,6 @@ function restoreCardFromArchive() {
     syncCardToCloud(card);
     closeModal('detailModal');
     
-    // Aggiorna la lista dell'archivio se aperta
     if (activeSubSettingsType === 'archive') {
       const list = document.getElementById('archiveSettingsList');
       if (list) { list.innerHTML = renderArchiveList(); lucide.createIcons(); }
@@ -1186,13 +1182,12 @@ function rotateGalleryImage() { const card = state.cards.find(c => c.id === acti
 function deleteCurrentCard() { const card = state.cards.find(c => c.id === activeCardId); if (!card) return; confirmDeletion(`Commessa: ${card.title || 'Senza Nome'}`, () => { state.cards = state.cards.filter(c => c.id !== activeCardId); saveLocal(); syncDeleteToCloud(activeCardId); closeModal('detailModal'); populateGlobalFilterDropdown(); }); }
 
 // ============================================
-// STAMPA ETICHETTE COLLI CON HOT FOLDER NAS E BOX NOTE
+// STAMPA ETICHETTE COLLI (A6 Landscape Puro 148x105mm)
 // ============================================
 function openLabelPrintModal(cardId) {
   playSound('click'); const card = state.cards.find(c => c.id === cardId); if (!card) return; activeLabelCardId = cardId;
   document.getElementById('labelClientName').innerText = card.client || 'N/D'; document.getElementById('labelTaskTitle').innerText = card.title || 'Senza Titolo';
   
-  // CARICA LE NOTE DAL CLOUD (SE GIA' PRESENTI)
   const notesInput = document.getElementById('labelNotesInput');
   if (notesInput) notesInput.value = card.labelNotes || '';
   
@@ -1263,10 +1258,8 @@ async function generateAndPrintLabels() {
   const totalPackages = packageNumbers.length;
   if (totalPackages === 0) { alert("Nessun articolo selezionato per i colli."); return; }
   
-  // RECUPERA LE NOTE MANUALI
   const labelNotes = document.getElementById('labelNotesInput') ? document.getElementById('labelNotesInput').value.trim() : '';
   
-  // SALVA E SINCRONIZZA LE NOTE SUL CLOUD (SE MODIFICATE)
   if (card.labelNotes !== labelNotes) {
     card.labelNotes = labelNotes;
     saveLocal();
@@ -1276,19 +1269,18 @@ async function generateAndPrintLabels() {
   playSound('success');
   
   let labelsHtml = '';
-  const senderText = "<strong style='font-size: 9px;'>Studio Grafico Associato di Gastaldi Antonio Francesco</strong><br>Via Mario Groppo 4 - 12048 Sommariva del Bosco (CN)<br>Tel: 0172 560087 - info@studiograficoassociato.com<br>www.studiograficoassociato.com";
+  const senderText = "<strong style='font-size: 11px;'>Studio Grafico Associato di Gastaldi Antonio Francesco</strong><br>Via Mario Groppo 4 - 12048 Sommariva del Bosco (CN)<br>Tel: 0172 560087 - info@studiograficoassociato.com<br>www.studiograficoassociato.com";
   let logoHtml = sharedCompanyLogo ? `<img src="${sharedCompanyLogo}" class="print-logo">` : `<div class="logo-area">SGA</div><div class="logo-sub">STUDIO GRAFICO ASSOCIATO</div>`;
 
   packageNumbers.forEach((pkgNum, idx) => {
     const currentPkgIndex = idx + 1;
     const articlesInPkg = packages[pkgNum];
-    const articlesListHtml = articlesInPkg.map(a => `<tr><td style="width: 40px; font-weight: bold; text-align: center; vertical-align: top;">${a.qty}x</td><td style="padding-bottom: 3px;">${a.desc}</td></tr>`).join('');
+    const articlesListHtml = articlesInPkg.map(a => `<tr><td style="width: 45px; font-weight: bold; text-align: center; vertical-align: top;">${a.qty}x</td><td style="padding-bottom: 4px;">${a.desc}</td></tr>`).join('');
     
-    // CREAZIONE DEL BOX NOTE (SE IL TESTO E' PRESENTE)
     const notesBoxHtml = labelNotes ? `
-        <div class="box notes-box" style="margin-top: 2mm; height: 16mm; flex-shrink: 0;">
-          <div class="box-header" style="background: #555;">NOTE:</div>
-          <div class="box-body" style="font-size: 11px;">
+        <div class="box notes-box" style="margin-top: 3mm; height: 18mm; flex-shrink: 0;">
+          <div class="box-header" style="background: #555;">NOTE / RIFERIMENTI:</div>
+          <div class="box-body" style="font-size: 12px;">
             ${labelNotes.replace(/\n/g, '<br>')}
           </div>
         </div>
@@ -1303,18 +1295,18 @@ async function generateAndPrintLabels() {
         </div>
         <div class="middle-row">
           <div class="box dest-box">
-            <div class="box-header">DESTINATARIO</div>
-            <div class="box-body" style="font-size: 14px; font-weight: bold;">
-              ${card.client || 'Cliente N/D'}<br><span style="font-weight: normal; font-size: 11px;">${card.referent ? 'Rif: ' + card.referent : ''}</span>
+            <div class="box-header">DESTINATARIO:</div>
+            <div class="box-body" style="font-size: 16px; font-weight: bold; padding-top: 6px;">
+              ${card.client || 'Cliente N/D'}<br><span style="font-weight: normal; font-size: 12px;">${card.referent ? 'Rif: ' + card.referent : ''}</span>
             </div>
           </div>
           <div class="collo-box">Collo ${currentPkgIndex} di ${totalPackages}</div>
         </div>
         <div class="box content-box" style="flex: 1; display: flex; flex-direction: column;">
-          <div class="box-header">CONTENUTO:</div>
+          <div class="box-header">CONTENUTO DEL COLLO:</div>
           <div class="box-body" style="padding: 0; flex: 1;">
             <table class="content-table">
-              <thead><tr><th style="width: 40px; text-align: center;">NR.</th><th>DESCRIZIONE.</th></tr></thead>
+              <thead><tr><th style="width: 45px; text-align: center;">Q.TÀ</th><th>DESCRIZIONE MATERIALE</th></tr></thead>
               <tbody>${articlesListHtml}</tbody>
             </table>
           </div>
@@ -1324,33 +1316,37 @@ async function generateAndPrintLabels() {
     `;
   });
 
+  /* Misure blindate al 100% per A6 (148x105 mm) in orientamento orizzontale (Landscape) */
   const fullHtml = `<!DOCTYPE html><html><head><title>Etichette_${card.title}</title><style>
-    @page { size: A6 landscape; margin: 4mm; }
-    body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; margin: 0; padding: 0; background: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    .label-page { width: 140mm; height: 97mm; page-break-after: always; display: flex; flex-direction: column; box-sizing: border-box; background: white; padding: 2mm; }
-    .top-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 3mm; padding-bottom: 2mm; border-bottom: 2px solid #444; }
-    .logo-box { width: 35mm; display: flex; flex-direction: column; justify-content: center; }
-    .print-logo { max-height: 14mm; max-width: 100%; object-fit: contain; filter: brightness(0); object-position: left center; }
-    .logo-area { font-weight: 900; font-size: 28px; line-height: 0.9; letter-spacing: -2px; color: #000; display: flex; align-items: center; }
-    .logo-sub { font-size: 8px; font-weight: bold; letter-spacing: 0.5px; text-transform: uppercase; margin-top: 1px;}
-    .sender-info { flex: 1; text-align: center; font-size: 8.5px; line-height: 1.3; color: #000; padding: 0 3mm; }
-    .qr-code { width: 17mm; height: 17mm; border: 1.5px solid #444; padding: 1px; border-radius: 4px; flex-shrink: 0;}
-    .box { border: 2px solid #444; border-radius: 6px; overflow: hidden; display: flex; flex-direction: column;}
-    .box-header { background: #666; color: #fff; font-weight: bold; font-size: 10px; padding: 2px 6px; text-transform: uppercase; letter-spacing: 0.5px;}
-    .box-body { background: #EBE8D8; padding: 5px 6px; font-size: 10.5px; line-height: 1.2; color: #000; flex: 1; }
-    .middle-row { display: flex; gap: 2mm; height: 16mm; margin-bottom: 2mm;}
+    @page { size: 148mm 105mm; margin: 0; }
+    body, html { margin: 0; padding: 0; width: 148mm; height: 105mm; overflow: hidden; background: #fff; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .label-page { width: 148mm; height: 105mm; padding: 5mm; box-sizing: border-box; display: flex; flex-direction: column; page-break-after: always; background: #fff; }
+    
+    .top-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 3.5mm; padding-bottom: 2.5mm; border-bottom: 2px solid #333; }
+    .logo-box { width: 38mm; display: flex; flex-direction: column; justify-content: center; }
+    .print-logo { max-height: 15mm; max-width: 100%; object-fit: contain; filter: brightness(0); object-position: left center; }
+    .logo-area { font-weight: 900; font-size: 32px; line-height: 0.9; letter-spacing: -2px; color: #000; display: flex; align-items: center; }
+    .logo-sub { font-size: 9px; font-weight: bold; letter-spacing: 0.5px; text-transform: uppercase; margin-top: 1px;}
+    .sender-info { flex: 1; text-align: center; font-size: 9.5px; line-height: 1.35; color: #000; padding: 0 3mm; }
+    .qr-code { width: 18mm; height: 18mm; border: 1.5px solid #333; padding: 1px; border-radius: 4px; flex-shrink: 0;}
+    
+    .box { border: 2px solid #333; border-radius: 6px; overflow: hidden; display: flex; flex-direction: column;}
+    .box-header { background: #555; color: #fff; font-weight: bold; font-size: 11px; padding: 3px 8px; text-transform: uppercase; letter-spacing: 0.5px;}
+    .box-body { background: #EBE8D8; padding: 6px 8px; font-size: 12px; line-height: 1.25; color: #000; flex: 1; }
+    
+    .middle-row { display: flex; gap: 3mm; height: 19mm; margin-bottom: 3mm;}
     .dest-box { flex: 1; }
-    .dest-box .box-header { background: #555; }
-    .collo-box { width: 38mm; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: bold; background: #EBE8D8; border: 2px solid #444; border-radius: 6px; color: #000;}
+    .dest-box .box-header { background: #444; }
+    .collo-box { width: 42mm; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: bold; background: #EBE8D8; border: 2px solid #333; border-radius: 6px; color: #000;}
+    
     .content-box { flex: 1; }
-    .content-box .box-header { background: #fff; color: #000; border-bottom: 1px solid #444;}
-    .content-table { width: 100%; border-collapse: collapse; font-size: 11.5px; }
-    .content-table th { background: #CFCFCF; border-bottom: 1px solid #999; text-align: left; padding: 3px 5px; font-size: 10px; font-weight: bold;}
-    .content-table td { padding: 4px 5px; border-bottom: 1px solid #ddd; background: #EBE8D8;}
+    .content-box .box-header { background: #fff; color: #000; border-bottom: 2px solid #333;}
+    .content-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .content-table th { background: #D9D9D9; border-bottom: 2px solid #888; text-align: left; padding: 4px 6px; font-size: 11px; font-weight: bold;}
+    .content-table td { padding: 5px 6px; border-bottom: 1px solid #ddd; background: #EBE8D8;}
     .content-table tr:nth-child(even) td { background: #E1DECD; }
   </style></head><body>${labelsHtml}</body></html>`;
 
-  // Salva l'etichetta come HTML nella cartella di download predefinita
   const blob = new Blob([fullHtml], { type: 'text/html' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -1361,7 +1357,7 @@ async function generateAndPrintLabels() {
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
 
-  alert("✅ File etichetta generato! Seleziona la cartella condivisa del NAS Synology come destinazione del download: la stampante Xerox la preleverà e stamperà in automatico.");
+  alert("✅ File etichetta generato a dimensione reale A6 (148x105)! Seleziona la cartella condivisa del NAS.");
   closeModal('labelPrintModal');
 }
 
@@ -1451,7 +1447,6 @@ function closeModal(modalId) { document.getElementById(modalId).classList.add('h
 // GESTIONE ARCHIVIO AVANZATA: ELIMINAZIONE, REPORT E SPAZIO
 // ============================================
 
-// Elimina singola commessa dall'archivio
 function deleteArchivedCard(cardId) {
   const card = state.cards.find(c => c.id === cardId);
   if (!card) return;
@@ -1459,14 +1454,12 @@ function deleteArchivedCard(cardId) {
     state.cards = state.cards.filter(c => c.id !== cardId);
     saveLocal();
     syncDeleteToCloud(cardId);
-    // Aggiorna visivamente la lista
     const searchInput = document.getElementById('archiveSearchInput');
     filterArchive(searchInput ? searchInput.value : '');
     updateStorageIndicator();
   });
 }
 
-// Calcola lo spazio occupato in LocalStorage
 function updateStorageIndicator() {
   const indicator = document.getElementById('storageUsageIndicator');
   if (!indicator) return;
@@ -1474,11 +1467,11 @@ function updateStorageIndicator() {
   let lsTotal = 0;
   for (let x in localStorage) {
     if (!localStorage.hasOwnProperty(x)) continue;
-    lsTotal += ((localStorage[x].length + x.length) * 2); // stima byte
+    lsTotal += ((localStorage[x].length + x.length) * 2);
   }
   
   const kbTotal = (lsTotal / 1024).toFixed(2);
-  const maxKb = 5120; // Circa 5MB (limite standard browser)
+  const maxKb = 5120;
   const percentage = ((kbTotal / maxKb) * 100).toFixed(1);
   
   indicator.innerText = `${percentage}% (${kbTotal} KB)`;
@@ -1495,7 +1488,6 @@ function updateStorageIndicator() {
   }
 }
 
-// Stampa Report Archivio con Totali
 function printArchiveReport() {
   const archivedCards = state.cards.filter(c => c.stage === 'archiviato');
   if (archivedCards.length === 0) {
