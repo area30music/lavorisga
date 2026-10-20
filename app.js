@@ -131,7 +131,7 @@ function init() {
   loadUserSettings(); loadState(); 
   let localMigrated = false;
   state.cards.forEach(c => { 
-    if (c.stage === 'magazzino') { c.stage = 'da-lavorare'; localMigrated = true; } // Migrazione "In magazzino" -> "In magazzino da lavorare"
+    if (c.stage === 'magazzino') { c.stage = 'da-lavorare'; localMigrated = true; }
     if (c.stage === 'lavorato') { c.stage = 'lavorato-da-bollettare'; localMigrated = true; } 
     if (c.stage === 'consegnato') { c.stage = 'bollettato-da-consegnare'; localMigrated = true; } 
   });
@@ -446,7 +446,7 @@ function listenToCloudUpdates() {
     let needsMigration = false;
     snapshot.docChanges().forEach((change) => {
       let docData = change.doc.data();
-      if (docData.stage === 'magazzino') { docData.stage = 'da-lavorare'; needsMigration = true; } // Migrazione "In magazzino"
+      if (docData.stage === 'magazzino') { docData.stage = 'da-lavorare'; needsMigration = true; }
       if (docData.stage === 'lavorato') { docData.stage = 'lavorato-da-bollettare'; needsMigration = true; } 
       if (docData.stage === 'consegnato') { docData.stage = 'bollettato-da-consegnare'; needsMigration = true; }
       if (change.type === "added" || change.type === "modified") { const existingIndex = state.cards.findIndex(c => c.id === docData.id); if (existingIndex >= 0) state.cards[existingIndex] = sanitizeCard(docData); else state.cards.push(sanitizeCard(docData)); }
@@ -493,7 +493,7 @@ function sanitizeCard(card) {
   if (!Array.isArray(card.history)) card.history = []; if (card.order === undefined) card.order = 0;
   if (!card.referent) card.referent = ''; if (!card.email) card.email = ''; if (!card.whatsapp) card.whatsapp = ''; if (!card.machine) card.machine = '';
   if (!card.customerRef) card.customerRef = '';
-  if (card.stage === 'magazzino') card.stage = 'da-lavorare'; // Sicurezza aggiuntiva per la migrazione In magazzino
+  if (card.stage === 'magazzino') card.stage = 'da-lavorare';
   if (card.stage === 'lavorato') card.stage = 'lavorato-da-bollettare'; if (card.stage === 'consegnato') card.stage = 'bollettato-da-consegnare';
   if (!Array.isArray(card.articles)) { card.articles = []; if (card.notes && card.notes.trim()) card.articles.push({ code: '', desc: card.notes, qty: 1, price: 0, tax: 22 }); } 
   else { card.articles = card.articles.map(art => { if (art.tax === undefined) art.tax = 22; return art; }); }
@@ -751,7 +751,14 @@ function renderLabelArticlesTable() {
   else {
     window.tempLabelArticles.forEach((art, idx) => {
       const tr = document.createElement('tr'); tr.className = "hover:bg-slate-900/50 transition-colors";
-      tr.innerHTML = `<td class="py-2 px-2"><input type="text" value="${art.code || ''}" onchange="updateLabelRow(${idx}, 'code', this.value)" class="w-full bg-transparent border-b border-slate-700 text-slate-200 text-xs font-mono focus:outline-none focus:border-blue-500" placeholder="Codice"></td><td class="py-2 px-2"><input type="text" value="${art.desc || ''}" onchange="updateLabelRow(${idx}, 'desc', this.value)" class="w-full bg-transparent border-b border-slate-700 text-slate-200 text-xs focus:outline-none focus:border-blue-500"></td><td class="py-2 px-2 text-center"><input type="number" min="1" value="${art.qty}" onchange="updateLabelRow(${idx}, 'qty', this.value)" class="w-16 bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-sm text-center focus:outline-none focus:border-blue-500"></td><td class="py-2 px-2 text-center"><input type="number" min="1" value="${art.packageNum}" onchange="updateLabelRow(${idx}, 'packageNum', this.value)" class="w-16 bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-sm text-center focus:outline-none focus:border-blue-500"></td><td class="py-2 px-2 text-center flex items-center justify-center gap-2"><button onclick="splitLabelRow(${idx})" class="p-1.5 bg-slate-800 hover:bg-blue-900/50 text-blue-400 rounded cursor-pointer transition-colors" title="Dividi Riga"><i data-lucide="split-square-vertical" class="w-4 h-4"></i></button><button onclick="removeLabelRow(${idx})" class="p-1.5 bg-slate-800 hover:bg-red-900/50 text-red-400 rounded cursor-pointer transition-colors" title="Rimuovi"><i data-lucide="trash-2" class="w-4 h-4"></i></button></td>`;
+      // Layout corretto UI: Descrizione(grande) | Codice(piccolo) | Q.tà | Collo | Azioni
+      tr.innerHTML = `
+        <td class="py-2 px-2 w-2/5"><input type="text" value="${art.desc || ''}" onchange="updateLabelRow(${idx}, 'desc', this.value)" class="w-full bg-transparent border-b border-slate-700 text-slate-200 text-xs focus:outline-none focus:border-blue-500" placeholder="Descrizione Articolo"></td>
+        <td class="py-2 px-2 w-1/5"><input type="text" value="${art.code || ''}" onchange="updateLabelRow(${idx}, 'code', this.value)" class="w-full bg-transparent border-b border-slate-700 text-slate-200 text-xs font-mono focus:outline-none focus:border-blue-500" placeholder="Codice"></td>
+        <td class="py-2 px-2 text-center w-20"><input type="number" min="1" value="${art.qty}" onchange="updateLabelRow(${idx}, 'qty', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded px-1 py-1 text-slate-200 text-sm text-center focus:outline-none focus:border-blue-500"></td>
+        <td class="py-2 px-2 text-center w-20"><input type="number" min="1" value="${art.packageNum}" onchange="updateLabelRow(${idx}, 'packageNum', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded px-1 py-1 text-slate-200 text-sm text-center focus:outline-none focus:border-blue-500"></td>
+        <td class="py-2 px-2 text-center w-16 flex items-center justify-center gap-2"><button onclick="splitLabelRow(${idx})" class="p-1.5 bg-slate-800 hover:bg-blue-900/50 text-blue-400 rounded cursor-pointer transition-colors" title="Dividi Riga"><i data-lucide="split-square-vertical" class="w-4 h-4"></i></button><button onclick="removeLabelRow(${idx})" class="p-1.5 bg-slate-800 hover:bg-red-900/50 text-red-400 rounded cursor-pointer transition-colors" title="Rimuovi"><i data-lucide="trash-2" class="w-4 h-4"></i></button></td>
+      `;
       tbody.appendChild(tr);
     });
   }
@@ -772,7 +779,8 @@ async function generateAndPrintLabels() {
   if (totalPackages === 0) { alert("Nessun articolo selezionato per i colli."); return; }
   
   const labelNotes = document.getElementById('labelNotesInput') ? document.getElementById('labelNotesInput').value.trim() : '';
-  card.labelArticles = JSON.parse(JSON.stringify(window.tempLabelArticles)); card.labelNotes = labelNotes; saveLocal(); syncCardToCloud(card);
+  card.labelArticles = JSON.parse(JSON.stringify(window.tempLabelArticles)); card.labelNotes = labelNotes; 
+  
   playSound('success');
   
   let labelsHtml = ''; const senderText = "<strong style='font-size: 11px;'>Studio Grafico Associato di Gastaldi Antonio Francesco</strong><br>Via Mario Groppo 4 - 12048 Sommariva del Bosco (CN)<br>Tel: 0172 560087 - info@studiograficoassociato.com<br>www.studiograficoassociato.com";
@@ -780,17 +788,29 @@ async function generateAndPrintLabels() {
 
   packageNumbers.forEach((pkgNum, idx) => {
     const currentPkgIndex = idx + 1; const articlesInPkg = packages[pkgNum];
-    const articlesListHtml = articlesInPkg.map(a => `<tr><td style="width: 45px; font-weight: bold; text-align: center; vertical-align: top;">${a.qty}x</td><td style="width: 70px; font-family: monospace; font-size: 11px; padding-bottom: 4px; vertical-align: top;">${a.code}</td><td style="padding-bottom: 4px; vertical-align: top;">${a.desc}</td></tr>`).join('');
+    // Formato STAMPA identico: Q.TÀ | DESCRIZIONE MATERIALE | CODICE
+    const articlesListHtml = articlesInPkg.map(a => `<tr><td style="width: 45px; font-weight: bold; text-align: center; vertical-align: top;">${a.qty}x</td><td style="padding-bottom: 4px; vertical-align: top;">${a.desc}</td><td style="width: 80px; font-family: monospace; font-size: 11px; padding-bottom: 4px; vertical-align: top;">${a.code}</td></tr>`).join('');
     const notesBoxHtml = labelNotes ? `<div class="box notes-box" style="margin-top: 3mm; height: 18mm; flex-shrink: 0;"><div class="box-header" style="background: #555;">NOTE / RIFERIMENTI:</div><div class="box-body" style="font-size: 12px;">${labelNotes.replace(/\n/g, '<br>')}</div></div>` : '';
     
-    labelsHtml += `<div class="label-page"><div class="top-row"><div class="logo-box">${logoHtml}</div><div class="sender-info">${senderText}</div><div class="qr-code"><img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://www.studiograficoassociato.com" alt="QR Code" style="width: 100%; height: 100%; object-fit: contain;"></div></div><div class="middle-row"><div class="box dest-box"><div class="box-header">DESTINATARIO:</div><div class="box-body" style="font-size: 16px; font-weight: bold; padding-top: 6px;">${card.client || 'Cliente N/D'}<br><span style="font-weight: normal; font-size: 12px;">${card.referent ? 'Rif: ' + card.referent : ''}</span></div></div><div class="collo-box">Collo ${currentPkgIndex} di ${totalPackages}</div></div><div class="box content-box" style="flex: 1; display: flex; flex-direction: column;"><div class="box-header">CONTENUTO DEL COLLO:</div><div class="box-body" style="padding: 0; flex: 1;"><table class="content-table"><thead><tr><th style="width: 45px; text-align: center;">Q.TÀ</th><th style="width: 70px;">CODICE</th><th>DESCRIZIONE MATERIALE</th></tr></thead><tbody>${articlesListHtml}</tbody></table></div></div>${notesBoxHtml}</div>`;
+    labelsHtml += `<div class="label-page"><div class="top-row"><div class="logo-box">${logoHtml}</div><div class="sender-info">${senderText}</div><div class="qr-code"><img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://www.studiograficoassociato.com" alt="QR Code" style="width: 100%; height: 100%; object-fit: contain;"></div></div><div class="middle-row"><div class="box dest-box"><div class="box-header">DESTINATARIO:</div><div class="box-body" style="font-size: 16px; font-weight: bold; padding-top: 6px;">${card.client || 'Cliente N/D'}<br><span style="font-weight: normal; font-size: 12px;">${card.referent ? 'Rif: ' + card.referent : ''}</span></div></div><div class="collo-box">Collo ${currentPkgIndex} di ${totalPackages}</div></div><div class="box content-box" style="flex: 1; display: flex; flex-direction: column;"><div class="box-header">CONTENUTO DEL COLLO:</div><div class="box-body" style="padding: 0; flex: 1;"><table class="content-table"><thead><tr><th style="width: 45px; text-align: center;">Q.TÀ</th><th>DESCRIZIONE MATERIALE</th><th style="width: 80px;">CODICE</th></tr></thead><tbody>${articlesListHtml}</tbody></table></div></div>${notesBoxHtml}</div>`;
   });
 
   const fullHtml = `<!DOCTYPE html><html><head><title>Etichette_${card.title}</title><style>
     @page { size: 148mm 105mm; margin: 0; } body, html { margin: 0; padding: 0; width: 148mm; background: #fff; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; -webkit-print-color-adjust: exact; print-color-adjust: exact; } .label-page { width: 148mm; height: 105mm; padding: 5mm; box-sizing: border-box; display: flex; flex-direction: column; page-break-after: always; break-after: page; background: #fff; overflow: hidden; position: relative; } .top-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 3.5mm; padding-bottom: 2.5mm; border-bottom: 2px solid #333; } .logo-box { width: 38mm; display: flex; flex-direction: column; justify-content: center; } .print-logo { max-height: 15mm; max-width: 100%; object-fit: contain; filter: brightness(0); object-position: left center; } .logo-area { font-weight: 900; font-size: 32px; line-height: 0.9; letter-spacing: -2px; color: #000; display: flex; align-items: center; } .logo-sub { font-size: 9px; font-weight: bold; letter-spacing: 0.5px; text-transform: uppercase; margin-top: 1px;} .sender-info { flex: 1; text-align: center; font-size: 9.5px; line-height: 1.35; color: #000; padding: 0 3mm; } .qr-code { width: 18mm; height: 18mm; border: 1.5px solid #333; padding: 1px; border-radius: 4px; flex-shrink: 0;} .box { border: 2px solid #333; border-radius: 6px; overflow: hidden; display: flex; flex-direction: column;} .box-header { background: #555; color: #fff; font-weight: bold; font-size: 11px; padding: 3px 8px; text-transform: uppercase; letter-spacing: 0.5px;} .box-body { background: #EBE8D8; padding: 6px 8px; font-size: 12px; line-height: 1.25; color: #000; flex: 1; } .middle-row { display: flex; gap: 3mm; height: 19mm; margin-bottom: 3mm;} .dest-box { flex: 1; } .dest-box .box-header { background: #444; } .collo-box { width: 42mm; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: bold; background: #EBE8D8; border: 2px solid #333; border-radius: 6px; color: #000;} .content-box { flex: 1; } .content-box .box-header { background: #fff; color: #000; border-bottom: 2px solid #333;} .content-table { width: 100%; border-collapse: collapse; font-size: 13px; } .content-table th { background: #D9D9D9; border-bottom: 2px solid #888; text-align: left; padding: 4px 6px; font-size: 11px; font-weight: bold;} .content-table td { padding: 5px 6px; border-bottom: 1px solid #ddd; background: #EBE8D8;} .content-table tr:nth-child(even) td { background: #E1DECD; }
   </style></head><body>${labelsHtml}</body></html>`;
 
-  const blob = new Blob([fullHtml], { type: 'text/html' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `Etichetta_${card.title.replace(/[^a-zA-Z0-9]/g, '_')}_${Date.now()}.html`; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url); alert("✅ File etichetta generato a dimensione reale A6 e modifiche salvate!"); closeModal('labelPrintModal');
+  const blob = new Blob([fullHtml], { type: 'text/html' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `Etichetta_${card.title.replace(/[^a-zA-Z0-9]/g, '_')}_${Date.now()}.html`; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url); 
+  alert("✅ File etichetta generato a dimensione reale A6 e modifiche salvate!"); 
+  closeModal('labelPrintModal');
+
+  // SPOStAMENTO AUTOMATICO A BOLLETTATO DA CONSEGNARE DOPO LA STAMPA
+  if (card.stage !== 'bollettato-da-consegnare' && card.stage !== 'fatturato' && card.stage !== 'archiviato') {
+    card.stage = 'bollettato-da-consegnare';
+    card.order = Date.now();
+    card.history.push({ stage: 'bollettato-da-consegnare', label: 'Stampa Etichette -> Spostata in Bollettato', timestamp: new Date().toISOString() });
+  }
+  
+  saveLocal(); syncCardToCloud(card);
 }
 
 // ============================================
