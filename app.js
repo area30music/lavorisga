@@ -1069,11 +1069,15 @@ function rotateGalleryImage() { const card = state.cards.find(c => c.id === acti
 function deleteCurrentCard() { const card = state.cards.find(c => c.id === activeCardId); if (!card) return; confirmDeletion(`Commessa: ${card.title || 'Senza Nome'}`, () => { state.cards = state.cards.filter(c => c.id !== activeCardId); saveLocal(); syncDeleteToCloud(activeCardId); closeModal('detailModal'); populateGlobalFilterDropdown(); }); }
 
 // ============================================
-// STAMPA ETICHETTE COLLI CON HOT FOLDER NAS
+// STAMPA ETICHETTE COLLI CON HOT FOLDER NAS E BOX NOTE
 // ============================================
 function openLabelPrintModal(cardId) {
   playSound('click'); const card = state.cards.find(c => c.id === cardId); if (!card) return; activeLabelCardId = cardId;
   document.getElementById('labelClientName').innerText = card.client || 'N/D'; document.getElementById('labelTaskTitle').innerText = card.title || 'Senza Titolo';
+  
+  // SVUOTA CAMPO NOTE AD OGNI APERTURA
+  const notesInput = document.getElementById('labelNotesInput');
+  if (notesInput) notesInput.value = '';
   
   window.tempLabelArticles = [];
   if (card.articles && card.articles.length > 0) {
@@ -1142,6 +1146,9 @@ async function generateAndPrintLabels() {
   const totalPackages = packageNumbers.length;
   if (totalPackages === 0) { alert("Nessun articolo selezionato per i colli."); return; }
   
+  // RECUPERA LE NOTE MANUALI
+  const labelNotes = document.getElementById('labelNotesInput') ? document.getElementById('labelNotesInput').value.trim() : '';
+  
   playSound('success');
   
   let labelsHtml = '';
@@ -1152,6 +1159,16 @@ async function generateAndPrintLabels() {
     const currentPkgIndex = idx + 1;
     const articlesInPkg = packages[pkgNum];
     const articlesListHtml = articlesInPkg.map(a => `<tr><td style="width: 40px; font-weight: bold; text-align: center; vertical-align: top;">${a.qty}x</td><td style="padding-bottom: 3px;">${a.desc}</td></tr>`).join('');
+    
+    // CREAZIONE DEL BOX NOTE (SE IL TESTO E' PRESENTE)
+    const notesBoxHtml = labelNotes ? `
+        <div class="box notes-box" style="margin-top: 2mm; height: 16mm; flex-shrink: 0;">
+          <div class="box-header" style="background: #555;">NOTE:</div>
+          <div class="box-body" style="font-size: 11px;">
+            ${labelNotes.replace(/\n/g, '<br>')}
+          </div>
+        </div>
+    ` : '';
     
     labelsHtml += `
       <div class="label-page">
@@ -1169,15 +1186,16 @@ async function generateAndPrintLabels() {
           </div>
           <div class="collo-box">Collo ${currentPkgIndex} di ${totalPackages}</div>
         </div>
-        <div class="box content-box">
+        <div class="box content-box" style="flex: 1; display: flex; flex-direction: column;">
           <div class="box-header">CONTENUTO:</div>
-          <div class="box-body" style="padding: 0; display: flex; flex-direction: column;">
+          <div class="box-body" style="padding: 0; flex: 1;">
             <table class="content-table">
               <thead><tr><th style="width: 40px; text-align: center;">NR.</th><th>DESCRIZIONE.</th></tr></thead>
               <tbody>${articlesListHtml}</tbody>
             </table>
           </div>
         </div>
+        ${notesBoxHtml}
       </div>
     `;
   });
