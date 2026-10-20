@@ -1316,11 +1316,11 @@ async function generateAndPrintLabels() {
     `;
   });
 
-  /* Misure blindate al 100% per A6 (148x105 mm) in orientamento orizzontale (Landscape) */
+  /* Misure corrette per permettere la generazione di PDF multi-pagina senza blocchi sul body */
   const fullHtml = `<!DOCTYPE html><html><head><title>Etichette_${card.title}</title><style>
     @page { size: 148mm 105mm; margin: 0; }
-    body, html { margin: 0; padding: 0; width: 148mm; height: 105mm; overflow: hidden; background: #fff; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    .label-page { width: 148mm; height: 105mm; padding: 5mm; box-sizing: border-box; display: flex; flex-direction: column; page-break-after: always; background: #fff; }
+    body, html { margin: 0; padding: 0; width: 148mm; background: #fff; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .label-page { width: 148mm; height: 105mm; padding: 5mm; box-sizing: border-box; display: flex; flex-direction: column; page-break-after: always; break-after: page; background: #fff; overflow: hidden; position: relative; }
     
     .top-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 3.5mm; padding-bottom: 2.5mm; border-bottom: 2px solid #333; }
     .logo-box { width: 38mm; display: flex; flex-direction: column; justify-content: center; }
