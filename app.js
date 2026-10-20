@@ -515,7 +515,7 @@ function clearGlobalSearch() { document.getElementById('globalSearchInput').valu
 
 function openSettingsModal() { openModal('settingsModal'); }
 
-// Rendering della Lista Archivio
+// Rendering della Lista Archivio (CON TASTO ELIMINA)
 function renderArchiveList(query = '') {
   const q = query.toLowerCase().trim();
   let archived = state.cards.filter(c => c.stage === 'archiviato');
@@ -527,12 +527,15 @@ function renderArchiveList(query = '') {
   if (archived.length === 0) return '<p class="text-xs text-slate-500 italic py-4 text-center">Nessuna commessa in archivio.</p>';
   
   return archived.map(c => `
-    <div onclick="openDetail('${c.id}')" class="bg-slate-950 p-3 rounded-lg border border-slate-800 hover:border-slate-500/50 cursor-pointer transition-colors group flex justify-between items-center">
-      <div>
+    <div class="bg-slate-950 p-3 rounded-lg border border-slate-800 hover:border-slate-500/50 transition-colors group flex justify-between items-center">
+      <div onclick="openDetail('${c.id}')" class="flex-1 cursor-pointer">
         <h5 class="text-sm font-bold text-slate-200 group-hover:text-white transition-colors">${c.title}</h5>
         <div class="text-[10px] text-slate-400 mt-0.5">Cliente: <span class="text-indigo-300 font-semibold">${c.client || 'N/D'}</span> | Inserimento: ${new Date(c.createdAt).toLocaleDateString('it-IT')}</div>
       </div>
-      <i data-lucide="external-link" class="w-4 h-4 text-slate-600 group-hover:text-indigo-400 transition-colors"></i>
+      <div class="flex items-center gap-2">
+        <button onclick="openDetail('${c.id}')" class="text-slate-600 hover:text-indigo-400 p-1.5 transition-colors cursor-pointer" title="Apri Dettaglio"><i data-lucide="external-link" class="w-4 h-4"></i></button>
+        <button onclick="deleteArchivedCard('${c.id}')" class="text-slate-600 hover:text-red-400 p-1.5 transition-colors cursor-pointer" title="Elimina Definitivamente"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+      </div>
     </div>
   `).join('');
 }
@@ -549,8 +552,26 @@ function openSubSettings(type) {
     contentEl.innerHTML = `<div class="space-y-4"><p class="text-xs text-slate-400">Gestisci l'anagrafica clienti con azienda, referente, email e WhatsApp:</p><div class="bg-slate-950 p-3 rounded-lg border border-slate-800 space-y-2.5"><h5 class="text-xs font-bold text-indigo-400 uppercase">Aggiungi / Modifica Cliente</h5><div class="grid grid-cols-2 gap-2"><input type="text" id="crmModalName" placeholder="Azienda / Cliente *" class="bg-slate-900 border border-slate-700 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"><input type="text" id="crmModalRef" placeholder="Referente" class="bg-slate-900 border border-slate-700 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"></div><div class="grid grid-cols-2 gap-2"><input type="email" id="crmModalEmail" placeholder="Email" class="bg-slate-900 border border-slate-700 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"><input type="text" id="crmModalWa" placeholder="WhatsApp" class="bg-slate-900 border border-slate-700 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"></div><button type="button" id="btnSaveCrmClient" onclick="addClientFromSettings()" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs px-3 py-2 rounded font-semibold w-full cursor-pointer transition-colors">Salva Cliente in Archivio</button></div><div id="settingsClientsList" class="space-y-1.5 max-h-44 overflow-y-auto pr-1">${renderCrmSettingsList()}</div></div>`;
   } else if (type === 'archive') {
     titleEl.innerHTML = `<i data-lucide="archive" class="w-5 h-5 text-slate-400"></i> Archivio Commesse`;
-    contentEl.innerHTML = `<div class="space-y-4"><div class="flex justify-between items-center"><p class="text-xs text-slate-400">Le commesse rimaste in "Fatturato" per più di 7 giorni finiscono qui.</p><div class="relative w-1/2 md:w-1/3"><i data-lucide="search" class="w-3.5 h-3.5 absolute left-2.5 top-2 text-slate-400"></i><input type="text" oninput="filterArchive(this.value)" placeholder="Cerca..." class="w-full bg-slate-950 border border-slate-700 rounded-lg pl-8 pr-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-slate-500"></div></div><div id="archiveSettingsList" class="space-y-2 max-h-96 overflow-y-auto pr-1">${renderArchiveList()}</div></div>`;
-    setTimeout(lucide.createIcons, 50);
+    contentEl.innerHTML = `
+      <div class="space-y-4">
+        <div class="bg-slate-950 p-3 rounded-lg border border-slate-800 flex justify-between items-center gap-2 flex-wrap">
+          <div>
+            <p class="text-xs font-bold text-slate-200 uppercase tracking-wider">Gestione Dati & Report</p>
+            <p class="text-[10px] text-slate-400 mt-0.5">Memoria Locale Usata: <span id="storageUsageIndicator" class="font-mono font-bold text-emerald-400">Calcolo...</span></p>
+          </div>
+          <button onclick="playSound('click'); printArchiveReport();" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs px-3 py-2 rounded-lg font-semibold flex items-center gap-1.5 cursor-pointer shadow-lg active:scale-95 transition-transform">
+            <i data-lucide="printer" class="w-4 h-4"></i> Stampa Report Fatturato
+          </button>
+        </div>
+        <div class="relative w-full">
+          <i data-lucide="search" class="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-slate-400"></i>
+          <input type="text" id="archiveSearchInput" oninput="filterArchive(this.value)" placeholder="Cerca nell'archivio..." class="w-full bg-slate-950 border border-slate-700 rounded-lg pl-8 pr-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-slate-500">
+        </div>
+        <div id="archiveSettingsList" class="space-y-2 max-h-[400px] overflow-y-auto pr-1">
+          ${renderArchiveList()}
+        </div>
+      </div>`;
+    setTimeout(() => { updateStorageIndicator(); lucide.createIcons(); }, 50);
   } else if (type === 'messages') {
     titleEl.innerHTML = `<i data-lucide="message-square" class="w-5 h-5 text-pink-400"></i> Testo Notifiche (WhatsApp / Email)`;
     contentEl.innerHTML = `<div class="space-y-4"><p class="text-xs text-slate-400">Personalizza il testo inviato ai clienti per il ritiro merce. La modifica viene salvata <strong class="text-pink-400">su Cloud</strong> ed è attiva su tutti i dispositivi. Usa le variabili magiche:</p><div class="bg-slate-950 p-3 rounded-lg border border-slate-800 space-y-1.5 font-mono text-[11px] text-indigo-300"><div><strong class="text-pink-400 text-xs">{SALUTO}</strong> -> "Nome Referente della ditta Azienda"</div><div><strong class="text-pink-400 text-xs">{TITOLO}</strong> -> Titolo della commessa</div><div><strong class="text-pink-400 text-xs">{ARTICOLI}</strong> -> Elenco articoli in lista (es: "- 2 pezzi Stampa Banner")</div></div><textarea id="msgTemplateText" rows="10" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-xs text-slate-200 focus:outline-none focus:border-pink-500 font-sans leading-relaxed">${sharedMsgTemplate}</textarea></div>`;
@@ -1425,3 +1446,159 @@ function renderAlarmsList() {
 
 function openModal(modalId) { document.getElementById(modalId).classList.remove('hidden'); }
 function closeModal(modalId) { document.getElementById(modalId).classList.add('hidden'); }
+
+// ============================================
+// GESTIONE ARCHIVIO AVANZATA: ELIMINAZIONE, REPORT E SPAZIO
+// ============================================
+
+// Elimina singola commessa dall'archivio
+function deleteArchivedCard(cardId) {
+  const card = state.cards.find(c => c.id === cardId);
+  if (!card) return;
+  confirmDeletion(`Sei sicuro di voler eliminare DEFINITIVAMENTE l'ordine "${card.title}" dall'archivio? Questa operazione non è reversibile.`, () => {
+    state.cards = state.cards.filter(c => c.id !== cardId);
+    saveLocal();
+    syncDeleteToCloud(cardId);
+    // Aggiorna visivamente la lista
+    const searchInput = document.getElementById('archiveSearchInput');
+    filterArchive(searchInput ? searchInput.value : '');
+    updateStorageIndicator();
+  });
+}
+
+// Calcola lo spazio occupato in LocalStorage
+function updateStorageIndicator() {
+  const indicator = document.getElementById('storageUsageIndicator');
+  if (!indicator) return;
+  
+  let lsTotal = 0;
+  for (let x in localStorage) {
+    if (!localStorage.hasOwnProperty(x)) continue;
+    lsTotal += ((localStorage[x].length + x.length) * 2); // stima byte
+  }
+  
+  const kbTotal = (lsTotal / 1024).toFixed(2);
+  const maxKb = 5120; // Circa 5MB (limite standard browser)
+  const percentage = ((kbTotal / maxKb) * 100).toFixed(1);
+  
+  indicator.innerText = `${percentage}% (${kbTotal} KB)`;
+  
+  if (percentage > 80) {
+    indicator.classList.replace('text-emerald-400', 'text-red-500');
+    indicator.classList.add('animate-pulse');
+  } else if (percentage > 50) {
+    indicator.classList.replace('text-emerald-400', 'text-yellow-400');
+  } else {
+    indicator.classList.replace('text-red-500', 'text-emerald-400');
+    indicator.classList.replace('text-yellow-400', 'text-emerald-400');
+    indicator.classList.remove('animate-pulse');
+  }
+}
+
+// Stampa Report Archivio con Totali
+function printArchiveReport() {
+  const archivedCards = state.cards.filter(c => c.stage === 'archiviato');
+  if (archivedCards.length === 0) {
+    alert("Nessuna commessa in archivio da stampare.");
+    return;
+  }
+  
+  const printWindow = window.open('', '_blank');
+  if (!printWindow) { alert("⚠️ ATTENZIONE: Il pop-up per la stampa è stato bloccato dal browser."); return; }
+
+  let rowsHtml = '';
+  let grandTotalNet = 0;
+  let grandTotalTax = 0;
+  let grandTotalGross = 0;
+
+  archivedCards.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt)).forEach(card => {
+    let cardNet = 0;
+    let cardTax = 0;
+    let cardGross = 0;
+    
+    if (card.articles && card.articles.length > 0) {
+      card.articles.forEach(art => {
+        const qty = parseFloat(art.qty) || 0;
+        const price = parseFloat(art.price) || 0;
+        const taxRate = parseFloat(art.tax) !== undefined ? parseFloat(art.tax) : 22;
+        
+        const sub = qty * price;
+        const taxAmt = sub * (taxRate / 100);
+        cardNet += sub;
+        cardTax += taxAmt;
+        cardGross += (sub + taxAmt);
+      });
+    }
+
+    grandTotalNet += cardNet;
+    grandTotalTax += cardTax;
+    grandTotalGross += cardGross;
+
+    const dateStr = card.createdAt ? new Date(card.createdAt).toLocaleDateString('it-IT') : '-';
+    rowsHtml += `
+      <tr>
+        <td style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0;">${dateStr}</td>
+        <td style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0; font-weight: bold;">${card.title}</td>
+        <td style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0;">${card.client || '-'}</td>
+        <td style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0; text-align: right;">€ ${cardNet.toFixed(2)}</td>
+        <td style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0; text-align: right; font-weight: bold; color: #0f172a;">€ ${cardGross.toFixed(2)}</td>
+      </tr>
+    `;
+  });
+
+  printWindow.document.write(`
+    <!DOCTYPE html>
+    <html><head><title>Report Archivio Fatturato SGA</title><style>
+      @page { size: A4 portrait; margin: 15mm; } 
+      body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; margin: 0; padding: 0; color: #0f172a; font-size: 11px; }
+      .header { border-bottom: 2px solid #4f46e5; padding-bottom: 10px; margin-bottom: 20px; text-align: center;} 
+      .title { font-size: 18px; font-weight: 800; margin: 0 0 5px; color: #1e293b; text-transform: uppercase; } 
+      .subtitle { color: #64748b; font-size: 11px; }
+      table { width: 100%; border-collapse: collapse; margin-bottom: 20px; } 
+      th { background: #f1f5f9; color: #334155; font-size: 10px; text-transform: uppercase; padding: 8px; text-align: left; border-bottom: 2px solid #cbd5e1; } 
+      .totals-box { width: 100%; border: 2px solid #e2e8f0; border-radius: 8px; padding: 15px; display: flex; justify-content: space-around; background: #f8fafc; margin-top: 20px; page-break-inside: avoid; }
+      .totals-box div { text-align: center; }
+      .totals-box label { display: block; font-size: 10px; text-transform: uppercase; color: #64748b; font-weight: bold; margin-bottom: 5px; }
+      .totals-box span { font-size: 16px; font-weight: bold; color: #0f172a; }
+      .totals-box .highlight span { color: #059669; font-size: 18px; }
+    </style></head><body>
+      <div class="header">
+        <h1 class="title">Report Archivio Commesse Fatturate</h1>
+        <div class="subtitle">SGA Studio Grafico Associato - Generato il ${new Date().toLocaleString('it-IT')}</div>
+      </div>
+      
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 15%;">Data</th>
+            <th style="width: 35%;">Titolo Commessa</th>
+            <th style="width: 25%;">Cliente</th>
+            <th style="width: 12%; text-align: right;">Imponibile</th>
+            <th style="width: 13%; text-align: right;">Tot. Ivato</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rowsHtml}
+        </tbody>
+      </table>
+
+      <div class="totals-box">
+        <div>
+          <label>Totale Imponibile</label>
+          <span>€ ${grandTotalNet.toFixed(2)}</span>
+        </div>
+        <div>
+          <label>Totale IVA</label>
+          <span>€ ${grandTotalTax.toFixed(2)}</span>
+        </div>
+        <div class="highlight">
+          <label>Fatturato Totale (Ivato)</label>
+          <span>€ ${grandTotalGross.toFixed(2)}</span>
+        </div>
+      </div>
+    </body></html>
+  `);
+  printWindow.document.close();
+  
+  setTimeout(() => { printWindow.focus(); printWindow.print(); }, 800);
+}
