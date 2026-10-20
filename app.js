@@ -39,6 +39,7 @@ let lastScrollTime = 0;
 let isAutoScrollPaused = false;
 let masterScrollSpeed = 0.08;
 window.editingClientId = null;
+window.editingMachineIndex = null;
 window.tempLabelArticles = [];
 let arcadeTimer = null;
 let sirenInterval = null;
@@ -156,6 +157,20 @@ function triggerAlarmAlert() {
   const cardsToDisplay = urgentCards.length > 0 ? urgentCards : state.cards.filter(card => card.stage !== 'bollettato-da-consegnare' && card.stage !== 'fatturato' && card.stage !== 'archiviato');
   if (cardsToDisplay.length > 0) showArcadeAlert(cardsToDisplay);
 }
+
+function showArcadeAlert(cards) {
+  playSound('alert'); const listEl = document.getElementById('arcadeAlertList'); listEl.innerHTML = '';
+  cards.forEach(card => {
+    const stageObj = COLUMNS_CONFIG.find(c => c.id === card.stage); const stageName = stageObj ? stageObj.label : card.stage; let timeText = ''; let badgeColor = 'bg-orange-600 text-white';
+    if (card.deliveryDate) { const delivery = new Date(card.deliveryDate); delivery.setHours(0,0,0,0); const today = new Date(); today.setHours(0,0,0,0); const diffDays = Math.ceil((delivery - today) / (1000 * 60 * 60 * 24)); if (diffDays < 0) { timeText = `SCADUTA da ${Math.abs(diffDays)} giorni!`; badgeColor = 'bg-red-600 text-white animate-pulse'; } else if (diffDays === 0) { timeText = 'Scade OGGI!'; badgeColor = 'bg-red-600 text-white animate-pulse'; } else if (diffDays <= 3) { timeText = `Scade tra ${diffDays} giorni (URGENTE)`; badgeColor = 'bg-amber-600 text-white'; } else { timeText = `Scade tra ${diffDays} giorni`; badgeColor = 'bg-yellow-600 text-slate-950 font-bold'; } } 
+    else { timeText = 'In Lavorazione'; badgeColor = 'bg-indigo-600 text-white'; }
+    const item = document.createElement('div'); item.className = "bg-black/70 border-2 border-red-500/60 p-4 rounded-xl flex justify-between items-center gap-4 shadow-lg"; item.innerHTML = `<div class="overflow-hidden space-y-1"><h4 class="font-bold text-lg text-white truncate">${card.title}</h4><p class="text-sm text-slate-300">Cliente: <span class="text-indigo-300">${card.client || 'N/D'}</span> | Stato: <span class="text-yellow-300">${stageName}</span></p></div><div class="shrink-0 text-right space-y-1"><span class="text-xs px-3 py-1.5 rounded-lg font-mono uppercase tracking-wider ${badgeColor}">${timeText}</span></div>`; listEl.appendChild(item);
+  });
+  document.getElementById('arcadeAlertModal').classList.remove('hidden'); lucide.createIcons();
+  const progressBar = document.getElementById('arcadeProgressBar'); if (progressBar) { progressBar.style.transition = 'none'; progressBar.style.width = '100%'; setTimeout(() => { progressBar.style.transition = 'width 60s linear'; progressBar.style.width = '0%'; }, 50); }
+  if (arcadeTimer) clearTimeout(arcadeTimer); arcadeTimer = setTimeout(() => { closeArcadeAlert(); }, 60000); 
+}
+function closeArcadeAlert() { playSound('close'); if (sirenInterval) { clearInterval(sirenInterval); sirenInterval = null; } document.getElementById('arcadeAlertModal').classList.add('hidden'); if (arcadeTimer) { clearTimeout(arcadeTimer); arcadeTimer = null; } }
 
 let audioCtx = null;
 function initAudio() { if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); if (audioCtx.state === 'suspended') audioCtx.resume(); }
@@ -320,7 +335,7 @@ function renderSettingsContent() {
         <i data-lucide="chevron-right" class="w-4 h-4 text-slate-600 group-hover:text-white transition-colors"></i>
       </div>
       <div onclick="openSubSettings('machines')" class="bg-slate-950 p-3.5 rounded-xl border border-slate-800 hover:border-cyan-500/50 cursor-pointer transition-colors flex items-center justify-between group">
-        <div class="flex items-center gap-3"><div class="p-2 bg-cyan-950 text-cyan-400 rounded-lg"><i data-lucide="cpu" class="w-5 h-5"></i></div><div><h4 class="text-xs font-bold text-white group-hover:text-cyan-400 transition-colors">Gestione Macchinari</h4><p class="text-[10px] text-slate-400">Stampanti, plotter e macchine da laboratorio</p></div></div>
+        <div class="flex items-center gap-3"><div class="p-2 bg-cyan-950 text-cyan-400 rounded-lg"><i data-lucide="cpu" class="w-5 h-5"></i></div><div><h4 class="text-xs font-bold text-white group-hover:text-cyan-400 transition-colors">Gestione Macchinari</h4><p class="text-[10px] text-slate-400">Aggiungi o modifica stampanti e plotter</p></div></div>
         <i data-lucide="chevron-right" class="w-4 h-4 text-slate-600 group-hover:text-white transition-colors"></i>
       </div>
       <div onclick="openSubSettings('logo')" class="bg-slate-950 p-3.5 rounded-xl border border-slate-800 hover:border-indigo-500/50 cursor-pointer transition-colors flex items-center justify-between group">
@@ -362,7 +377,7 @@ function renderSettingsContent() {
       bodyEl.innerHTML = `<div class="space-y-4"><p class="text-xs text-slate-400">Personalizza il testo inviato ai clienti per il ritiro merce. La modifica viene salvata <strong class="text-pink-400">su Cloud</strong> ed è attiva su tutti i dispositivi. Usa le variabili magiche:</p><div class="bg-slate-950 p-3 rounded-lg border border-slate-800 space-y-1.5 font-mono text-[11px] text-indigo-300"><div><strong class="text-pink-400 text-xs">{SALUTO}</strong> -> "Nome Referente della ditta Azienda"</div><div><strong class="text-pink-400 text-xs">{TITOLO}</strong> -> Titolo della commessa</div><div><strong class="text-pink-400 text-xs">{ARTICOLI}</strong> -> Elenco articoli in lista</div></div><textarea id="msgTemplateText" rows="8" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-xs text-slate-200 focus:outline-none focus:border-pink-500 font-sans leading-relaxed">${sharedMsgTemplate}</textarea><button onclick="saveSubSettingsAction('messages')" class="bg-pink-600 hover:bg-pink-500 text-white text-xs px-4 py-2 rounded font-semibold w-full cursor-pointer shadow">Salva Modifiche Testo</button></div>`;
     } else if (currentSettingsView === 'machines') {
       titleEl.innerHTML = `<i data-lucide="cpu" class="w-5 h-5 text-cyan-400"></i> Gestione Macchinari`;
-      bodyEl.innerHTML = `<div class="space-y-3"><p class="text-xs text-slate-400">Aggiungi o rimuovi i macchinari utilizzati in tipografia o laboratorio:</p><div class="flex gap-2"><input type="text" id="newMachineInput" placeholder="Nuovo macchinario..." class="flex-1 bg-slate-950 border border-slate-700 rounded px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-cyan-500"><button type="button" onclick="addMachine()" class="bg-cyan-600 hover:bg-cyan-500 text-white text-xs px-3 py-2 rounded font-semibold cursor-pointer">Aggiungi</button></div><div id="settingsMachinesList" class="space-y-1.5 max-h-56 overflow-y-auto pr-1">${MACHINES_DB.map((m, idx) => `<div class="flex items-center justify-between bg-slate-950 p-2 rounded border border-slate-800 text-xs"><span class="text-slate-200 font-medium">${m}</span><button onclick="removeMachine(${idx})" class="text-red-400 hover:text-red-300 p-1 cursor-pointer"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button></div>`).join('')}</div></div>`;
+      bodyEl.innerHTML = `<div class="space-y-3"><p class="text-xs text-slate-400">Aggiungi, modifica o rimuovi i macchinari utilizzati in laboratorio:</p><div class="flex gap-2"><input type="text" id="newMachineInput" placeholder="Nome macchinario..." class="flex-1 bg-slate-950 border border-slate-700 rounded px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-cyan-500"><button type="button" id="btnSaveMachine" onclick="saveMachine()" class="bg-cyan-600 hover:bg-cyan-500 text-white text-xs px-3 py-2 rounded font-semibold cursor-pointer">Aggiungi</button></div><div id="settingsMachinesList" class="space-y-1.5 max-h-56 overflow-y-auto pr-1">${renderMachinesSettingsList()}</div></div>`;
     } else if (currentSettingsView === 'logo') {
       titleEl.innerHTML = `<i data-lucide="image" class="w-5 h-5 text-indigo-400"></i> Logo Aziendale`;
       bodyEl.innerHTML = `<div class="space-y-3"><p class="text-xs text-slate-400">Carica il logo in PNG trasparente: verrà salvato nel Cloud e visibile su tutti i dispositivi.</p><div class="flex items-center gap-4"><div class="w-32 h-14 bg-slate-950 border border-slate-700 rounded flex items-center justify-center overflow-hidden">${sharedCompanyLogo ? `<img src="${sharedCompanyLogo}" class="max-h-full max-w-full object-contain">` : '<span class="text-[10px] text-slate-500">Nessun Logo</span>'}</div><div class="flex gap-2"><label class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs px-3 py-2 rounded font-semibold cursor-pointer transition-colors flex items-center gap-1.5"><i data-lucide="upload" class="w-3.5 h-3.5"></i> Carica Logo PNG<input type="file" accept="image/png, image/jpeg" class="hidden" onchange="uploadCompanyLogo(event); openSubSettings('logo');"></label><button onclick="removeCompanyLogo();" class="bg-slate-800 hover:bg-slate-700 text-red-400 text-xs px-3 py-2 rounded font-semibold transition-colors cursor-pointer">Rimuovi</button></div></div></div>`;
@@ -394,8 +409,8 @@ function renderSettingsContent() {
   lucide.createIcons();
 }
 
-function openSubSettings(type) { playSound('click'); currentSettingsView = type; renderSettingsContent(); }
-function backToMainSettings() { playSound('click'); currentSettingsView = 'main'; renderSettingsContent(); }
+function openSubSettings(type) { playSound('click'); currentSettingsView = type; window.editingMachineIndex = null; renderSettingsContent(); }
+function backToMainSettings() { playSound('click'); currentSettingsView = 'main'; window.editingMachineIndex = null; renderSettingsContent(); }
 
 function saveSubSettingsAction(type) {
   if (type === 'colors') {
@@ -432,24 +447,59 @@ function addClientFromSettings() {
 
 function removeClient(clientId) { const c = CLIENTS_DB.find(client => client.id === clientId); if(!c) return; confirmDeletion(`Cliente dal CRM: ${c.name}`, () => { CLIENTS_DB = CLIENTS_DB.filter(client => client.id !== clientId); localStorage.setItem('workflow_sga_clients_db', JSON.stringify(CLIENTS_DB)); populateClientSelectors(); syncClientsToCloud(); renderSettingsContent(); }); }
 
-function addMachine() { const input = document.getElementById('newMachineInput'); if (!input || !input.value.trim()) return; const mName = input.value.trim(); if (!MACHINES_DB.includes(mName)) { MACHINES_DB.push(mName); localStorage.setItem('workflow_sga_machines_db', JSON.stringify(MACHINES_DB)); populateMachinesDropdowns(); renderSettingsContent(); playSound('success'); } input.value = ''; }
-function removeMachine(idx) { const m = MACHINES_DB[idx]; confirmDeletion(`Macchinario: ${m}`, () => { MACHINES_DB.splice(idx, 1); localStorage.setItem('workflow_sga_machines_db', JSON.stringify(MACHINES_DB)); populateMachinesDropdowns(); renderSettingsContent(); }); }
+function renderMachinesSettingsList() {
+  return MACHINES_DB.map((m, idx) => `
+    <div class="flex items-center justify-between bg-slate-950 p-2.5 rounded border border-slate-800 text-xs">
+      <span class="text-slate-200 font-medium">${m}</span>
+      <div class="flex items-center gap-1.5">
+        <button onclick="loadMachineForEdit(${idx})" class="p-1 text-slate-400 hover:text-white cursor-pointer" title="Modifica"><i data-lucide="edit-3" class="w-3.5 h-3.5"></i></button>
+        <button onclick="removeMachine(${idx})" class="p-1 text-red-400 hover:text-red-300 cursor-pointer" title="Elimina"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function loadMachineForEdit(idx) {
+  playSound('click'); window.editingMachineIndex = idx;
+  const input = document.getElementById('newMachineInput');
+  const btn = document.getElementById('btnSaveMachine');
+  if (input && btn) {
+    input.value = MACHINES_DB[idx];
+    btn.innerText = "Aggiorna";
+    btn.classList.replace('bg-cyan-600', 'bg-emerald-600');
+    btn.classList.replace('hover:bg-cyan-500', 'hover:bg-emerald-500');
+    input.focus();
+  }
+}
+
+function saveMachine() {
+  const input = document.getElementById('newMachineInput');
+  if (!input || !input.value.trim()) return;
+  const mName = input.value.trim();
+  if (window.editingMachineIndex !== null && window.editingMachineIndex >= 0) {
+    MACHINES_DB[window.editingMachineIndex] = mName;
+    window.editingMachineIndex = null;
+  } else {
+    if (!MACHINES_DB.includes(mName)) MACHINES_DB.push(mName);
+  }
+  localStorage.setItem('workflow_sga_machines_db', JSON.stringify(MACHINES_DB));
+  populateMachinesDropdowns();
+  renderSettingsContent();
+  playSound('success');
+  input.value = '';
+}
+
+function removeMachine(idx) { 
+  const m = MACHINES_DB[idx]; 
+  confirmDeletion(`Macchinario: ${m}`, () => { 
+    MACHINES_DB.splice(idx, 1); 
+    localStorage.setItem('workflow_sga_machines_db', JSON.stringify(MACHINES_DB)); 
+    populateMachinesDropdowns(); 
+    renderSettingsContent(); 
+  }); 
+}
 
 function resetDefaultSettings() { if (confirm("Vuoi ripristinare tutti i valori predefiniti?")) { COLUMNS_CONFIG = JSON.parse(JSON.stringify(DEFAULT_COLUMNS_CONFIG)); USER_ALARMS = []; masterFontSizePx = 24; appFontSizePx = 15; sharedMsgTemplate = DEFAULT_MSG_TEMPLATE; localStorage.removeItem('workflow_sga_columns_config'); localStorage.removeItem('workflow_sga_alarms'); localStorage.removeItem('workflow_sga_master_fontsize_px'); localStorage.removeItem('workflow_sga_app_fontsize_px'); localStorage.removeItem('workflow_sga_msg_template'); applyMasterFontSize(24); applyAppFontSize(15); closeModal('settingsModal'); renderBoard(); alert("Ripristino completato."); } }
-
-function showArcadeAlert(cards) {
-  playSound('alert'); const listEl = document.getElementById('arcadeAlertList'); listEl.innerHTML = '';
-  cards.forEach(card => {
-    const stageObj = COLUMNS_CONFIG.find(c => c.id === card.stage); const stageName = stageObj ? stageObj.label : card.stage; let timeText = ''; let badgeColor = 'bg-orange-600 text-white';
-    if (card.deliveryDate) { const delivery = new Date(card.deliveryDate); delivery.setHours(0,0,0,0); const today = new Date(); today.setHours(0,0,0,0); const diffDays = Math.ceil((delivery - today) / (1000 * 60 * 60 * 24)); if (diffDays < 0) { timeText = `SCADUTA da ${Math.abs(diffDays)} giorni!`; badgeColor = 'bg-red-600 text-white animate-pulse'; } else if (diffDays === 0) { timeText = 'Scade OGGI!'; badgeColor = 'bg-red-600 text-white animate-pulse'; } else if (diffDays <= 3) { timeText = `Scade tra ${diffDays} giorni (URGENTE)`; badgeColor = 'bg-amber-600 text-white'; } else { timeText = `Scade tra ${diffDays} giorni`; badgeColor = 'bg-yellow-600 text-slate-950 font-bold'; } } 
-    else { timeText = 'In Lavorazione'; badgeColor = 'bg-indigo-600 text-white'; }
-    const item = document.createElement('div'); item.className = "bg-black/70 border-2 border-red-500/60 p-4 rounded-xl flex justify-between items-center gap-4 shadow-lg"; item.innerHTML = `<div class="overflow-hidden space-y-1"><h4 class="font-bold text-lg text-white truncate">${card.title}</h4><p class="text-sm text-slate-300">Cliente: <span class="text-indigo-300">${card.client || 'N/D'}</span> | Stato: <span class="text-yellow-300">${stageName}</span></p></div><div class="shrink-0 text-right space-y-1"><span class="text-xs px-3 py-1.5 rounded-lg font-mono uppercase tracking-wider ${badgeColor}">${timeText}</span></div>`; listEl.appendChild(item);
-  });
-  document.getElementById('arcadeAlertModal').classList.remove('hidden'); lucide.createIcons();
-  const progressBar = document.getElementById('arcadeProgressBar'); if (progressBar) { progressBar.style.transition = 'none'; progressBar.style.width = '100%'; setTimeout(() => { progressBar.style.transition = 'width 60s linear'; progressBar.style.width = '0%'; }, 50); }
-  if (arcadeTimer) clearTimeout(arcadeTimer); arcadeTimer = setTimeout(() => { closeArcadeAlert(); }, 60000); 
-}
-function closeArcadeAlert() { playSound('close'); if (sirenInterval) { clearInterval(sirenInterval); sirenInterval = null; } document.getElementById('arcadeAlertModal').classList.add('hidden'); if (arcadeTimer) { clearTimeout(arcadeTimer); arcadeTimer = null; } }
 
 function togglePlayPauseMaster() { isAutoScrollPaused = !isAutoScrollPaused; const icon = document.getElementById('masterPlayPauseIcon'); const text = document.getElementById('masterPlayPauseText'); if (isAutoScrollPaused) { if(icon) { icon.setAttribute('data-lucide', 'play'); icon.classList.replace('text-amber-400', 'text-emerald-400'); } if(text) text.innerText = 'Play'; } else { if(icon) { icon.setAttribute('data-lucide', 'pause'); icon.classList.replace('text-emerald-400', 'text-amber-400'); } if(text) text.innerText = 'Pausa'; } lucide.createIcons(); }
 
@@ -477,8 +527,8 @@ function stopAutoScroll() { if (autoScrollId) cancelAnimationFrame(autoScrollId)
 
 function updateCloudStatus(isOnline) {
   const statusEl = document.getElementById('cloudStatus'); let hasImgbb = IMGBB_API_KEY && IMGBB_API_KEY.trim() !== "" && IMGBB_API_KEY !== "INSERISCI_QUI_LA_TUA_CHIAVE_IMGBB";
-  if (isOnline) { const hqIcon = hasImgbb ? `<span class="ml-1 px-1 bg-emerald-900 text-emerald-200 rounded text-[9px] font-bold border border-emerald-700">4K ON</span>` : ''; statusEl.innerHTML = `<i data-lucide="wifi" class="w-3 h-3 text-emerald-500"></i> <span class="text-emerald-400 font-semibold hover:text-emerald-300 transition-colors">Cloud Attivo${hqIcon}</span>`; } 
-  else { statusEl.innerHTML = `<i data-lucide="hard-drive" class="w-3 h-3 text-slate-400"></i> <span class="text-slate-400 hover:text-slate-200 transition-colors">Modalità Locale</span>`; }
+  if (isOnline) { const hqIcon = hasImgbb ? `<span class="ml-1 px-1 bg-emerald-900 text-emerald-200 rounded text-[9px] font-bold border border-emerald-700">4K ON</span>` : ''; statusEl.innerHTML = `<i data-lucide="wifi" class="w-3.5 h-3.5 text-emerald-500"></i> <span class="text-emerald-400 font-semibold hover:text-emerald-300 transition-colors">Cloud Attivo${hqIcon}</span>`; } 
+  else { statusEl.innerHTML = `<i data-lucide="hard-drive" class="w-3.5 h-3.5 text-slate-400"></i> <span class="text-slate-400 hover:text-slate-200 transition-colors">Modalità Locale</span>`; }
   lucide.createIcons();
 }
 
@@ -541,7 +591,7 @@ function sanitizeCard(card) {
   if (card.stage === 'magazzino') card.stage = 'da-lavorare';
   if (card.stage === 'lavorato') card.stage = 'lavorato-da-bollettare'; if (card.stage === 'consegnato') card.stage = 'bollettato-da-consegnare';
   if (!Array.isArray(card.articles)) { card.articles = []; if (card.notes && card.notes.trim()) card.articles.push({ code: '', desc: card.notes, qty: 1, price: 0, tax: 22 }); } 
-  else { card.articles = card.articles.map(art => { if (art.tax === undefined) art.tax = 22; return art; }); }
+  else { card.articles = card.articles.map(art => { if (art.tax === undefined || art.tax === 0 || art.tax === '0') art.tax = 22; return art; }); }
   return card;
 }
 
@@ -571,7 +621,6 @@ function renderBoard() {
     if (globalFilterJobType) { colCards = colCards.filter(c => c.jobType === globalFilterJobType); }
     colCards.sort((a,b) => (a.order || 0) - (b.order || 0));
     const colEl = document.createElement('div'); 
-    // RIPRISTINATE LE LARGHEZZE FISSE ORIGINARIE W-80 E SHRINK-0 PER COLONNE E COMMESSE UGUALI
     colEl.className = `board-column flex flex-col h-full bg-slate-900/60 rounded-xl border border-slate-800 w-80 shrink-0 overflow-hidden`;
     colEl.innerHTML = `<div class="p-3 border-b border-slate-800 ${col.color} ${col.border} flex justify-between items-center bg-opacity-30"><h3 class="font-bold uppercase tracking-wide truncate max-w-[80%]">${col.label}</h3><span class="font-semibold bg-slate-950/60 px-2 py-0.5 rounded-full shadow-inner">${colCards.length}</span></div><div class="flex-1 overflow-y-auto p-2 space-y-2 card-dropzone" data-col="${col.id}" ondragover="allowDrop(event)" ondrop="handleDrop(event)">${colCards.map(card => createCardHTML(card)).join('')}</div>`;
     board.appendChild(colEl);
@@ -712,9 +761,9 @@ function renderArticlesTable(card) {
   const tbody = document.getElementById('articlesTableBody'); tbody.innerHTML = '';
   if (!card.articles || card.articles.length === 0) card.articles = [{ code: '', desc: '', qty: '', price: '', tax: 22 }];
   card.articles.forEach((art, idx) => {
-    const qty = parseFloat(art.qty) || 0, price = parseFloat(art.price) || 0, taxRate = parseFloat(art.tax) !== undefined ? parseFloat(art.tax) : 22; const rowTotalNet = qty * price, unitTaxPrice = price * (1 + taxRate / 100), rowTotalTaxed = rowTotalNet * (1 + taxRate / 100);
+    const qty = parseFloat(art.qty) || 0, price = parseFloat(art.price) || 0, taxRate = parseFloat(art.tax) !== undefined && !isNaN(parseFloat(art.tax)) ? parseFloat(art.tax) : 22; const rowTotalNet = qty * price, unitTaxPrice = price * (1 + taxRate / 100), rowTotalTaxed = rowTotalNet * (1 + taxRate / 100);
     const tr = document.createElement('tr'); tr.className = "hover:bg-slate-900/50 transition-colors";
-    tr.innerHTML = `<td class="py-1.5 px-1 text-center align-middle"><div class="flex items-center justify-center gap-0.5 bg-slate-900 rounded p-0.5 border border-slate-800"><button onclick="moveArticleRowVertical(${idx}, -1)" class="hover:bg-slate-800 text-slate-300 text-xs px-1 rounded cursor-pointer">▲</button><button onclick="moveArticleRowVertical(${idx}, 1)" class="hover:bg-slate-800 text-slate-300 text-xs px-1 rounded cursor-pointer">▼</button></div></td><td class="py-1.5 px-1"><input type="text" value="${art.code || ''}" data-field="code" data-index="${idx}" oninput="updateArticleField(this)" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-xs font-mono focus:outline-none"></td><td class="py-1.5 px-1"><input type="text" value="${art.desc || ''}" data-field="desc" data-index="${idx}" oninput="updateArticleField(this)" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-xs focus:outline-none"></td><td class="py-1.5 px-1"><input type="number" step="any" value="${art.qty !== undefined ? art.qty : ''}" data-field="qty" data-index="${idx}" oninput="updateArticleField(this)" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-xs text-center focus:outline-none"></td><td class="py-1.5 px-1"><input type="number" step="any" value="${art.price !== undefined ? art.price : ''}" data-field="price" data-index="${idx}" oninput="updateArticleField(this)" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-xs text-right focus:outline-none"></td><td class="py-1.5 px-1"><input type="number" step="any" value="${art.tax !== undefined ? art.tax : 22}" data-field="tax" data-index="${idx}" oninput="updateArticleField(this)" class="w-full bg-slate-900 border border-slate-700 rounded px-1 py-1 text-slate-200 text-xs text-center focus:outline-none"></td><td class="py-1.5 px-1 text-right font-mono text-slate-300 align-middle"><span id="row-net-${idx}">€ ${rowTotalNet.toFixed(2)}</span></td><td class="py-1.5 px-1 text-right font-mono text-slate-300 align-middle"><span id="row-unit-taxed-${idx}">€ ${unitTaxPrice.toFixed(2)}</span></td><td class="py-1.5 px-2 text-right font-mono font-bold text-slate-300 align-middle"><span id="row-total-${idx}">€ ${rowTotalTaxed.toFixed(2)}</span></td><td class="py-1.5 px-1 text-center align-middle"><button onclick="removeArticleRow(${idx})" class="text-red-400 hover:text-red-300 p-1 cursor-pointer"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button></td>`;
+    tr.innerHTML = `<td class="py-1.5 px-1 text-center align-middle"><div class="flex items-center justify-center gap-0.5 bg-slate-900 rounded p-0.5 border border-slate-800"><button onclick="moveArticleRowVertical(${idx}, -1)" class="hover:bg-slate-800 text-slate-300 text-xs px-1 rounded cursor-pointer">▲</button><button onclick="moveArticleRowVertical(${idx}, 1)" class="hover:bg-slate-800 text-slate-300 text-xs px-1 rounded cursor-pointer">▼</button></div></td><td class="py-1.5 px-1"><input type="text" value="${art.code || ''}" data-field="code" data-index="${idx}" oninput="updateArticleField(this)" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-xs font-mono focus:outline-none"></td><td class="py-1.5 px-1"><input type="text" value="${art.desc || ''}" data-field="desc" data-index="${idx}" oninput="updateArticleField(this)" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-xs focus:outline-none"></td><td class="py-1.5 px-1"><input type="number" step="any" value="${art.qty !== undefined ? art.qty : ''}" data-field="qty" data-index="${idx}" oninput="updateArticleField(this)" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-xs text-center focus:outline-none"></td><td class="py-1.5 px-1"><input type="number" step="any" value="${art.price !== undefined ? art.price : ''}" data-field="price" data-index="${idx}" oninput="updateArticleField(this)" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-xs text-right focus:outline-none"></td><td class="py-1.5 px-1"><input type="number" step="any" value="${taxRate}" data-field="tax" data-index="${idx}" oninput="updateArticleField(this)" class="w-full bg-slate-900 border border-slate-700 rounded px-1 py-1 text-slate-200 text-xs text-center focus:outline-none"></td><td class="py-1.5 px-1 text-right font-mono text-slate-300 align-middle"><span id="row-net-${idx}">€ ${rowTotalNet.toFixed(2)}</span></td><td class="py-1.5 px-1 text-right font-mono text-slate-300 align-middle"><span id="row-unit-taxed-${idx}">€ ${unitTaxPrice.toFixed(2)}</span></td><td class="py-1.5 px-2 text-right font-mono font-bold text-slate-300 align-middle"><span id="row-total-${idx}">€ ${rowTotalTaxed.toFixed(2)}</span></td><td class="py-1.5 px-1 text-center align-middle"><button onclick="removeArticleRow(${idx})" class="text-red-400 hover:text-red-300 p-1 cursor-pointer"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button></td>`;
     tbody.appendChild(tr);
   });
   calculateGrandTotals(); lucide.createIcons();
@@ -724,12 +773,12 @@ function moveArticleRowVertical(idx, direction) { playSound('click'); const card
 
 function updateArticleField(input) {
   const idx = parseInt(input.dataset.index), field = input.dataset.field; const card = state.cards.find(c => c.id === activeCardId); if (!card || !card.articles[idx]) return; card.articles[idx][field] = input.value;
-  if (['qty', 'price', 'tax'].includes(field)) { const qty = parseFloat(card.articles[idx].qty) || 0, price = parseFloat(card.articles[idx].price) || 0, taxRate = parseFloat(card.articles[idx].tax) || 22; const rowTotalNet = qty * price, unitTaxPrice = price * (1 + taxRate / 100), rowTotalTaxed = rowTotalNet * (1 + taxRate / 100); document.getElementById(`row-net-${idx}`).innerText = `€ ${rowTotalNet.toFixed(2)}`; document.getElementById(`row-unit-taxed-${idx}`).innerText = `€ ${unitTaxPrice.toFixed(2)}`; document.getElementById(`row-total-${idx}`).innerText = `€ ${rowTotalTaxed.toFixed(2)}`; calculateGrandTotals(); }
+  if (['qty', 'price', 'tax'].includes(field)) { const qty = parseFloat(card.articles[idx].qty) || 0, price = parseFloat(card.articles[idx].price) || 0, taxRate = parseFloat(card.articles[idx].tax) !== undefined && !isNaN(parseFloat(card.articles[idx].tax)) ? parseFloat(card.articles[idx].tax) : 22; const rowTotalNet = qty * price, unitTaxPrice = price * (1 + taxRate / 100), rowTotalTaxed = rowTotalNet * (1 + taxRate / 100); document.getElementById(`row-net-${idx}`).innerText = `€ ${rowTotalNet.toFixed(2)}`; document.getElementById(`row-unit-taxed-${idx}`).innerText = `€ ${unitTaxPrice.toFixed(2)}`; document.getElementById(`row-total-${idx}`).innerText = `€ ${rowTotalTaxed.toFixed(2)}`; calculateGrandTotals(); }
 }
 
 function calculateGrandTotals() {
   const card = state.cards.find(c => c.id === activeCardId); if (!card || !card.articles) return; let grandSubtotal = 0, grandTax = 0, grandTotalTaxed = 0;
-  card.articles.forEach(art => { const qty = parseFloat(art.qty) || 0, price = parseFloat(art.price) || 0, taxRate = parseFloat(art.tax) || 22; const sub = qty * price, taxAmt = sub * (taxRate / 100); grandSubtotal += sub; grandTax += taxAmt; grandTotalTaxed += (sub + taxAmt); });
+  card.articles.forEach(art => { const qty = parseFloat(art.qty) || 0, price = parseFloat(art.price) || 0, taxRate = parseFloat(art.tax) !== undefined && !isNaN(parseFloat(art.tax)) ? parseFloat(art.tax) : 22; const sub = qty * price, taxAmt = sub * (taxRate / 100); grandSubtotal += sub; grandTax += taxAmt; grandTotalTaxed += (sub + taxAmt); });
   document.getElementById('grandSubtotalDisplay').innerText = `€ ${grandSubtotal.toFixed(2)}`; document.getElementById('grandTaxDisplay').innerText = `€ ${grandTax.toFixed(2)}`; document.getElementById('grandTotalDisplay').innerText = `€ ${grandTotalTaxed.toFixed(2)}`;
 }
 
@@ -860,7 +909,7 @@ function printCard() {
   const historyHtml = (card.history || []).map((h, i) => { return `<div style="margin-bottom: 8px; padding-left: 12px; border-left: 2px solid #cbd5e1; position: relative;"><div style="position: absolute; left: -5px; top: 2px; width: 8px; height: 8px; border-radius: 50%; background: #475569;"></div><div style="font-weight: bold; font-size: 11px; color: #1e293b;">Passaggio #${i+1}: ${h.label}</div><div style="font-size: 9px; color: #64748b;">Data: ${new Date(h.timestamp).toLocaleString('it-IT')}</div></div>`; }).join('');
 
   let articlesRowsHtml = ''; let grandSubtotal = 0; let grandTax = 0; let grandTotalTaxed = 0;
-  if (card.articles && card.articles.length > 0) { card.articles.forEach(art => { const qty = parseFloat(art.qty) || 0; const price = parseFloat(art.price) || 0; const taxRate = parseFloat(art.tax) !== undefined ? parseFloat(art.tax) : 22; const sub = qty * price; const taxAmt = sub * (taxRate / 100); const rowTotalTaxed = sub + taxAmt; const unitTaxed = price * (1 + taxRate / 100); grandSubtotal += sub; grandTax += taxAmt; grandTotalTaxed += rowTotalTaxed; articlesRowsHtml += `<tr style="border-bottom: 1px solid #e2e8f0;"><td style="padding: 8px; font-family: monospace; font-size: 11px; color: #334155;">${art.code || '-'}</td><td style="padding: 8px; font-size: 11px; color: #0f172a;">${art.desc || '-'}</td><td style="padding: 8px; text-align: center; font-size: 11px; color: #334155;">${art.qty !== undefined && art.qty !== '' ? art.qty : '-'}</td><td style="padding: 8px; text-align: right; font-size: 11px; color: #334155;">${art.price !== undefined && art.price !== '' ? '€ ' + parseFloat(art.price).toFixed(2) : '-'}</td><td style="padding: 8px; text-align: center; font-size: 11px; color: #334155;">${taxRate}%</td><td style="padding: 8px; text-align: right; font-size: 11px; color: #334155;">${(art.qty !== undefined && art.price !== undefined && art.qty !== '' && art.price !== '') ? '€ ' + unitTaxed.toFixed(2) : '-'}</td><td style="padding: 8px; text-align: right; font-size: 11px; font-weight: bold; color: #0f172a;">${(art.qty !== undefined && art.price !== undefined && art.qty !== '' && art.price !== '') ? '€ ' + rowTotalTaxed.toFixed(2) : '-'}</td></tr>`; }); } 
+  if (card.articles && card.articles.length > 0) { card.articles.forEach(art => { const qty = parseFloat(art.qty) || 0; const price = parseFloat(art.price) || 0; const taxRate = parseFloat(art.tax) !== undefined && !isNaN(parseFloat(art.tax)) ? parseFloat(art.tax) : 22; const sub = qty * price; const taxAmt = sub * (taxRate / 100); const rowTotalTaxed = sub + taxAmt; const unitTaxed = price * (1 + taxRate / 100); grandSubtotal += sub; grandTax += taxAmt; grandTotalTaxed += rowTotalTaxed; articlesRowsHtml += `<tr style="border-bottom: 1px solid #e2e8f0;"><td style="padding: 8px; font-family: monospace; font-size: 11px; color: #334155;">${art.code || '-'}</td><td style="padding: 8px; font-size: 11px; color: #0f172a;">${art.desc || '-'}</td><td style="padding: 8px; text-align: center; font-size: 11px; color: #334155;">${art.qty !== undefined && art.qty !== '' ? art.qty : '-'}</td><td style="padding: 8px; text-align: right; font-size: 11px; color: #334155;">${art.price !== undefined && art.price !== '' ? '€ ' + parseFloat(art.price).toFixed(2) : '-'}</td><td style="padding: 8px; text-align: center; font-size: 11px; color: #334155;">${taxRate}%</td><td style="padding: 8px; text-align: right; font-size: 11px; color: #334155;">${(art.qty !== undefined && art.price !== undefined && art.qty !== '' && art.price !== '') ? '€ ' + unitTaxed.toFixed(2) : '-'}</td><td style="padding: 8px; text-align: right; font-size: 11px; font-weight: bold; color: #0f172a;">${(art.qty !== undefined && art.price !== undefined && art.qty !== '' && art.price !== '') ? '€ ' + rowTotalTaxed.toFixed(2) : '-'}</td></tr>`; }); } 
   else { articlesRowsHtml = `<tr><td colspan="7" style="padding: 10px; text-align: center; color: #64748b; font-size: 11px;">Nessun articolo inserito</td></tr>`; }
 
   let attachmentsPrintHtml = ''; if (card.photos && card.photos.length > 0) { attachmentsPrintHtml = card.photos.map((p, idx) => { return `<div class="print-page"><img src="${p.image}" style="transform: rotate(${p.rotation || 0}deg);"></div>`; }).join(''); }
@@ -921,7 +970,7 @@ function printArchiveReport() {
 
   archivedCards.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt)).forEach(card => {
     let cardNet = 0; let cardTax = 0; let cardGross = 0;
-    if (card.articles && card.articles.length > 0) { card.articles.forEach(art => { const qty = parseFloat(art.qty) || 0; const price = parseFloat(art.price) || 0; const taxRate = parseFloat(art.tax) !== undefined ? parseFloat(art.tax) : 22; const sub = qty * price; const taxAmt = sub * (taxRate / 100); cardNet += sub; cardTax += taxAmt; cardGross += (sub + taxAmt); }); }
+    if (card.articles && card.articles.length > 0) { card.articles.forEach(art => { const qty = parseFloat(art.qty) || 0; const price = parseFloat(art.price) || 0; const taxRate = parseFloat(art.tax) !== undefined && !isNaN(parseFloat(art.tax)) ? parseFloat(art.tax) : 22; const sub = qty * price; const taxAmt = sub * (taxRate / 100); cardNet += sub; cardTax += taxAmt; cardGross += (sub + taxAmt); }); }
     grandTotalNet += cardNet; grandTotalTax += cardTax; grandTotalGross += cardGross;
     const dateStr = card.createdAt ? new Date(card.createdAt).toLocaleDateString('it-IT') : '-';
     rowsHtml += `<tr><td style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0;">${dateStr}</td><td style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0; font-weight: bold;">${card.title}</td><td style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0;">${card.client || '-'}</td><td style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0; text-align: right;">€ ${cardNet.toFixed(2)}</td><td style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0; text-align: right; font-weight: bold; color: #0f172a;">€ ${cardGross.toFixed(2)}</td></tr>`;

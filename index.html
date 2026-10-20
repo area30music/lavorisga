@@ -63,14 +63,14 @@
       </div>
       <div>
         <h1 class="text-base font-bold text-white tracking-wide flex items-center gap-2">
-          SGA Workflow <span class="text-[10px] font-normal px-2 py-0.5 rounded-full bg-indigo-950 text-indigo-300 border border-indigo-800">Laboratorio & Grafica</span>
+          SGA Workflow
         </h1>
-        <div class="flex items-center gap-2 text-xs text-slate-400 mt-0.5">
-          <span id="cloudStatus" class="flex items-center gap-1"><i data-lucide="wifi" class="w-3 h-3 text-emerald-500"></i> <span class="text-emerald-400">Cloud Sincronizzato</span></span>
-          <span>•</span>
-          <span id="headerClockDate" class="font-medium text-slate-300">--/--/----</span>
-          <span>•</span>
-          <span id="headerClockTime" class="font-mono font-bold text-indigo-400">--:--:--</span>
+        <div class="flex items-center gap-2.5 text-xs text-slate-300 mt-0.5">
+          <span id="cloudStatus" class="flex items-center gap-1"><i data-lucide="wifi" class="w-3.5 h-3.5 text-emerald-500"></i> <span class="text-emerald-400 font-medium">Cloud Sincronizzato</span></span>
+          <span class="text-slate-600">•</span>
+          <span id="headerClockDate" class="font-bold text-slate-200 text-sm">--/--/----</span>
+          <span class="text-slate-600">•</span>
+          <span id="headerClockTime" class="font-mono font-black text-indigo-400 text-sm">--:--:--</span>
         </div>
       </div>
     </div>
@@ -124,7 +124,7 @@
 
   <!-- MAIN KANBAN BOARD -->
   <main class="flex-1 overflow-x-auto p-4 bg-slate-950">
-    <div id="board" class="flex gap-4 h-full items-start min-w-[2880px]"></div>
+    <div id="board" class="flex gap-4 h-full items-start min-w-max"></div>
   </main>
 
   <!-- MODALE: NUOVA COMMESSA -->
@@ -399,7 +399,6 @@
   <!-- SETTINGS MODAL -->
   <div id="settingsModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 hidden">
     <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-xl w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
-      <!-- HEADER DINAMICO IMPOSTAZIONI (SUPPORTA TASTO INDIETRO) -->
       <div class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-950 shrink-0">
         <div class="flex items-center gap-2">
           <button id="settingsBackBtn" onclick="backToMainSettings()" class="text-slate-400 hover:text-white p-1 rounded hover:bg-slate-800 cursor-pointer hidden"><i data-lucide="arrow-left" class="w-4 h-4"></i></button>
@@ -407,10 +406,7 @@
         </div>
         <button onclick="closeModal('settingsModal')" class="text-slate-400 hover:text-white p-1 cursor-pointer"><i data-lucide="x" class="w-4 h-4"></i></button>
       </div>
-      <!-- CORPO DINAMICO (MENU O SOTTO-PAGINA) -->
-      <div id="settingsModalBody" class="p-5 overflow-y-auto space-y-3 flex-1">
-        <!-- Verrà popolato dinamicamente via JS -->
-      </div>
+      <div id="settingsModalBody" class="p-5 overflow-y-auto space-y-3 flex-1"></div>
     </div>
   </div>
 
@@ -437,8 +433,8 @@
     </div>
   </div>
 
-  <!-- GALLERY MODAL -->
-  <div id="galleryModal" class="fixed inset-0 z-70 bg-black/95 backdrop-blur-md flex flex-col justify-between p-4 hidden">
+  <!-- GALLERY MODAL (CORRETTO IN PRIMO PIANO SOPRA LA SCHEDA COMMESSA) -->
+  <div id="galleryModal" class="fixed inset-0 z-[90] bg-black/95 backdrop-blur-md flex flex-col justify-between p-4 hidden">
     <div class="flex justify-between items-center z-10">
       <div id="galleryCounter" class="text-xs font-mono text-slate-300 bg-slate-900/80 px-3 py-1.5 rounded-lg border border-slate-800">1 / 1</div>
       <div class="flex items-center gap-2">
