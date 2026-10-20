@@ -782,12 +782,11 @@ function calculateGrandTotals() {
 function addArticleRow() { const card = state.cards.find(c => c.id === activeCardId); if (!card) return; if (!Array.isArray(card.articles)) card.articles = []; card.articles.push({ code: '', desc: '', qty: 1, price: 0, tax: 22 }); renderArticlesTable(card); }
 function removeArticleRow(idx) { const card = state.cards.find(c => c.id === activeCardId); if (!card || !card.articles || !card.articles[idx]) return; const artName = card.articles[idx].desc || "Riga Vuota"; confirmDeletion(`Articolo: ${artName}`, () => { card.articles.splice(idx, 1); renderArticlesTable(card); saveLocal(); syncCardToCloud(card); }); }
 
-// MODIFICA APPLICATA QUI: Cattura istantaneamente tutti i valori modificati dagli input prima di persistere
+// MODIFICA APPLICATA QUI: Cattura istantaneamente tutti i valori modificati dagli input e pulisce/resetta eventuali vecchie etichette salvate che bloccavano l'aggiornamento
 function saveArticlesEdits() { 
   const card = state.cards.find(c => c.id === activeCardId); 
   if (!card) return; 
   
-  // Sincronizza lo stato degli articoli leggendo direttamente dai campi input della tabella
   const tbody = document.getElementById('articlesTableBody');
   if (tbody) {
     const rows = tbody.querySelectorAll('tr');
@@ -813,6 +812,9 @@ function saveArticlesEdits() {
       card.articles = updatedArticles;
     }
   }
+
+  // Rimuove la cache delle etichette precedenti per fare in modo che la finestra stampa etichette ricarichi sempre i dati freschi e aggiornati della commessa
+  delete card.labelArticles;
 
   saveLocal(); 
   syncCardToCloud(card); 
