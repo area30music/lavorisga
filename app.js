@@ -144,6 +144,36 @@ function logoutApp() {
   }
 }
 
+// Controllo Archivio Automatico: sposta in archivio le commesse in "Fatturato" da oltre 7 giorni
+function checkAutoArchive() {
+  const now = Date.now();
+  const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;
+  let localMigrated = false;
+  
+  state.cards.forEach(card => {
+    if (card.stage === 'fatturato') {
+      let fatturatoTime = card.createdAt; 
+      // Cerca nel log quando è entrata in 'fatturato'
+      if (card.history && card.history.length > 0) {
+        const lastFatturato = [...card.history].reverse().find(h => h.stage === 'fatturato');
+        if (lastFatturato && lastFatturato.timestamp) {
+          fatturatoTime = lastFatturato.timestamp;
+        }
+      }
+      
+      if ((now - new Date(fatturatoTime).getTime()) > SEVEN_DAYS) {
+        card.stage = 'archiviato';
+        if (!card.history) card.history = [];
+        card.history.push({ stage: 'archiviato', label: 'Archiviata automaticamente (7+ giorni in Fatturato)', timestamp: new Date().toISOString() });
+        localMigrated = true;
+        syncCardToCloud(card);
+      }
+    }
+  });
+  
+  if (localMigrated) saveLocal();
+}
+
 function init() {
   loadUserSettings(); 
   loadState(); 
@@ -153,8 +183,12 @@ function init() {
     if (c.stage === 'consegnato') { c.stage = 'bollettato-da-consegnare'; localMigrated = true; } 
   });
   state.cards.sort((a,b) => (a.order || 0) - (b.order || 0)); 
-  saveLocal(); 
-  if (localMigrated) { state.cards.forEach(c => syncCardToCloud(c)); }
+  if (localMigrated) { saveLocal(); state.cards.forEach(c => syncCardToCloud(c)); }
+  
+  // Esegui scansione per archiviare vecchie fatture all'avvio e ogni ora
+  checkAutoArchive();
+  setInterval(checkAutoArchive, 60 * 60 * 1000);
+
   renderBoard(); 
   updateCloudStatus(true); 
   listenToCloudUpdates(); 
@@ -203,7 +237,7 @@ function checkScheduledAlarms(now) {
 
 function triggerAlarmAlert() {
   const urgentCards = state.cards.filter(card => {
-    if (card.stage === 'bollettato-da-consegnare' || card.stage === 'fatturato') return false;
+    if (card.stage === 'bollettato-da-consegnare' || card.stage === 'fatturato' || card.stage === 'archiviato') return false;
     if (!card.deliveryDate) return false;
     const delivery = new Date(card.deliveryDate);
     delivery.setHours(0,0,0,0);
@@ -213,7 +247,7 @@ function triggerAlarmAlert() {
     return diffDays <= 7;
   });
 
-  const cardsToDisplay = urgentCards.length > 0 ? urgentCards : state.cards.filter(card => card.stage !== 'bollettato-da-consegnare' && card.stage !== 'fatturato');
+  const cardsToDisplay = urgentCards.length > 0 ? urgentCards : state.cards.filter(card => card.stage !== 'bollettato-da-consegnare' && card.stage !== 'fatturato' && card.stage !== 'archiviato');
   if (cardsToDisplay.length > 0) showArcadeAlert(cardsToDisplay);
 }
 
@@ -481,12 +515,42 @@ function clearGlobalSearch() { document.getElementById('globalSearchInput').valu
 
 function openSettingsModal() { openModal('settingsModal'); }
 
+// Rendering della Lista Archivio
+function renderArchiveList(query = '') {
+  const q = query.toLowerCase().trim();
+  let archived = state.cards.filter(c => c.stage === 'archiviato');
+  if (q) {
+    archived = archived.filter(c => (c.title||'').toLowerCase().includes(q) || (c.client||'').toLowerCase().includes(q));
+  }
+  archived.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
+  
+  if (archived.length === 0) return '<p class="text-xs text-slate-500 italic py-4 text-center">Nessuna commessa in archivio.</p>';
+  
+  return archived.map(c => `
+    <div onclick="openDetail('${c.id}')" class="bg-slate-950 p-3 rounded-lg border border-slate-800 hover:border-slate-500/50 cursor-pointer transition-colors group flex justify-between items-center">
+      <div>
+        <h5 class="text-sm font-bold text-slate-200 group-hover:text-white transition-colors">${c.title}</h5>
+        <div class="text-[10px] text-slate-400 mt-0.5">Cliente: <span class="text-indigo-300 font-semibold">${c.client || 'N/D'}</span> | Inserimento: ${new Date(c.createdAt).toLocaleDateString('it-IT')}</div>
+      </div>
+      <i data-lucide="external-link" class="w-4 h-4 text-slate-600 group-hover:text-indigo-400 transition-colors"></i>
+    </div>
+  `).join('');
+}
+function filterArchive(val) {
+  const list = document.getElementById('archiveSettingsList');
+  if (list) { list.innerHTML = renderArchiveList(val); lucide.createIcons(); }
+}
+
 function openSubSettings(type) {
   activeSubSettingsType = type; const titleEl = document.getElementById('subSettingsTitle'); const contentEl = document.getElementById('subSettingsContent'); contentEl.innerHTML = '';
   if (type === 'crm') {
     window.editingClientId = null;
     titleEl.innerHTML = `<i data-lucide="users" class="w-5 h-5 text-indigo-400"></i> Gestione Clienti (CRM)`;
     contentEl.innerHTML = `<div class="space-y-4"><p class="text-xs text-slate-400">Gestisci l'anagrafica clienti con azienda, referente, email e WhatsApp:</p><div class="bg-slate-950 p-3 rounded-lg border border-slate-800 space-y-2.5"><h5 class="text-xs font-bold text-indigo-400 uppercase">Aggiungi / Modifica Cliente</h5><div class="grid grid-cols-2 gap-2"><input type="text" id="crmModalName" placeholder="Azienda / Cliente *" class="bg-slate-900 border border-slate-700 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"><input type="text" id="crmModalRef" placeholder="Referente" class="bg-slate-900 border border-slate-700 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"></div><div class="grid grid-cols-2 gap-2"><input type="email" id="crmModalEmail" placeholder="Email" class="bg-slate-900 border border-slate-700 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"><input type="text" id="crmModalWa" placeholder="WhatsApp" class="bg-slate-900 border border-slate-700 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"></div><button type="button" id="btnSaveCrmClient" onclick="addClientFromSettings()" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs px-3 py-2 rounded font-semibold w-full cursor-pointer transition-colors">Salva Cliente in Archivio</button></div><div id="settingsClientsList" class="space-y-1.5 max-h-44 overflow-y-auto pr-1">${renderCrmSettingsList()}</div></div>`;
+  } else if (type === 'archive') {
+    titleEl.innerHTML = `<i data-lucide="archive" class="w-5 h-5 text-slate-400"></i> Archivio Commesse`;
+    contentEl.innerHTML = `<div class="space-y-4"><div class="flex justify-between items-center"><p class="text-xs text-slate-400">Le commesse rimaste in "Fatturato" per più di 7 giorni finiscono qui.</p><div class="relative w-1/2 md:w-1/3"><i data-lucide="search" class="w-3.5 h-3.5 absolute left-2.5 top-2 text-slate-400"></i><input type="text" oninput="filterArchive(this.value)" placeholder="Cerca..." class="w-full bg-slate-950 border border-slate-700 rounded-lg pl-8 pr-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-slate-500"></div></div><div id="archiveSettingsList" class="space-y-2 max-h-96 overflow-y-auto pr-1">${renderArchiveList()}</div></div>`;
+    setTimeout(lucide.createIcons, 50);
   } else if (type === 'messages') {
     titleEl.innerHTML = `<i data-lucide="message-square" class="w-5 h-5 text-pink-400"></i> Testo Notifiche (WhatsApp / Email)`;
     contentEl.innerHTML = `<div class="space-y-4"><p class="text-xs text-slate-400">Personalizza il testo inviato ai clienti per il ritiro merce. La modifica viene salvata <strong class="text-pink-400">su Cloud</strong> ed è attiva su tutti i dispositivi. Usa le variabili magiche:</p><div class="bg-slate-950 p-3 rounded-lg border border-slate-800 space-y-1.5 font-mono text-[11px] text-indigo-300"><div><strong class="text-pink-400 text-xs">{SALUTO}</strong> -> "Nome Referente della ditta Azienda"</div><div><strong class="text-pink-400 text-xs">{TITOLO}</strong> -> Titolo della commessa</div><div><strong class="text-pink-400 text-xs">{ARTICOLI}</strong> -> Elenco articoli in lista (es: "- 2 pezzi Stampa Banner")</div></div><textarea id="msgTemplateText" rows="10" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-xs text-slate-200 focus:outline-none focus:border-pink-500 font-sans leading-relaxed">${sharedMsgTemplate}</textarea></div>`;
@@ -852,7 +916,7 @@ function getContrastTextColor(hexColor) {
 function createCardHTML(card) {
   if (!card) return ''; const badgeStyle = getJobTypeClass(card.jobType);
   let isUrgent = false;
-  if (card.deliveryDate && card.stage !== 'bollettato-da-consegnare' && card.stage !== 'fatturato') { const delivery = new Date(card.deliveryDate); delivery.setHours(0,0,0,0); const today = new Date(); today.setHours(0,0,0,0); if (Math.ceil((delivery - today) / (1000 * 60 * 60 * 24)) <= 7) isUrgent = true; }
+  if (card.deliveryDate && card.stage !== 'bollettato-da-consegnare' && card.stage !== 'fatturato' && card.stage !== 'archiviato') { const delivery = new Date(card.deliveryDate); delivery.setHours(0,0,0,0); const today = new Date(); today.setHours(0,0,0,0); if (Math.ceil((delivery - today) / (1000 * 60 * 60 * 24)) <= 7) isUrgent = true; }
   let customCardStyle = '', customTextStyle = '', customSubTextStyle = 'text-slate-400', baseCardClass = 'bg-slate-900 border border-slate-800';
   if (card.customColor && card.customColor !== '') { const contrastColor = getContrastTextColor(card.customColor); customCardStyle = `background-color: ${card.customColor}; border-color: ${card.customColor};`; customTextStyle = `color: ${contrastColor};`; baseCardClass = 'border shadow-md'; customSubTextStyle = contrastColor === '#0f172a' ? 'text-slate-800 font-semibold' : 'text-slate-200'; }
   const deliveryHTML = card.deliveryDate ? `<div class="flex items-center gap-1.5 mt-1 mb-1 font-bold ${isUrgent && !card.customColor ? 'text-red-400 bg-red-950/40 border border-red-900/60 animate-pulse' : ''} px-2 py-1 rounded w-fit text-xs" style="${card.customColor ? `background: rgba(0,0,0,0.15); ${customTextStyle}` : ''}"><i data-lucide="calendar" class="w-3.5 h-3.5"></i> Consegna: ${new Date(card.deliveryDate).toLocaleDateString('it-IT')}</div>` : '';
@@ -1019,13 +1083,45 @@ function saveArticlesEdits() { const card = state.cards.find(c => c.id === activ
 
 function openDetail(id) {
   if (isMasterMode) return; const card = state.cards.find(c => c.id === id); if (!card) return; activeCardId = id;
-  const currentStageObj = COLUMNS_CONFIG.find(col => col.id === card.stage); const badge = document.getElementById('detailBadge'); badge.textContent = currentStageObj ? currentStageObj.label : 'N/A'; badge.className = `px-2 py-0.5 rounded text-[11px] font-bold text-white uppercase ${currentStageObj ? currentStageObj.color.split(' ')[0] : 'bg-slate-700'}`;
+  
+  const currentStageObj = COLUMNS_CONFIG.find(col => col.id === card.stage); 
+  const badge = document.getElementById('detailBadge'); 
+  badge.textContent = currentStageObj ? currentStageObj.label : (card.stage === 'archiviato' ? 'Archiviata' : 'N/A'); 
+  badge.className = `px-2 py-0.5 rounded text-[11px] font-bold text-white uppercase ${currentStageObj ? currentStageObj.color.split(' ')[0] : 'bg-slate-600'}`;
+  
   document.getElementById('editClientSelector').value = ''; document.getElementById('editTitle').value = card.title || ''; document.getElementById('editReferent').value = card.referent || ''; document.getElementById('editEmail').value = card.email || ''; document.getElementById('editWhatsapp').value = card.whatsapp || ''; document.getElementById('editDeliveryDate').value = card.deliveryDate || ''; populateMachinesDropdowns(); document.getElementById('editMachine').value = card.machine || '';
   const colDef = COLUMNS_CONFIG.find(col => col.id === card.stage); const defaultColor = colDef ? colDef.hexDefault : '#4f46e5'; const colorInput = document.getElementById('editCardColor'); colorInput.value = card.customColor || defaultColor; colorInput.dataset.defaultColor = defaultColor; 
   renderArticlesTable(card); renderAttachments(card);
+  
   const timeline = document.getElementById('storyboardTimeline'); timeline.innerHTML = '';
-  if (Array.isArray(card.history)) { card.history.forEach((h, idx) => { const hStageObj = COLUMNS_CONFIG.find(col => col.id === h.stage); const circleBg = hStageObj ? hStageObj.color.split(' ')[0] : 'bg-slate-700'; const item = document.createElement('div'); item.className = "flex items-start gap-3 relative"; item.innerHTML = `<div class="absolute -left-[23px] mt-1.5 w-4.5 h-4.5 rounded-full border border-slate-900 ${circleBg} flex items-center justify-center text-[8px] font-bold text-slate-100 shadow-sm">${idx+1}</div><div class="flex-1 bg-slate-950/40 p-2.5 rounded border border-slate-800/80"><div class="flex justify-between items-center mb-0.5"><span class="font-bold text-xs text-slate-200 uppercase">${h.label}</span><span class="text-[10px] text-slate-500">${new Date(h.timestamp).toLocaleString('it-IT')}</span></div></div>`; timeline.appendChild(item); }); }
+  if (Array.isArray(card.history)) { card.history.forEach((h, idx) => { const hStageObj = COLUMNS_CONFIG.find(col => col.id === h.stage); const circleBg = hStageObj ? hStageObj.color.split(' ')[0] : (h.stage === 'archiviato' ? 'bg-slate-600' : 'bg-slate-700'); const item = document.createElement('div'); item.className = "flex items-start gap-3 relative"; item.innerHTML = `<div class="absolute -left-[23px] mt-1.5 w-4.5 h-4.5 rounded-full border border-slate-900 ${circleBg} flex items-center justify-center text-[8px] font-bold text-slate-100 shadow-sm">${idx+1}</div><div class="flex-1 bg-slate-950/40 p-2.5 rounded border border-slate-800/80"><div class="flex justify-between items-center mb-0.5"><span class="font-bold text-xs text-slate-200 uppercase">${h.label}</span><span class="text-[10px] text-slate-500">${new Date(h.timestamp).toLocaleString('it-IT')}</span></div></div>`; timeline.appendChild(item); }); }
+  
+  // Mostra/Nascondi pulsante ripristino per commesse archiviate
+  const restoreBtn = document.getElementById('restoreCardBtnContainer');
+  if (restoreBtn) {
+    if (card.stage === 'archiviato') restoreBtn.classList.remove('hidden');
+    else restoreBtn.classList.add('hidden');
+  }
+  
   openModal('detailModal');
+}
+
+function restoreCardFromArchive() {
+  const card = state.cards.find(c => c.id === activeCardId);
+  if (card && card.stage === 'archiviato') {
+    playSound('success');
+    card.stage = 'fatturato';
+    card.history.push({ stage: 'fatturato', label: 'Ripristinata dall\'archivio in Fatturato', timestamp: new Date().toISOString() });
+    saveLocal(); 
+    syncCardToCloud(card);
+    closeModal('detailModal');
+    
+    // Aggiorna la lista dell'archivio se aperta
+    if (activeSubSettingsType === 'archive') {
+      const list = document.getElementById('archiveSettingsList');
+      if (list) { list.innerHTML = renderArchiveList(); lucide.createIcons(); }
+    }
+  }
 }
 
 function renderAttachments(card) {
@@ -1075,9 +1171,9 @@ function openLabelPrintModal(cardId) {
   playSound('click'); const card = state.cards.find(c => c.id === cardId); if (!card) return; activeLabelCardId = cardId;
   document.getElementById('labelClientName').innerText = card.client || 'N/D'; document.getElementById('labelTaskTitle').innerText = card.title || 'Senza Titolo';
   
-  // SVUOTA CAMPO NOTE AD OGNI APERTURA
+  // CARICA LE NOTE DAL CLOUD (SE GIA' PRESENTI)
   const notesInput = document.getElementById('labelNotesInput');
-  if (notesInput) notesInput.value = '';
+  if (notesInput) notesInput.value = card.labelNotes || '';
   
   window.tempLabelArticles = [];
   if (card.articles && card.articles.length > 0) {
@@ -1148,6 +1244,13 @@ async function generateAndPrintLabels() {
   
   // RECUPERA LE NOTE MANUALI
   const labelNotes = document.getElementById('labelNotesInput') ? document.getElementById('labelNotesInput').value.trim() : '';
+  
+  // SALVA E SINCRONIZZA LE NOTE SUL CLOUD (SE MODIFICATE)
+  if (card.labelNotes !== labelNotes) {
+    card.labelNotes = labelNotes;
+    saveLocal();
+    syncCardToCloud(card);
+  }
   
   playSound('success');
   
@@ -1226,7 +1329,7 @@ async function generateAndPrintLabels() {
     .content-table tr:nth-child(even) td { background: #E1DECD; }
   </style></head><body>${labelsHtml}</body></html>`;
 
-  // Salva l'etichetta come HTML nella cartella di download predefinita (o scelta dall'utente)
+  // Salva l'etichetta come HTML nella cartella di download predefinita
   const blob = new Blob([fullHtml], { type: 'text/html' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
