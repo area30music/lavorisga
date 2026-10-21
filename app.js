@@ -12,17 +12,29 @@ const IMGBB_API_KEY = "4452dd184d4f0efb701cba820e8c8f81";
 
 const zoomStyles = document.createElement('style');
 zoomStyles.innerHTML = `
+  /* Ottimizzazioni specifiche per la Master View TV */
   body:not(.master-mode) .card-dropzone { font-size: var(--app-font-size, 15px); }
   body.master-mode .card-dropzone { font-size: var(--master-font-size, 24px); }
   body.master-mode .hide-in-master { display: none !important; }
+  
+  /* Nasconde la Top Bar principale in Master Mode */
+  body.master-mode header:first-of-type { display: none !important; }
+  
+  /* Dimensioni Colonne uguali e più larghe in Master Mode */
+  body:not(.master-mode) .board-column { width: 320px; }
+  body.master-mode .board-column { width: 450px !important; min-width: 450px !important; flex-shrink: 0; }
+  
+  /* Gestione Testo Scorrevole (Marquee) per il Referente in Master Mode */
+  body.master-mode .standard-client-text { display: none !important; }
+  body:not(.master-mode) .master-marquee-text { display: none !important; }
+  
+  /* Adattamento grandezze card in Master View */
   .card-dropzone > div { font-size: 1em !important; padding: 0.8em !important; }
   .card-dropzone > div .text-sm { font-size: 1.15em !important; line-height: 1.3 !important; }
   .card-dropzone > div .text-xs { font-size: 0.9em !important; line-height: 1.3 !important; }
   .card-dropzone > div .text-\\[11px\\] { font-size: 0.8em !important; line-height: 1.2 !important; }
   .card-dropzone > div .text-\\[10px\\] { font-size: 0.75em !important; line-height: 1.2 !important; }
   .card-dropzone > div svg { width: 1.1em !important; height: 1.1em !important; }
-  .card-dropzone > div .h-14 { height: 3.5em !important; }
-  .card-dropzone > div .w-14 { width: 3.5em !important; }
   .card-dropzone > div .px-2 { padding-left: 0.5em !important; padding-right: 0.5em !important; }
   .card-dropzone > div .py-0\\.5 { padding-top: 0.2em !important; padding-bottom: 0.2em !important; }
 `;
@@ -39,6 +51,7 @@ let autoScrollPause = 0;
 let lastScrollTime = 0;
 let isAutoScrollPaused = false;
 let masterScrollSpeed = 0.08;
+let boardExactScrollLeft = 0; // Risolve il bug del blocco scorrimento orizzontale
 window.editingClientId = null;
 window.editingMachineIndex = null;
 window.tempLabelArticles = [];
@@ -506,19 +519,76 @@ function togglePlayPauseMaster() { isAutoScrollPaused = !isAutoScrollPaused; con
 
 function toggleMasterMode() {
   isMasterMode = !isMasterMode; const body = document.body; const board = document.getElementById('board'); const backBtns = document.querySelectorAll('.master-back-btn');
-  if (isMasterMode) { body.classList.add('master-mode'); backBtns.forEach(el => { el.classList.remove('hidden'); el.style.display = 'flex'; }); isAutoScrollPaused = false; renderBoard(); startAutoScroll(); } 
-  else { body.classList.remove('master-mode'); backBtns.forEach(el => { el.classList.add('hidden'); el.style.display = 'none'; }); stopAutoScroll(); if(board) board.scrollLeft = 0; renderBoard(); }
+  const mainHeader = document.querySelector('header');
+  
+  if (isMasterMode) { 
+    body.classList.add('master-mode'); 
+    backBtns.forEach(el => { el.classList.remove('hidden'); el.style.display = 'flex'; }); 
+    if(mainHeader) mainHeader.classList.add('hidden'); // Nascondi Top Bar principale
+    isAutoScrollPaused = false; 
+    renderBoard(); 
+    startAutoScroll(); 
+  } else { 
+    body.classList.remove('master-mode'); 
+    backBtns.forEach(el => { el.classList.add('hidden'); el.style.display = 'none'; }); 
+    if(mainHeader) mainHeader.classList.remove('hidden'); // Rimostra Top Bar
+    stopAutoScroll(); 
+    if(board) board.scrollLeft = 0; 
+    renderBoard(); 
+  }
 }
 
 function startAutoScroll() {
   stopAutoScroll(); autoScrollDir = 1; autoScrollPause = 0; const board = document.getElementById('board');
+  boardExactScrollLeft = board ? board.scrollLeft : 0; // Inizializza posizione orizzontale precisa
   function step(timestamp) {
     if (!isMasterMode) return; if (!lastScrollTime) lastScrollTime = timestamp; const elapsed = timestamp - lastScrollTime;
     if (isAutoScrollPaused) { lastScrollTime = timestamp; autoScrollId = requestAnimationFrame(step); return; }
     if (board) {
       const activeCols = board.querySelectorAll('.board-column');
-      activeCols.forEach(col => { const dropzone = col.querySelector('.card-dropzone'); if (dropzone && dropzone.scrollHeight > dropzone.clientHeight) { if (!dropzone.dataset.vDir) dropzone.dataset.vDir = 1; if (!dropzone.dataset.vPause) dropzone.dataset.vPause = 0; let vPause = parseFloat(dropzone.dataset.vPause); if (vPause > 0) { dropzone.dataset.vPause = vPause - elapsed; } else { let vDir = parseInt(dropzone.dataset.vDir); const pxToScrollV = (elapsed * masterScrollSpeed * 0.6); dropzone.scrollTop += (pxToScrollV * vDir); if (vDir === 1 && dropzone.scrollTop >= (dropzone.scrollHeight - dropzone.clientHeight - 2)) { dropzone.dataset.vDir = -1; dropzone.dataset.vPause = 2000; } else if (vDir === -1 && dropzone.scrollTop <= 0) { dropzone.dataset.vDir = 1; dropzone.dataset.vPause = 2000; } } } });
-      if (board.scrollWidth > board.clientWidth) { if (autoScrollPause > 0) { autoScrollPause -= elapsed; } else { const pxToScroll = elapsed * masterScrollSpeed * 0.8; board.scrollLeft += (pxToScroll * autoScrollDir); if (autoScrollDir === 1 && board.scrollLeft >= (board.scrollWidth - board.clientWidth - 2)) { autoScrollDir = -1; autoScrollPause = 3000; } else if (autoScrollDir === -1 && board.scrollLeft <= 0) { autoScrollDir = 1; autoScrollPause = 3000; } } }
+      // SCROLL VERTICALE DELLE SINGOLE COLONNE
+      activeCols.forEach(col => { 
+        const dropzone = col.querySelector('.card-dropzone'); 
+        if (dropzone && dropzone.scrollHeight > dropzone.clientHeight) { 
+          if (!dropzone.dataset.vDir) dropzone.dataset.vDir = 1; 
+          if (!dropzone.dataset.vPause) dropzone.dataset.vPause = 0; 
+          if (!dropzone.dataset.exactScroll) dropzone.dataset.exactScroll = dropzone.scrollTop;
+          
+          let vPause = parseFloat(dropzone.dataset.vPause); 
+          if (vPause > 0) { 
+            dropzone.dataset.vPause = vPause - elapsed; 
+          } else { 
+            let vDir = parseInt(dropzone.dataset.vDir); 
+            const pxToScrollV = (elapsed * masterScrollSpeed * 0.6); 
+            
+            let exactScroll = parseFloat(dropzone.dataset.exactScroll) + (pxToScrollV * vDir);
+            dropzone.dataset.exactScroll = exactScroll;
+            dropzone.scrollTop = exactScroll;
+            
+            if (vDir === 1 && dropzone.scrollTop >= (dropzone.scrollHeight - dropzone.clientHeight - 2)) { 
+              dropzone.dataset.vDir = -1; dropzone.dataset.vPause = 2000; 
+            } else if (vDir === -1 && dropzone.scrollTop <= 0) { 
+              dropzone.dataset.vDir = 1; dropzone.dataset.vPause = 2000; 
+            } 
+          } 
+        } 
+      });
+      // SCROLL ORIZZONTALE DI TUTTA LA BOARD - Modificato con l'uso di boardExactScrollLeft per i decimali!
+      if (board.scrollWidth > board.clientWidth) { 
+        if (autoScrollPause > 0) { 
+          autoScrollPause -= elapsed; 
+        } else { 
+          const pxToScroll = elapsed * masterScrollSpeed * 0.8; 
+          boardExactScrollLeft += (pxToScroll * autoScrollDir); 
+          board.scrollLeft = boardExactScrollLeft; 
+          
+          if (autoScrollDir === 1 && board.scrollLeft >= (board.scrollWidth - board.clientWidth - 2)) { 
+            autoScrollDir = -1; autoScrollPause = 3000; boardExactScrollLeft = board.scrollLeft;
+          } else if (autoScrollDir === -1 && board.scrollLeft <= 0) { 
+            autoScrollDir = 1; autoScrollPause = 3000; boardExactScrollLeft = 0;
+          } 
+        } 
+      }
     }
     lastScrollTime = timestamp; autoScrollId = requestAnimationFrame(step);
   }
@@ -619,7 +689,7 @@ function renderBoard() {
     if (globalFilterJobType) { colCards = colCards.filter(c => c.jobType === globalFilterJobType); }
     colCards.sort((a,b) => (a.order || 0) - (b.order || 0));
     const colEl = document.createElement('div'); 
-    colEl.className = `board-column flex flex-col h-full bg-slate-900/60 rounded-xl border border-slate-800 w-80 shrink-0 overflow-hidden`;
+    colEl.className = `board-column flex flex-col h-full bg-slate-900/60 rounded-xl border border-slate-800 shrink-0 overflow-hidden`;
     colEl.innerHTML = `<div class="p-3 border-b border-slate-800 ${col.color} ${col.border} flex justify-between items-center bg-opacity-30"><h3 class="font-bold uppercase tracking-wide truncate max-w-[80%]">${col.label}</h3><span class="font-semibold bg-slate-950/60 px-2 py-0.5 rounded-full shadow-inner">${colCards.length}</span></div><div class="flex-1 overflow-y-auto p-2 space-y-2 card-dropzone" data-col="${col.id}" ondragover="allowDrop(event)" ondrop="handleDrop(event)">${colCards.map(card => createCardHTML(card)).join('')}</div>`;
     board.appendChild(colEl);
   });
@@ -637,23 +707,27 @@ function createCardHTML(card) {
   if (card.deliveryDate && card.stage !== 'bollettato-da-consegnare' && card.stage !== 'fatturato' && card.stage !== 'archiviato') { const delivery = new Date(card.deliveryDate); delivery.setHours(0,0,0,0); const today = new Date(); today.setHours(0,0,0,0); if (Math.ceil((delivery - today) / (1000 * 60 * 60 * 24)) <= 7) isUrgent = true; }
   let customCardStyle = '', customTextStyle = '', customSubTextStyle = 'text-slate-400', baseCardClass = 'bg-slate-900 border border-slate-800';
   if (card.customColor && card.customColor !== '') { const contrastColor = getContrastTextColor(card.customColor); customCardStyle = `background-color: ${card.customColor}; border-color: ${card.customColor};`; customTextStyle = `color: ${contrastColor};`; baseCardClass = 'border shadow-md'; customSubTextStyle = contrastColor === '#0f172a' ? 'text-slate-800 font-semibold' : 'text-slate-200'; }
+  
   const deliveryHTML = card.deliveryDate ? `<div class="flex items-center gap-1.5 mt-1 mb-1 font-bold ${isUrgent && !card.customColor ? 'text-red-400 bg-red-950/40 border border-red-900/60 animate-pulse' : ''} px-2 py-1 rounded w-fit text-xs" style="${card.customColor ? `background: rgba(0,0,0,0.15); ${customTextStyle}` : ''}"><i data-lucide="calendar" class="w-3.5 h-3.5"></i> Consegna: ${new Date(card.deliveryDate).toLocaleDateString('it-IT')}</div>` : '';
   const machineBadgeHTML = card.machine ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono bg-cyan-950 text-cyan-300 border border-cyan-800 mt-1"><i data-lucide="cpu" class="w-3 h-3"></i> ${card.machine}</span>` : '';
-  const thumbnailHTML = card.photos && card.photos.length > 0 ? `<div class="mt-2 flex gap-1 overflow-hidden h-14">${card.photos.map(p => `<div class="w-14 h-14 shrink-0 overflow-hidden rounded border border-slate-700 bg-slate-900 flex items-center justify-center"><img src="${p.image}" style="transform: rotate(${p.rotation || 0}deg);" class="min-w-full min-h-full object-cover bg-white"></div>`).join('')}</div>` : '';
+  const thumbnailHTML = card.photos && card.photos.length > 0 ? `<div class="hide-in-master mt-2 flex gap-1 overflow-hidden h-14">${card.photos.map(p => `<div class="w-14 h-14 shrink-0 overflow-hidden rounded border border-slate-700 bg-slate-900 flex items-center justify-center"><img src="${p.image}" style="transform: rotate(${p.rotation || 0}deg);" class="min-w-full min-h-full object-cover bg-white"></div>`).join('')}</div>` : '';
   const cardIdShort = card.id ? card.id.slice(-4).toUpperCase() : '0000';
   const notifyIconHTML = (card.stage === 'bollettato-da-consegnare' && (card.email || card.whatsapp)) ? `<button onclick="event.stopPropagation(); triggerNotifyById('${card.id}')" class="ml-2 p-1 bg-emerald-500/20 hover:bg-emerald-500/50 text-emerald-400 rounded cursor-pointer transition-colors" title="Invia Notifica Pronto Ritiro"><i data-lucide="mail" class="w-3.5 h-3.5"></i></button>` : '';
   
   const printStages = ['in-lavorazione', 'lavorato-da-bollettare', 'bollettato-da-consegnare', 'fatturato'];
   const printLabelIconHTML = printStages.includes(card.stage) ? `<button onclick="event.stopPropagation(); openLabelPrintModal('${card.id}')" class="ml-2 p-1 bg-blue-500/20 hover:bg-blue-500/50 text-blue-400 rounded cursor-pointer transition-colors" title="Stampa Etichette Colli"><i data-lucide="printer" class="w-3.5 h-3.5"></i></button>` : '';
 
-  return `<div draggable="true" ondragstart="handleDragStart(event)" id="card-${card.id}" data-id="${card.id}" onclick="${isMasterMode ? '' : `playSound('click'); openDetail('${card.id}')`}" style="${customCardStyle}" class="${baseCardClass} hover:border-indigo-500/50 p-3.5 rounded-lg shadow-md cursor-pointer transition-all active:scale-95 space-y-2 group relative ${isUrgent ? 'card-urgent' : ''}"><div class="flex justify-between items-start gap-1"><span class="px-2 py-0.5 rounded font-medium text-[11px] ${badgeStyle}">${card.jobType || 'Generico'}</span><span class="text-xs" style="${card.customColor ? customTextStyle : 'color: #64748b;'}">${card.createdAt ? new Date(card.createdAt).toLocaleDateString('it-IT', {day: 'numeric', month: 'short'}) : ''}</span></div><h4 class="font-bold text-sm leading-snug truncate transition-colors" style="${card.customColor ? customTextStyle : 'color: #f8fafc;'}">${card.title || 'Senza Titolo'}</h4>${card.client ? `<p class="truncate text-xs flex items-center gap-1.5 ${customSubTextStyle}"><i data-lucide="building-2" class="w-3.5 h-3.5 shrink-0"></i> ${card.client}${card.referent ? ` <span class="text-indigo-300 font-semibold">(${card.referent})</span>` : ''}</p>` : ''}${machineBadgeHTML}${deliveryHTML}${thumbnailHTML}<div class="pt-2 border-t flex justify-between items-center text-xs" style="${card.customColor ? 'border-color: rgba(0,0,0,0.15);' : 'border-color: #1e293b;'}" onclick="event.stopPropagation()"><div class="flex items-center gap-1"><span class="font-mono text-[11px]" style="${card.customColor ? customTextStyle : 'color: #475569;'}">#${cardIdShort}</span><span class="hide-in-master inline-flex items-center gap-1">${notifyIconHTML}${printLabelIconHTML}</span><div class="hide-in-master flex items-center bg-black/20 rounded ml-2"><button onclick="moveCardVertical('${card.id}', -1)" class="p-0.5 hover:bg-black/30 rounded px-1.5 cursor-pointer" title="Sposta su" style="${card.customColor ? customTextStyle : 'color: #cbd5e1;'}">▲</button><button onclick="moveCardVertical('${card.id}', 1)" class="p-0.5 hover:bg-black/30 rounded px-1.5 cursor-pointer" title="Sposta giù" style="${card.customColor ? customTextStyle : 'color: #cbd5e1;'}">▼</button></div></div><div class="flex gap-1.5 hide-in-master"><button onclick="moveCardStep('${card.id}', -1)" class="p-1 rounded bg-slate-900 hover:bg-slate-700 text-slate-400 hover:text-slate-200 transition-colors cursor-pointer" title="Indietro"><i data-lucide="chevron-left" class="w-4 h-4"></i></button><button onclick="moveCardStep('${card.id}', 1)" class="p-1 rounded bg-slate-900 hover:bg-slate-700 text-slate-400 hover:text-slate-200 transition-colors cursor-pointer" title="Avanti"><i data-lucide="chevron-right" class="w-4 h-4"></i></button></div></div></div>`;
+  const clientTextContent = `${card.client}${card.referent ? ` <span class="text-indigo-300 font-semibold">(${card.referent})</span>` : ''}`;
+  const clientHTML = card.client ? `<div class="w-full text-xs flex items-center gap-1.5 ${customSubTextStyle}"><i data-lucide="building-2" class="w-3.5 h-3.5 shrink-0"></i><span class="standard-client-text truncate w-full">${clientTextContent}</span><marquee class="master-marquee-text w-full" behavior="alternate" scrollamount="3" scrolldelay="0">${clientTextContent}</marquee></div>` : '';
+
+  return `<div draggable="true" ondragstart="handleDragStart(event)" id="card-${card.id}" data-id="${card.id}" onclick="${isMasterMode ? '' : `playSound('click'); openDetail('${card.id}')`}" style="${customCardStyle}" class="${baseCardClass} hover:border-indigo-500/50 p-3.5 rounded-lg shadow-md cursor-pointer transition-all active:scale-95 space-y-2 group relative ${isUrgent ? 'card-urgent' : ''}"><div class="flex justify-between items-start gap-1"><span class="px-2 py-0.5 rounded font-medium text-[11px] ${badgeStyle}">${card.jobType || 'Generico'}</span><span class="text-xs" style="${card.customColor ? customTextStyle : 'color: #64748b;'}">${card.createdAt ? new Date(card.createdAt).toLocaleDateString('it-IT', {day: 'numeric', month: 'short'}) : ''}</span></div><h4 class="font-bold text-sm leading-snug truncate transition-colors" style="${card.customColor ? customTextStyle : 'color: #f8fafc;'}">${card.title || 'Senza Titolo'}</h4>${clientHTML}${machineBadgeHTML}${deliveryHTML}${thumbnailHTML}<div class="pt-2 border-t flex justify-between items-center text-xs" style="${card.customColor ? 'border-color: rgba(0,0,0,0.15);' : 'border-color: #1e293b;'}" onclick="event.stopPropagation()"><div class="flex items-center gap-1"><span class="font-mono text-[11px]" style="${card.customColor ? customTextStyle : 'color: #475569;'}">#${cardIdShort}</span><span class="hide-in-master inline-flex items-center gap-1">${notifyIconHTML}${printLabelIconHTML}</span><div class="hide-in-master flex items-center bg-black/20 rounded ml-2"><button onclick="moveCardVertical('${card.id}', -1)" class="p-0.5 hover:bg-black/30 rounded px-1.5 cursor-pointer" title="Sposta su" style="${card.customColor ? customTextStyle : 'color: #cbd5e1;'}">▲</button><button onclick="moveCardVertical('${card.id}', 1)" class="p-0.5 hover:bg-black/30 rounded px-1.5 cursor-pointer" title="Sposta giù" style="${card.customColor ? customTextStyle : 'color: #cbd5e1;'}">▼</button></div></div><div class="flex gap-1.5 hide-in-master"><button onclick="moveCardStep('${card.id}', -1)" class="p-1 rounded bg-slate-900 hover:bg-slate-700 text-slate-400 hover:text-slate-200 transition-colors cursor-pointer" title="Indietro"><i data-lucide="chevron-left" class="w-4 h-4"></i></button><button onclick="moveCardStep('${card.id}', 1)" class="p-1 rounded bg-slate-900 hover:bg-slate-700 text-slate-400 hover:text-slate-200 transition-colors cursor-pointer" title="Avanti"><i data-lucide="chevron-right" class="w-4 h-4"></i></button></div></div></div>`;
 }
 
 function moveCardVertical(cardId, direction) {
   playSound('click'); const card = state.cards.find(c => c.id === cardId); if (!card) return;
   const colCards = state.cards.filter(c => c.stage === card.stage); colCards.sort((a, b) => (a.order || 0) - (b.order || 0));
   const currentIndex = colCards.findIndex(c => c.id === cardId); const targetIndex = currentIndex + direction;
-  if (targetIndex >= 0 && targetIndex < colCards.length) { const tempOrder = colCards[currentIndex].order; colCards[currentIndex].order = colCards[targetIndex].order; colCards[targetIndex].order = tempOrder; if (colCards[currentIndex].order === colCards[targetIndex].order) { colCards[currentIndex].order = index; colCards[targetIndex].order = currentIndex; } saveLocal(); syncCardToCloud(colCards[currentIndex]); syncCardToCloud(colCards[targetIndex]); }
+  if (targetIndex >= 0 && targetIndex < colCards.length) { const tempOrder = colCards[currentIndex].order; colCards[currentIndex].order = colCards[targetIndex].order; colCards[targetIndex].order = tempOrder; if (colCards[currentIndex].order === colCards[targetIndex].order) { colCards[currentIndex].order = targetIndex; colCards[targetIndex].order = currentIndex; } saveLocal(); syncCardToCloud(colCards[currentIndex]); syncCardToCloud(colCards[targetIndex]); }
 }
 
 function getJobTypeClass(type) {
