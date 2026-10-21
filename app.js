@@ -80,6 +80,7 @@ const DEFAULT_MSG_TEMPLATE = `Buongiorno {SALUTO},\n\nquesto è il sistema di au
 let COLUMNS_CONFIG = JSON.parse(JSON.stringify(DEFAULT_COLUMNS_CONFIG));
 let USER_ALARMS = []; 
 let CLIENTS_DB = [];
+let ARTICLES_DB = [];
 let MACHINES_DB = ["Roland TrueVIS SG2-540", "Epson SureColor T7200", "Epson F1000 DTF", "Xerox PrimeLink C9200", "Happy Japan HCH Embroidery"];
 let masterFontSizePx = 24; 
 let appFontSizePx = 15;
@@ -398,6 +399,9 @@ function loadUserSettings() {
     const oldClients = localStorage.getItem('workflow_sga_clients');
     if (oldClients) { try { const arr = JSON.parse(oldClients); CLIENTS_DB = arr.map((c,idx) => ({ id: 'crm_old'+idx, name: c, referent: '', email: '', whatsapp: '' })); } catch(e){ CLIENTS_DB = []; } }
   }
+  
+  const savedArticles = localStorage.getItem('workflow_sga_articles_db');
+  if (savedArticles) { try { ARTICLES_DB = JSON.parse(savedArticles); } catch(e){ ARTICLES_DB = []; } }
 
   const savedMachines = localStorage.getItem('workflow_sga_machines_db');
   if (savedMachines) { try { MACHINES_DB = JSON.parse(savedMachines); } catch(e){} }
@@ -431,6 +435,7 @@ function resetAppFont() { playSound('click'); applyAppFontSize(15); }
 function updateMasterSpeed(val) { masterScrollSpeed = parseFloat(val); }
 
 function syncClientsToCloud() { if (db) db.collection('workflow_sga_settings').doc('clients').set({ db: CLIENTS_DB }).catch(err => console.error(err)); }
+function syncArticlesToCloud() { if (db) db.collection('workflow_sga_settings').doc('articles').set({ db: ARTICLES_DB }).catch(err => console.error(err)); }
 
 function registerClientAdvanced(name, referent, email, whatsapp) {
   if (!name || !name.trim()) return;
@@ -548,6 +553,24 @@ function openSubSettings(type) {
     window.editingClientId = null;
     titleEl.innerHTML = `<i data-lucide="users" class="w-5 h-5 text-indigo-400"></i> Gestione Clienti (CRM)`;
     contentEl.innerHTML = `<div class="space-y-4"><p class="text-xs text-slate-400">Gestisci l'anagrafica clienti con azienda, referente, email e WhatsApp:</p><div class="bg-slate-950 p-3 rounded-lg border border-slate-800 space-y-2.5"><h5 class="text-xs font-bold text-indigo-400 uppercase">Aggiungi / Modifica Cliente</h5><div class="grid grid-cols-2 gap-2"><input type="text" id="crmModalName" placeholder="Azienda / Cliente *" class="bg-slate-900 border border-slate-700 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"><input type="text" id="crmModalRef" placeholder="Referente" class="bg-slate-900 border border-slate-700 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"></div><div class="grid grid-cols-2 gap-2"><input type="email" id="crmModalEmail" placeholder="Email" class="bg-slate-900 border border-slate-700 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"><input type="text" id="crmModalWa" placeholder="WhatsApp" class="bg-slate-900 border border-slate-700 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"></div><button type="button" id="btnSaveCrmClient" onclick="addClientFromSettings()" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs px-3 py-2 rounded font-semibold w-full cursor-pointer transition-colors">Salva Cliente in Archivio</button></div><div id="settingsClientsList" class="space-y-1.5 max-h-44 overflow-y-auto pr-1">${renderCrmSettingsList()}</div></div>`;
+  } else if (type === 'articles') {
+    titleEl.innerHTML = `<i data-lucide="shopping-cart" class="w-5 h-5 text-emerald-400"></i> Gestione Articoli Base`;
+    contentEl.innerHTML = `
+      <div class="space-y-4">
+        <p class="text-xs text-slate-400">Inserisci gli articoli frequenti per l'autocompilazione rapida dei preventivi:</p>
+        <div class="bg-slate-950 p-3 rounded-lg border border-slate-800 space-y-2.5">
+          <h5 class="text-xs font-bold text-emerald-400 uppercase">Aggiungi Nuovo Articolo</h5>
+          <div class="grid grid-cols-4 gap-2">
+            <input type="text" id="artModalCode" placeholder="Codice" class="col-span-1 bg-slate-900 border border-slate-700 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-emerald-500 font-mono">
+            <input type="text" id="artModalDesc" placeholder="Descrizione Articolo *" class="col-span-2 bg-slate-900 border border-slate-700 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-emerald-500">
+            <input type="number" step="any" id="artModalPrice" placeholder="Prezzo € *" class="col-span-1 bg-slate-900 border border-slate-700 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-emerald-500 text-right">
+          </div>
+          <button type="button" onclick="addArticleFromSettings()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs px-3 py-2 rounded font-semibold w-full cursor-pointer transition-colors">Salva Articolo nel Database</button>
+        </div>
+        <div id="settingsArticlesList" class="space-y-1.5 max-h-44 overflow-y-auto pr-1">
+          ${renderArticlesSettingsList()}
+        </div>
+      </div>`;
   } else if (type === 'archive') {
     titleEl.innerHTML = `<i data-lucide="archive" class="w-5 h-5 text-slate-400"></i> Archivio Commesse`;
     contentEl.innerHTML = `
@@ -783,6 +806,14 @@ function listenToCloudUpdates() {
       if (data.db && Array.isArray(data.db)) { CLIENTS_DB = data.db; localStorage.setItem('workflow_sga_clients_db', JSON.stringify(CLIENTS_DB)); populateClientSelectors(); if (activeSubSettingsType === 'crm') { openSubSettings('crm'); } }
     } else { syncClientsToCloud(); }
   });
+  // Listener Articoli
+  db.collection('workflow_sga_settings').doc('articles').onSnapshot((doc) => {
+    if (doc.exists) {
+      const data = doc.data();
+      if (data.db && Array.isArray(data.db)) { ARTICLES_DB = data.db; localStorage.setItem('workflow_sga_articles_db', JSON.stringify(ARTICLES_DB)); if (activeSubSettingsType === 'articles') { openSubSettings('articles'); } }
+    } else { syncArticlesToCloud(); }
+  });
+  
   db.collection('workflow_sga_cards').onSnapshot((snapshot) => {
     if (snapshot.empty && state.cards.length > 0) { state.cards.forEach(card => syncCardToCloud(card)); return; }
     let needsMigration = false;
@@ -874,6 +905,7 @@ function sanitizeCard(card) {
   card.photos = card.photos.map(p => { if (typeof p === 'string') return { image: p, rotation: 0 }; if (!p.rotation) p.rotation = 0; return p; });
   if (!Array.isArray(card.history)) card.history = []; if (card.order === undefined) card.order = 0;
   if (!card.referent) card.referent = ''; if (!card.email) card.email = ''; if (!card.whatsapp) card.whatsapp = ''; if (!card.machine) card.machine = '';
+  if (!card.orderRef) card.orderRef = '';
   if (card.stage === 'lavorato') card.stage = 'lavorato-da-bollettare'; if (card.stage === 'consegnato') card.stage = 'bollettato-da-consegnare';
   if (!Array.isArray(card.articles)) { card.articles = []; if (card.notes && card.notes.trim()) card.articles.push({ code: '', desc: card.notes, qty: 1, price: 0, tax: 22 }); } 
   else { card.articles = card.articles.map(art => { if (art.tax === undefined) art.tax = 22; return art; }); }
@@ -917,7 +949,7 @@ function renderBoard() {
   }
   columnsToRender.forEach(col => {
     let colCards = state.cards.filter(c => c && c.stage === col.id);
-    if (globalSearchQuery) { colCards = colCards.filter(c => { const t = (c.title || '').toLowerCase(); const cl = (c.client || '').toLowerCase(); const ref = (c.referent || '').toLowerCase(); const jt = (c.jobType || '').toLowerCase(); const mach = (c.machine || '').toLowerCase(); const idMatch = c.id && c.id.toLowerCase().includes(globalSearchQuery); return t.includes(globalSearchQuery) || cl.includes(globalSearchQuery) || ref.includes(globalSearchQuery) || jt.includes(globalSearchQuery) || mach.includes(globalSearchQuery) || idMatch; }); }
+    if (globalSearchQuery) { colCards = colCards.filter(c => { const t = (c.title || '').toLowerCase(); const cl = (c.client || '').toLowerCase(); const ref = (c.referent || '').toLowerCase(); const oref = (c.orderRef || '').toLowerCase(); const jt = (c.jobType || '').toLowerCase(); const mach = (c.machine || '').toLowerCase(); const idMatch = c.id && c.id.toLowerCase().includes(globalSearchQuery); return t.includes(globalSearchQuery) || cl.includes(globalSearchQuery) || ref.includes(globalSearchQuery) || oref.includes(globalSearchQuery) || jt.includes(globalSearchQuery) || mach.includes(globalSearchQuery) || idMatch; }); }
     if (globalFilterJobType) { colCards = colCards.filter(c => c.jobType === globalFilterJobType); }
     colCards.sort((a,b) => (a.order || 0) - (b.order || 0));
     const colEl = document.createElement('div'); colEl.className = `board-column flex flex-col h-full bg-slate-900/60 rounded-xl border border-slate-800 shrink-0 overflow-hidden`;
@@ -945,7 +977,7 @@ function createCardHTML(card) {
   const notifyIconHTML = (card.stage === 'bollettato-da-consegnare' && (card.email || card.whatsapp)) ? `<button onclick="event.stopPropagation(); triggerNotifyById('${card.id}')" class="ml-2 p-1 bg-emerald-500/20 hover:bg-emerald-500/50 text-emerald-400 rounded cursor-pointer transition-colors" title="Invia Notifica Pronto Ritiro"><i data-lucide="mail" class="w-3.5 h-3.5"></i></button>` : '';
   const printLabelIconHTML = (card.stage === 'lavorato-da-bollettare') ? `<button onclick="event.stopPropagation(); openLabelPrintModal('${card.id}')" class="ml-2 p-1 bg-blue-500/20 hover:bg-blue-500/50 text-blue-400 rounded cursor-pointer transition-colors" title="Stampa Etichette Colli"><i data-lucide="printer" class="w-3.5 h-3.5"></i></button>` : '';
 
-  return `<div draggable="true" ondragstart="handleDragStart(event)" id="card-${card.id}" data-id="${card.id}" onclick="${isMasterMode ? '' : `playSound('click'); openDetail('${card.id}')`}" style="${customCardStyle}" class="${baseCardClass} hover:border-indigo-500/50 p-3.5 rounded-lg shadow-md cursor-pointer transition-all active:scale-95 space-y-2 group relative ${isUrgent ? 'card-urgent' : ''}"><div class="flex justify-between items-start gap-1"><span class="px-2 py-0.5 rounded font-medium text-[11px] ${badgeStyle}">${card.jobType || 'Generico'}</span><span class="text-xs" style="${card.customColor ? customTextStyle : 'color: #64748b;'}">${card.createdAt ? new Date(card.createdAt).toLocaleDateString('it-IT', {day: 'numeric', month: 'short'}) : ''}</span></div><h4 class="font-bold text-sm leading-snug truncate transition-colors" style="${card.customColor ? customTextStyle : 'color: #f8fafc;'}">${card.title || 'Senza Titolo'}</h4>${card.client ? `<p class="truncate text-xs flex items-center gap-1.5 ${customSubTextStyle}"><i data-lucide="building-2" class="w-3.5 h-3.5 shrink-0"></i> ${card.client}${card.referent ? ` <span class="text-indigo-300 font-semibold">(${card.referent})</span>` : ''}</p>` : ''}${machineBadgeHTML}${deliveryHTML}${thumbnailHTML}<div class="pt-2 border-t flex justify-between items-center text-xs" style="${card.customColor ? 'border-color: rgba(0,0,0,0.15);' : 'border-color: #1e293b;'}" onclick="event.stopPropagation()"><div class="flex items-center gap-1"><span class="font-mono text-[11px]" style="${card.customColor ? customTextStyle : 'color: #475569;'}">#${cardIdShort}</span>${notifyIconHTML}${printLabelIconHTML}<div class="hide-in-master flex items-center bg-black/20 rounded ml-2"><button onclick="moveCardVertical('${card.id}', -1)" class="p-0.5 hover:bg-black/30 rounded px-1.5 cursor-pointer" title="Sposta su" style="${card.customColor ? customTextStyle : 'color: #cbd5e1;'}">▲</button><button onclick="moveCardVertical('${card.id}', 1)" class="p-0.5 hover:bg-black/30 rounded px-1.5 cursor-pointer" title="Sposta giù" style="${card.customColor ? customTextStyle : 'color: #cbd5e1;'}">▼</button></div></div><div class="flex gap-1.5 hide-in-master"><button onclick="moveCardStep('${card.id}', -1)" class="p-1 rounded bg-slate-900 hover:bg-slate-700 text-slate-400 hover:text-slate-200 transition-colors cursor-pointer" title="Indietro"><i data-lucide="chevron-left" class="w-4 h-4"></i></button><button onclick="moveCardStep('${card.id}', 1)" class="p-1 rounded bg-slate-900 hover:bg-slate-700 text-slate-400 hover:text-slate-200 transition-colors cursor-pointer" title="Avanti"><i data-lucide="chevron-right" class="w-4 h-4"></i></button></div></div></div>`;
+  return `<div draggable="true" ondragstart="handleDragStart(event)" id="card-${card.id}" data-id="${card.id}" onclick="${isMasterMode ? '' : `playSound('click'); openDetail('${card.id}')`}" style="${customCardStyle}" class="${baseCardClass} hover:border-indigo-500/50 p-3.5 rounded-lg shadow-md cursor-pointer transition-all active:scale-95 space-y-2 group relative ${isUrgent ? 'card-urgent' : ''}"><div class="flex justify-between items-start gap-1"><span class="px-2 py-0.5 rounded font-medium text-[11px] ${badgeStyle}">${card.jobType || 'Generico'}</span><span class="text-xs" style="${card.customColor ? customTextStyle : 'color: #64748b;'}">${card.createdAt ? new Date(card.createdAt).toLocaleDateString('it-IT', {day: 'numeric', month: 'short'}) : ''}</span></div><h4 class="font-bold text-sm leading-snug truncate transition-colors" style="${card.customColor ? customTextStyle : 'color: #f8fafc;'}">${card.title || 'Senza Titolo'}</h4>${card.client ? `<p class="truncate text-xs flex items-center gap-1.5 ${customSubTextStyle}"><i data-lucide="building-2" class="w-3.5 h-3.5 shrink-0"></i> ${card.client}${card.referent ? ` <span class="text-indigo-300 font-semibold">(${card.referent})</span>` : ''}${card.orderRef ? `<span class="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-[9px] font-mono ml-1">Rif: ${card.orderRef}</span>` : ''}</p>` : ''}${machineBadgeHTML}${deliveryHTML}${thumbnailHTML}<div class="pt-2 border-t flex justify-between items-center text-xs" style="${card.customColor ? 'border-color: rgba(0,0,0,0.15);' : 'border-color: #1e293b;'}" onclick="event.stopPropagation()"><div class="flex items-center gap-1"><span class="font-mono text-[11px]" style="${card.customColor ? customTextStyle : 'color: #475569;'}">#${cardIdShort}</span>${notifyIconHTML}${printLabelIconHTML}<div class="hide-in-master flex items-center bg-black/20 rounded ml-2"><button onclick="moveCardVertical('${card.id}', -1)" class="p-0.5 hover:bg-black/30 rounded px-1.5 cursor-pointer" title="Sposta su" style="${card.customColor ? customTextStyle : 'color: #cbd5e1;'}">▲</button><button onclick="moveCardVertical('${card.id}', 1)" class="p-0.5 hover:bg-black/30 rounded px-1.5 cursor-pointer" title="Sposta giù" style="${card.customColor ? customTextStyle : 'color: #cbd5e1;'}">▼</button></div></div><div class="flex gap-1.5 hide-in-master"><button onclick="moveCardStep('${card.id}', -1)" class="p-1 rounded bg-slate-900 hover:bg-slate-700 text-slate-400 hover:text-slate-200 transition-colors cursor-pointer" title="Indietro"><i data-lucide="chevron-left" class="w-4 h-4"></i></button><button onclick="moveCardStep('${card.id}', 1)" class="p-1 rounded bg-slate-900 hover:bg-slate-700 text-slate-400 hover:text-slate-200 transition-colors cursor-pointer" title="Avanti"><i data-lucide="chevron-right" class="w-4 h-4"></i></button></div></div></div>`;
 }
 
 function moveCardVertical(cardId, direction) {
@@ -1020,6 +1052,7 @@ async function createNewCard(event) {
   event.preventDefault(); playSound('success');
   const title = document.getElementById('formTitle').value.trim(); const client = title;
   const referent = document.getElementById('formReferent') ? document.getElementById('formReferent').value.trim() : ''; const email = document.getElementById('formEmail') ? document.getElementById('formEmail').value.trim() : ''; const whatsapp = document.getElementById('formWhatsapp') ? document.getElementById('formWhatsapp').value.trim() : ''; const machine = document.getElementById('formMachine') ? document.getElementById('formMachine').value : ''; const deliveryDate = document.getElementById('formDeliveryDate') ? document.getElementById('formDeliveryDate').value : '';
+  const orderRef = document.getElementById('formOrderRef') ? document.getElementById('formOrderRef').value.trim() : '';
   let jobType = document.getElementById('formJobType').value; if (jobType === 'custom') jobType = document.getElementById('formCustomJobType').value.trim() || 'Altro';
   const initialStage = document.getElementById('formInitialStage').value; const initialStageLabel = COLUMNS_CONFIG.find(col => col.id === initialStage)?.label || 'Prev. da fare'; const initialNote = document.getElementById('formNotes') ? document.getElementById('formNotes').value.trim() : '';
   
@@ -1042,7 +1075,7 @@ async function createNewCard(event) {
 
   const newCard = {
     id: 'c' + Date.now().toString(36) + Math.random().toString(36).substring(2, 7),
-    title, client, referent, email, whatsapp, machine, jobType, deliveryDate,
+    title, client, referent, email, whatsapp, orderRef, machine, jobType, deliveryDate,
     articles: extractedArticles, stage: initialStage, order: Date.now(), createdAt: new Date().toISOString(), photos: initialPhotos, history: [{ stage: initialStage, label: `Inserito in "${initialStageLabel}"`, timestamp: new Date().toISOString() }]
   };
 
@@ -1053,6 +1086,7 @@ async function createNewCard(event) {
 function saveCardEdits() {
   const card = state.cards.find(c => c.id === activeCardId); if (!card) return;
   card.title = document.getElementById('editTitle').value.trim(); card.client = card.title; card.referent = document.getElementById('editReferent').value.trim(); card.email = document.getElementById('editEmail').value.trim(); card.whatsapp = document.getElementById('editWhatsapp').value.trim(); card.machine = document.getElementById('editMachine').value;
+  card.orderRef = document.getElementById('editOrderRef') ? document.getElementById('editOrderRef').value.trim() : '';
   if (card.client) registerClientAdvanced(card.client, card.referent, card.email, card.whatsapp);
   card.deliveryDate = document.getElementById('editDeliveryDate').value;
   const colorInput = document.getElementById('editCardColor'); const selectedColor = colorInput.value.toLowerCase(); const defaultColor = colorInput.dataset.defaultColor ? colorInput.dataset.defaultColor.toLowerCase() : "";
@@ -1068,10 +1102,45 @@ function renderArticlesTable(card) {
     const qty = parseFloat(art.qty) || 0, price = parseFloat(art.price) || 0, taxRate = parseFloat(art.tax) !== undefined ? parseFloat(art.tax) : 22;
     const rowTotalNet = qty * price, unitTaxPrice = price * (1 + taxRate / 100), rowTotalTaxed = rowTotalNet * (1 + taxRate / 100);
     const tr = document.createElement('tr'); tr.className = "hover:bg-slate-900/50 transition-colors";
-    tr.innerHTML = `<td class="py-1.5 px-1 text-center align-middle"><div class="flex items-center justify-center gap-0.5 bg-slate-900 rounded p-0.5 border border-slate-800"><button onclick="moveArticleRowVertical(${idx}, -1)" class="hover:bg-slate-800 text-slate-300 text-xs px-1 rounded cursor-pointer">▲</button><button onclick="moveArticleRowVertical(${idx}, 1)" class="hover:bg-slate-800 text-slate-300 text-xs px-1 rounded cursor-pointer">▼</button></div></td><td class="py-1.5 px-1"><input type="text" value="${art.code || ''}" data-field="code" data-index="${idx}" oninput="updateArticleField(this)" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-xs font-mono focus:outline-none"></td><td class="py-1.5 px-1"><input type="text" value="${art.desc || ''}" data-field="desc" data-index="${idx}" oninput="updateArticleField(this)" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-xs focus:outline-none"></td><td class="py-1.5 px-1"><input type="number" step="any" value="${art.qty !== undefined ? art.qty : ''}" data-field="qty" data-index="${idx}" oninput="updateArticleField(this)" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-xs text-center focus:outline-none"></td><td class="py-1.5 px-1"><input type="number" step="any" value="${art.price !== undefined ? art.price : ''}" data-field="price" data-index="${idx}" oninput="updateArticleField(this)" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-xs text-right focus:outline-none"></td><td class="py-1.5 px-1"><input type="number" step="any" value="${art.tax !== undefined ? art.tax : 22}" data-field="tax" data-index="${idx}" oninput="updateArticleField(this)" class="w-full bg-slate-900 border border-slate-700 rounded px-1 py-1 text-slate-200 text-xs text-center focus:outline-none"></td><td class="py-1.5 px-1 text-right font-mono text-slate-300 align-middle"><span id="row-net-${idx}">€ ${rowTotalNet.toFixed(2)}</span></td><td class="py-1.5 px-1 text-right font-mono text-slate-300 align-middle"><span id="row-unit-taxed-${idx}">€ ${unitTaxPrice.toFixed(2)}</span></td><td class="py-1.5 px-2 text-right font-mono font-bold text-slate-300 align-middle"><span id="row-total-${idx}">€ ${rowTotalTaxed.toFixed(2)}</span></td><td class="py-1.5 px-1 text-center align-middle"><button onclick="removeArticleRow(${idx})" class="text-red-400 hover:text-red-300 p-1 cursor-pointer"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button></td>`;
+    tr.innerHTML = `
+      <td class="py-1.5 px-1 text-center align-middle"><div class="flex items-center justify-center gap-0.5 bg-slate-900 rounded p-0.5 border border-slate-800"><button onclick="moveArticleRowVertical(${idx}, -1)" class="hover:bg-slate-800 text-slate-300 text-xs px-1 rounded cursor-pointer">▲</button><button onclick="moveArticleRowVertical(${idx}, 1)" class="hover:bg-slate-800 text-slate-300 text-xs px-1 rounded cursor-pointer">▼</button></div></td>
+      <td class="py-1.5 px-1"><input type="text" value="${art.code || ''}" data-field="code" data-index="${idx}" oninput="updateArticleField(this)" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-xs font-mono focus:outline-none"></td>
+      <td class="py-1.5 px-1 relative">
+        <input type="text" value="${art.desc || ''}" data-field="desc" data-index="${idx}" autocomplete="off" oninput="updateArticleField(this); handleArticleAutocomplete(this.value, ${idx})" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-xs focus:outline-none focus:border-indigo-500">
+        <div id="articleSuggestions-${idx}" class="hidden absolute left-0 right-0 top-full mt-1 bg-slate-800 border border-slate-600 rounded shadow-xl z-50 max-h-32 overflow-y-auto"></div>
+      </td>
+      <td class="py-1.5 px-1"><input type="number" step="any" value="${art.qty !== undefined ? art.qty : ''}" data-field="qty" data-index="${idx}" oninput="updateArticleField(this)" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-xs text-center focus:outline-none"></td>
+      <td class="py-1.5 px-1"><input type="number" step="any" value="${art.price !== undefined ? art.price : ''}" data-field="price" data-index="${idx}" oninput="updateArticleField(this)" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-xs text-right focus:outline-none"></td>
+      <td class="py-1.5 px-1"><input type="number" step="any" value="${art.tax !== undefined ? art.tax : 22}" data-field="tax" data-index="${idx}" oninput="updateArticleField(this)" class="w-full bg-slate-900 border border-slate-700 rounded px-1 py-1 text-slate-200 text-xs text-center focus:outline-none"></td>
+      <td class="py-1.5 px-1 text-right font-mono text-slate-300 align-middle"><span id="row-net-${idx}">€ ${rowTotalNet.toFixed(2)}</span></td>
+      <td class="py-1.5 px-1 text-right font-mono text-slate-300 align-middle"><span id="row-unit-taxed-${idx}">€ ${unitTaxPrice.toFixed(2)}</span></td>
+      <td class="py-1.5 px-2 text-right font-mono font-bold text-slate-300 align-middle"><span id="row-total-${idx}">€ ${rowTotalTaxed.toFixed(2)}</span></td>
+      <td class="py-1.5 px-1 text-center align-middle"><button onclick="removeArticleRow(${idx})" class="text-red-400 hover:text-red-300 p-1 cursor-pointer"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button></td>
+    `;
     tbody.appendChild(tr);
   });
   calculateGrandTotals(); lucide.createIcons();
+}
+
+function handleArticleAutocomplete(query, idx) {
+  const container = document.getElementById(`articleSuggestions-${idx}`);
+  if(!query.trim()) { container.classList.add('hidden'); return; }
+  const q = query.toLowerCase();
+  const matches = ARTICLES_DB.filter(a => a.desc.toLowerCase().includes(q) || a.code.toLowerCase().includes(q));
+  if(matches.length === 0) { container.classList.add('hidden'); return; }
+  container.innerHTML = matches.map(m => `<div onclick="selectArticleSuggestion('${m.code.replace(/'/g, "\\'")}', '${m.desc.replace(/'/g, "\\'")}', ${m.price}, ${idx})" class="px-2 py-1.5 hover:bg-indigo-600/50 cursor-pointer text-xs border-b border-slate-700 last:border-0"><div class="font-bold text-white">${m.desc}</div><div class="text-[10px] text-slate-400 font-mono">Cod: ${m.code || 'N/D'} | Prezzo base: € ${m.price}</div></div>`).join('');
+  container.classList.remove('hidden');
+}
+
+function selectArticleSuggestion(code, desc, price, idx) {
+  const card = state.cards.find(c => c.id === activeCardId);
+  if(!card || !card.articles[idx]) return;
+  card.articles[idx].code = code;
+  card.articles[idx].desc = desc;
+  card.articles[idx].price = price;
+  if (!card.articles[idx].qty) card.articles[idx].qty = 1;
+  renderArticlesTable(card);
+  saveLocal(); syncCardToCloud(card); playSound('click');
 }
 
 function moveArticleRowVertical(idx, direction) {
@@ -1109,6 +1178,8 @@ function openDetail(id) {
   badge.className = `px-2 py-0.5 rounded text-[11px] font-bold text-white uppercase ${currentStageObj ? currentStageObj.color.split(' ')[0] : 'bg-slate-600'}`;
   
   document.getElementById('editClientSelector').value = ''; document.getElementById('editTitle').value = card.title || ''; document.getElementById('editReferent').value = card.referent || ''; document.getElementById('editEmail').value = card.email || ''; document.getElementById('editWhatsapp').value = card.whatsapp || ''; document.getElementById('editDeliveryDate').value = card.deliveryDate || ''; populateMachinesDropdowns(); document.getElementById('editMachine').value = card.machine || '';
+  if(document.getElementById('editOrderRef')) document.getElementById('editOrderRef').value = card.orderRef || '';
+  
   const colDef = COLUMNS_CONFIG.find(col => col.id === card.stage); const defaultColor = colDef ? colDef.hexDefault : '#4f46e5'; const colorInput = document.getElementById('editCardColor'); colorInput.value = card.customColor || defaultColor; colorInput.dataset.defaultColor = defaultColor; 
   renderArticlesTable(card); renderAttachments(card);
   
@@ -1316,7 +1387,6 @@ async function generateAndPrintLabels() {
     `;
   });
 
-  /* Misure corrette per permettere la generazione di PDF multi-pagina senza blocchi sul body */
   const fullHtml = `<!DOCTYPE html><html><head><title>Etichette_${card.title}</title><style>
     @page { size: 148mm 105mm; margin: 0; }
     body, html { margin: 0; padding: 0; width: 148mm; background: #fff; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
@@ -1593,4 +1663,46 @@ function printArchiveReport() {
   printWindow.document.close();
   
   setTimeout(() => { printWindow.focus(); printWindow.print(); }, 800);
+}
+
+// ============================================
+// GESTIONE DATABASE ARTICOLI BASE
+// ============================================
+function renderArticlesSettingsList() {
+  return ARTICLES_DB.length === 0 ? '<p class="text-xs text-slate-500 italic py-2">Nessun articolo salvato.</p>' : 
+  ARTICLES_DB.map((a, idx) => `
+    <div class="flex items-center justify-between bg-slate-950 p-2.5 rounded border border-slate-800 text-xs">
+      <div>
+        <span class="text-white font-bold">${a.desc}</span>
+        <div class="text-[10px] text-slate-400 font-mono">Cod: ${a.code || 'N/D'} | Prezzo base: € ${parseFloat(a.price).toFixed(2)}</div>
+      </div>
+      <button onclick="removeArticleFromDB(${idx})" class="text-slate-600 hover:text-red-400 p-1 cursor-pointer transition-colors"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+    </div>
+  `).join('');
+}
+
+function addArticleFromSettings() {
+  const code = document.getElementById('artModalCode').value.trim(); 
+  const desc = document.getElementById('artModalDesc').value.trim(); 
+  const price = parseFloat(document.getElementById('artModalPrice').value) || 0;
+  
+  if (!desc) return alert("Inserisci almeno la descrizione dell'articolo.");
+  
+  ARTICLES_DB.push({ code, desc, price }); 
+  ARTICLES_DB.sort((a,b) => a.desc.localeCompare(b.desc));
+  
+  localStorage.setItem('workflow_sga_articles_db', JSON.stringify(ARTICLES_DB)); 
+  syncArticlesToCloud();
+  openSubSettings('articles'); 
+  playSound('success');
+}
+
+function removeArticleFromDB(idx) {
+  const a = ARTICLES_DB[idx];
+  confirmDeletion(`Articolo base: ${a.desc}`, () => { 
+    ARTICLES_DB.splice(idx, 1);
+    localStorage.setItem('workflow_sga_articles_db', JSON.stringify(ARTICLES_DB)); 
+    syncArticlesToCloud();
+    openSubSettings('articles'); 
+  });
 }

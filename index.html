@@ -277,6 +277,15 @@
 
       <div class="p-5 overflow-y-auto space-y-4 flex-1 text-sm">
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4">
+          <div onclick="playSound('click'); openSubSettings('articles');" class="bg-slate-950 hover:bg-slate-850 border border-slate-800 hover:border-emerald-500/50 p-4 rounded-xl cursor-pointer transition-all flex items-start gap-3.5 group">
+            <div class="bg-emerald-600/20 text-emerald-400 p-3 rounded-lg border border-emerald-500/30 group-hover:scale-105 transition-transform">
+              <i data-lucide="shopping-cart" class="w-6 h-6"></i>
+            </div>
+            <div>
+              <h4 class="font-bold text-slate-200 text-sm">Gestione Articoli Base</h4>
+              <p class="text-xs text-slate-400 mt-0.5">Database articoli con codice, descrizione e prezzo per autocompilazione.</p>
+            </div>
+          </div>
           <div onclick="playSound('click'); openSubSettings('crm');" class="bg-slate-950 hover:bg-slate-850 border border-slate-800 hover:border-indigo-500/50 p-4 rounded-xl cursor-pointer transition-all flex items-start gap-3.5 group">
             <div class="bg-indigo-600/20 text-indigo-400 p-3 rounded-lg border border-indigo-500/30 group-hover:scale-105 transition-transform">
               <i data-lucide="users" class="w-6 h-6"></i>
@@ -421,6 +430,11 @@
               <input type="text" id="editTitle" autocomplete="off" oninput="handleClientInput(this.value, 'editClientSuggestions', 'editReferent', 'editEmail', 'editWhatsapp')" class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-1.5 text-slate-100 font-semibold text-base focus:outline-none focus:border-indigo-500">
               <div id="editClientSuggestions" class="hidden absolute left-0 right-0 top-full mt-1 bg-slate-900 border border-slate-700 rounded-lg shadow-xl z-30 max-h-40 overflow-y-auto"></div>
             </div>
+            
+            <div class="mt-2">
+              <label class="text-[10px] text-indigo-400 font-semibold uppercase tracking-wider block mb-1">Rif. Ordine</label>
+              <input type="text" id="editOrderRef" placeholder="Codice ordine o preventivo..." class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-1.5 text-slate-200 text-sm focus:outline-none focus:border-indigo-500">
+            </div>
           </div>
           
           <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -488,7 +502,7 @@
             </button>
           </div>
           
-          <div class="overflow-x-auto">
+          <div class="overflow-x-auto overflow-y-visible">
             <table class="w-full text-left text-xs min-w-[700px]">
               <thead>
                 <tr class="border-b border-slate-800 text-slate-400 uppercase text-[10px]">
@@ -584,19 +598,25 @@
       </div>
       <form id="newCardForm" class="space-y-4 text-sm" onsubmit="createNewCard(event)">
         
-        <div class="relative">
-          <div class="flex justify-between items-end gap-2 mb-1">
-            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400">Cliente / Titolo Progetto</label>
-            <!-- SELETTORE CLIENTI CRM -->
-            <div class="flex items-center gap-1.5 w-1/2 md:w-1/3">
-              <i data-lucide="users" class="w-3.5 h-3.5 text-slate-400"></i>
-              <select id="formClientSelector" onchange="autofillClientFromSelect(this.value, 'form')" class="w-full bg-slate-950 border border-slate-800 rounded px-2 py-1 text-[11px] text-slate-300 focus:outline-none focus:border-indigo-500 cursor-pointer">
-                <option value="">-- Seleziona dal CRM --</option>
-              </select>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div class="md:col-span-2 relative">
+            <div class="flex justify-between items-end gap-2 mb-1">
+              <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400">Cliente / Titolo Progetto</label>
+              <!-- SELETTORE CLIENTI CRM -->
+              <div class="flex items-center gap-1.5 w-1/2 md:w-1/3">
+                <i data-lucide="users" class="w-3.5 h-3.5 text-slate-400"></i>
+                <select id="formClientSelector" onchange="autofillClientFromSelect(this.value, 'form')" class="w-full bg-slate-950 border border-slate-800 rounded px-2 py-1 text-[11px] text-slate-300 focus:outline-none focus:border-indigo-500 cursor-pointer">
+                  <option value="">-- Seleziona dal CRM --</option>
+                </select>
+              </div>
             </div>
+            <input type="text" id="formTitle" required autocomplete="off" placeholder="Es. Rossi S.r.l." oninput="handleClientInput(this.value, 'formClientSuggestions', 'formReferent', 'formEmail', 'formWhatsapp')" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-indigo-500">
+            <div id="formClientSuggestions" class="hidden absolute left-0 right-0 top-full mt-1 bg-slate-900 border border-slate-700 rounded-lg shadow-xl z-30 max-h-40 overflow-y-auto"></div>
           </div>
-          <input type="text" id="formTitle" required autocomplete="off" placeholder="Es. Rossi S.r.l." oninput="handleClientInput(this.value, 'formClientSuggestions', 'formReferent', 'formEmail', 'formWhatsapp')" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-indigo-500">
-          <div id="formClientSuggestions" class="hidden absolute left-0 right-0 top-full mt-1 bg-slate-900 border border-slate-700 rounded-lg shadow-xl z-30 max-h-40 overflow-y-auto"></div>
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Rif. Ordine (Opz.)</label>
+            <input type="text" id="formOrderRef" placeholder="Es. PO-12345" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-indigo-500">
+          </div>
         </div>
         
         <div class="grid grid-cols-2 gap-3">
