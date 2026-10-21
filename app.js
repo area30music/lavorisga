@@ -21,14 +21,12 @@ zoomStyles.innerHTML = `
   body:not(.master-mode) .card-dropzone { font-size: var(--app-font-size, 15px); }
   body.master-mode .card-dropzone { font-size: var(--master-font-size, 24px); }
   
-  /* Sovrascrive le misure fisse di Tailwind con unità in proporzione (em) */
   .card-dropzone > div { font-size: 1em !important; padding: 0.8em !important; }
   .card-dropzone > div .text-sm { font-size: 1.15em !important; line-height: 1.3 !important; }
   .card-dropzone > div .text-xs { font-size: 0.9em !important; line-height: 1.3 !important; }
   .card-dropzone > div .text-\\[11px\\] { font-size: 0.8em !important; line-height: 1.2 !important; }
   .card-dropzone > div .text-\\[10px\\] { font-size: 0.75em !important; line-height: 1.2 !important; }
   
-  /* Scala icone, badge e immagini */
   .card-dropzone > div svg { width: 1.1em !important; height: 1.1em !important; }
   .card-dropzone > div .h-14 { height: 3.5em !important; }
   .card-dropzone > div .w-14 { width: 3.5em !important; }
@@ -56,6 +54,7 @@ let isAutoScrollPaused = false;
 let masterScrollSpeed = 0.08;
 
 window.editingClientId = null;
+window.editingArticleId = null;
 window.tempLabelArticles = [];
 
 let arcadeTimer = null;
@@ -80,6 +79,7 @@ const DEFAULT_MSG_TEMPLATE = `Buongiorno {SALUTO},\n\nquesto è il sistema di au
 let COLUMNS_CONFIG = JSON.parse(JSON.stringify(DEFAULT_COLUMNS_CONFIG));
 let USER_ALARMS = []; 
 let CLIENTS_DB = [];
+let ARTICLES_DB = [];
 let MACHINES_DB = ["Roland TrueVIS SG2-540", "Epson SureColor T7200", "Epson F1000 DTF", "Xerox PrimeLink C9200", "Happy Japan HCH Embroidery"];
 let masterFontSizePx = 24; 
 let appFontSizePx = 15;
@@ -399,6 +399,11 @@ function loadUserSettings() {
     if (oldClients) { try { const arr = JSON.parse(oldClients); CLIENTS_DB = arr.map((c,idx) => ({ id: 'crm_old'+idx, name: c, referent: '', email: '', whatsapp: '' })); } catch(e){ CLIENTS_DB = []; } }
   }
 
+  const savedArticles = localStorage.getItem('workflow_sga_articles_db');
+  if (savedArticles) {
+    try { ARTICLES_DB = JSON.parse(savedArticles); } catch(e) { ARTICLES_DB = []; }
+  }
+
   const savedMachines = localStorage.getItem('workflow_sga_machines_db');
   if (savedMachines) { try { MACHINES_DB = JSON.parse(savedMachines); } catch(e){} }
   
@@ -410,7 +415,7 @@ function loadUserSettings() {
   if (savedAppFont) appFontSizePx = parseInt(savedAppFont);
   applyAppFontSize(appFontSizePx);
 
-  loadCompanyLogo(); populateMachinesDropdowns(); populateGlobalFilterDropdown(); populateClientSelectors();
+  loadCompanyLogo(); populateMachinesDropdowns(); populateGlobalFilterDropdown(); populateClientSelectors(); updateArticlesDatalists();
 }
 
 function applyMasterFontSize(pxVal) {
@@ -431,6 +436,7 @@ function resetAppFont() { playSound('click'); applyAppFontSize(15); }
 function updateMasterSpeed(val) { masterScrollSpeed = parseFloat(val); }
 
 function syncClientsToCloud() { if (db) db.collection('workflow_sga_settings').doc('clients').set({ db: CLIENTS_DB }).catch(err => console.error(err)); }
+function syncArticlesToCloud() { if (db) db.collection('workflow_sga_settings').doc('articles').set({ db: ARTICLES_DB }).catch(err => console.error(err)); }
 
 function registerClientAdvanced(name, referent, email, whatsapp) {
   if (!name || !name.trim()) return;
@@ -448,6 +454,13 @@ function registerClientAdvanced(name, referent, email, whatsapp) {
   CLIENTS_DB.sort((a,b) => a.name.localeCompare(b.name));
   localStorage.setItem('workflow_sga_clients_db', JSON.stringify(CLIENTS_DB));
   populateClientSelectors(); syncClientsToCloud();
+}
+
+function updateArticlesDatalists() {
+  const codesList = document.getElementById('dbArticleCodes');
+  const descsList = document.getElementById('dbArticleDescs');
+  if (codesList) { codesList.innerHTML = ARTICLES_DB.map(a => `<option value="${a.code}">`).join(''); }
+  if (descsList) { descsList.innerHTML = ARTICLES_DB.map(a => `<option value="${a.desc}">`).join(''); }
 }
 
 function populateClientSelectors() {
@@ -548,6 +561,10 @@ function openSubSettings(type) {
     window.editingClientId = null;
     titleEl.innerHTML = `<i data-lucide="users" class="w-5 h-5 text-indigo-400"></i> Gestione Clienti (CRM)`;
     contentEl.innerHTML = `<div class="space-y-4"><p class="text-xs text-slate-400">Gestisci l'anagrafica clienti con azienda, referente, email e WhatsApp:</p><div class="bg-slate-950 p-3 rounded-lg border border-slate-800 space-y-2.5"><h5 class="text-xs font-bold text-indigo-400 uppercase">Aggiungi / Modifica Cliente</h5><div class="grid grid-cols-2 gap-2"><input type="text" id="crmModalName" placeholder="Azienda / Cliente *" class="bg-slate-900 border border-slate-700 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"><input type="text" id="crmModalRef" placeholder="Referente" class="bg-slate-900 border border-slate-700 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"></div><div class="grid grid-cols-2 gap-2"><input type="email" id="crmModalEmail" placeholder="Email" class="bg-slate-900 border border-slate-700 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"><input type="text" id="crmModalWa" placeholder="WhatsApp" class="bg-slate-900 border border-slate-700 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"></div><button type="button" id="btnSaveCrmClient" onclick="addClientFromSettings()" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs px-3 py-2 rounded font-semibold w-full cursor-pointer transition-colors">Salva Cliente in Archivio</button></div><div id="settingsClientsList" class="space-y-1.5 max-h-44 overflow-y-auto pr-1">${renderCrmSettingsList()}</div></div>`;
+  } else if (type === 'articles_mgmt') {
+    window.editingArticleId = null;
+    titleEl.innerHTML = `<i data-lucide="package" class="w-5 h-5 text-blue-400"></i> Gestione Articoli (Database)`;
+    contentEl.innerHTML = `<div class="space-y-4"><p class="text-xs text-slate-400">Salva articoli frequenti per autocompilare in automatico (Codice e Descrizione) l'inserimento o la modifica di una commessa.</p><div class="bg-slate-950 p-3 rounded-lg border border-slate-800 space-y-2.5"><h5 class="text-xs font-bold text-blue-400 uppercase">Aggiungi / Modifica Articolo</h5><div class="grid grid-cols-3 gap-2"><input type="text" id="artModalCode" placeholder="Codice *" class="bg-slate-900 border border-slate-700 rounded px-2.5 py-1.5 text-xs text-slate-200 font-mono"><input type="text" id="artModalDesc" placeholder="Descrizione *" class="bg-slate-900 border border-slate-700 rounded px-2.5 py-1.5 text-xs text-slate-200"><input type="number" step="any" id="artModalPrice" placeholder="Prezzo base (€)" class="bg-slate-900 border border-slate-700 rounded px-2.5 py-1.5 text-xs text-slate-200"></div><button type="button" id="btnSaveArticleDb" onclick="addArticleFromSettings()" class="bg-blue-600 hover:bg-blue-500 text-white text-xs px-3 py-2 rounded font-semibold w-full cursor-pointer transition-colors">Salva Articolo nel Database</button></div><div id="settingsArticlesList" class="space-y-1.5 max-h-44 overflow-y-auto pr-1">${renderArticlesSettingsList()}</div></div>`;
   } else if (type === 'archive') {
     titleEl.innerHTML = `<i data-lucide="archive" class="w-5 h-5 text-slate-400"></i> Archivio Commesse`;
     contentEl.innerHTML = `
@@ -598,6 +615,65 @@ function openSubSettings(type) {
 }
 
 function closeSubSettings() { closeModal('subSettingsModal'); activeSubSettingsType = null; }
+
+function renderArticlesSettingsList() {
+  return ARTICLES_DB.length === 0 ? '<p class="text-xs text-slate-500 italic py-2">Nessun articolo salvato.</p>' : 
+  ARTICLES_DB.map((a, idx) => `
+    <div onclick="loadArticleForEdit('${a.id}')" class="flex items-center justify-between bg-slate-950 p-2.5 rounded border border-slate-800 text-xs hover:border-blue-500/50 cursor-pointer transition-colors group">
+      <div>
+        <span class="text-white font-mono font-bold">${a.code}</span> <span class="text-blue-300">- ${a.desc}</span>
+        <div class="text-[10px] text-slate-400">Prezzo: € ${(parseFloat(a.price) || 0).toFixed(2)}</div>
+      </div>
+      <button onclick="event.stopPropagation(); removeArticleDb('${a.id}')" class="text-slate-600 group-hover:text-red-400 hover:!text-red-300 p-1 cursor-pointer transition-colors"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+    </div>
+  `).join('');
+}
+
+function loadArticleForEdit(id) {
+  playSound('click'); 
+  window.editingArticleId = id; 
+  const a = ARTICLES_DB.find(art => art.id === id);
+  if(!a) return;
+  document.getElementById('artModalCode').value = a.code || ''; 
+  document.getElementById('artModalDesc').value = a.desc || ''; 
+  document.getElementById('artModalPrice').value = a.price || ''; 
+  const btn = document.getElementById('btnSaveArticleDb'); 
+  btn.innerText = "Aggiorna Articolo"; 
+  btn.classList.replace('bg-blue-600', 'bg-emerald-600'); 
+  btn.classList.replace('hover:bg-blue-500', 'hover:bg-emerald-500');
+}
+
+function addArticleFromSettings() {
+  const code = document.getElementById('artModalCode').value.trim();
+  const desc = document.getElementById('artModalDesc').value.trim();
+  const price = parseFloat(document.getElementById('artModalPrice').value) || 0;
+  
+  if (!code || !desc) return alert("Inserisci sia il codice che la descrizione.");
+  
+  if (window.editingArticleId) {
+    const idx = ARTICLES_DB.findIndex(a => a.id === window.editingArticleId);
+    if(idx >= 0) ARTICLES_DB[idx] = { id: window.editingArticleId, code, desc, price };
+    window.editingArticleId = null;
+  } else {
+    const existing = ARTICLES_DB.find(a => a.code.toLowerCase() === code.toLowerCase());
+    if (existing) return alert(`Il codice ${code} esiste già nel database.`);
+    ARTICLES_DB.push({ id: 'art_' + Date.now().toString(36), code, desc, price });
+  }
+  
+  ARTICLES_DB.sort((a,b) => a.code.localeCompare(b.code));
+  localStorage.setItem('workflow_sga_articles_db', JSON.stringify(ARTICLES_DB));
+  updateArticlesDatalists(); syncArticlesToCloud();
+  openSubSettings('articles_mgmt'); playSound('success');
+}
+
+function removeArticleDb(id) {
+  const a = ARTICLES_DB.find(art => art.id === id); if(!a) return;
+  confirmDeletion(`Articolo Database: ${a.code}`, () => { 
+    ARTICLES_DB = ARTICLES_DB.filter(art => art.id !== id); 
+    localStorage.setItem('workflow_sga_articles_db', JSON.stringify(ARTICLES_DB)); 
+    updateArticlesDatalists(); syncArticlesToCloud(); openSubSettings('articles_mgmt'); 
+  });
+}
 
 function renderCrmSettingsList() {
   return CLIENTS_DB.length === 0 ? '<p class="text-xs text-slate-500 italic py-2">Nessun cliente in archivio.</p>' : 
@@ -783,6 +859,12 @@ function listenToCloudUpdates() {
       if (data.db && Array.isArray(data.db)) { CLIENTS_DB = data.db; localStorage.setItem('workflow_sga_clients_db', JSON.stringify(CLIENTS_DB)); populateClientSelectors(); if (activeSubSettingsType === 'crm') { openSubSettings('crm'); } }
     } else { syncClientsToCloud(); }
   });
+  db.collection('workflow_sga_settings').doc('articles').onSnapshot((doc) => {
+    if (doc.exists) {
+      const data = doc.data();
+      if (data.db && Array.isArray(data.db)) { ARTICLES_DB = data.db; localStorage.setItem('workflow_sga_articles_db', JSON.stringify(ARTICLES_DB)); updateArticlesDatalists(); if (activeSubSettingsType === 'articles_mgmt') { openSubSettings('articles_mgmt'); } }
+    } else { syncArticlesToCloud(); }
+  });
   db.collection('workflow_sga_cards').onSnapshot((snapshot) => {
     if (snapshot.empty && state.cards.length > 0) { state.cards.forEach(card => syncCardToCloud(card)); return; }
     let needsMigration = false;
@@ -873,6 +955,7 @@ function sanitizeCard(card) {
   if (!Array.isArray(card.photos)) card.photos = [];
   card.photos = card.photos.map(p => { if (typeof p === 'string') return { image: p, rotation: 0 }; if (!p.rotation) p.rotation = 0; return p; });
   if (!Array.isArray(card.history)) card.history = []; if (card.order === undefined) card.order = 0;
+  if (!card.orderRef) card.orderRef = '';
   if (!card.referent) card.referent = ''; if (!card.email) card.email = ''; if (!card.whatsapp) card.whatsapp = ''; if (!card.machine) card.machine = '';
   if (card.stage === 'lavorato') card.stage = 'lavorato-da-bollettare'; if (card.stage === 'consegnato') card.stage = 'bollettato-da-consegnare';
   if (!Array.isArray(card.articles)) { card.articles = []; if (card.notes && card.notes.trim()) card.articles.push({ code: '', desc: card.notes, qty: 1, price: 0, tax: 22 }); } 
@@ -938,6 +1021,7 @@ function createCardHTML(card) {
   if (card.deliveryDate && card.stage !== 'bollettato-da-consegnare' && card.stage !== 'fatturato' && card.stage !== 'archiviato') { const delivery = new Date(card.deliveryDate); delivery.setHours(0,0,0,0); const today = new Date(); today.setHours(0,0,0,0); if (Math.ceil((delivery - today) / (1000 * 60 * 60 * 24)) <= 7) isUrgent = true; }
   let customCardStyle = '', customTextStyle = '', customSubTextStyle = 'text-slate-400', baseCardClass = 'bg-slate-900 border border-slate-800';
   if (card.customColor && card.customColor !== '') { const contrastColor = getContrastTextColor(card.customColor); customCardStyle = `background-color: ${card.customColor}; border-color: ${card.customColor};`; customTextStyle = `color: ${contrastColor};`; baseCardClass = 'border shadow-md'; customSubTextStyle = contrastColor === '#0f172a' ? 'text-slate-800 font-semibold' : 'text-slate-200'; }
+  const orderRefHTML = card.orderRef ? `<div class="text-[10px] font-mono mt-1 font-bold opacity-80" style="${card.customColor ? customTextStyle : 'color: #94a3b8;'}">Rif: ${card.orderRef}</div>` : '';
   const deliveryHTML = card.deliveryDate ? `<div class="flex items-center gap-1.5 mt-1 mb-1 font-bold ${isUrgent && !card.customColor ? 'text-red-400 bg-red-950/40 border border-red-900/60 animate-pulse' : ''} px-2 py-1 rounded w-fit text-xs" style="${card.customColor ? `background: rgba(0,0,0,0.15); ${customTextStyle}` : ''}"><i data-lucide="calendar" class="w-3.5 h-3.5"></i> Consegna: ${new Date(card.deliveryDate).toLocaleDateString('it-IT')}</div>` : '';
   const machineBadgeHTML = card.machine ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono bg-cyan-950 text-cyan-300 border border-cyan-800 mt-1"><i data-lucide="cpu" class="w-3 h-3"></i> ${card.machine}</span>` : '';
   const thumbnailHTML = card.photos && card.photos.length > 0 ? `<div class="mt-2 flex gap-1 overflow-hidden h-14">${card.photos.map(p => `<div class="w-14 h-14 shrink-0 overflow-hidden rounded border border-slate-700 bg-slate-900 flex items-center justify-center"><img src="${p.image}" style="transform: rotate(${p.rotation || 0}deg);" class="min-w-full min-h-full object-cover bg-white"></div>`).join('')}</div>` : '';
@@ -945,7 +1029,7 @@ function createCardHTML(card) {
   const notifyIconHTML = (card.stage === 'bollettato-da-consegnare' && (card.email || card.whatsapp)) ? `<button onclick="event.stopPropagation(); triggerNotifyById('${card.id}')" class="ml-2 p-1 bg-emerald-500/20 hover:bg-emerald-500/50 text-emerald-400 rounded cursor-pointer transition-colors" title="Invia Notifica Pronto Ritiro"><i data-lucide="mail" class="w-3.5 h-3.5"></i></button>` : '';
   const printLabelIconHTML = (card.stage === 'lavorato-da-bollettare') ? `<button onclick="event.stopPropagation(); openLabelPrintModal('${card.id}')" class="ml-2 p-1 bg-blue-500/20 hover:bg-blue-500/50 text-blue-400 rounded cursor-pointer transition-colors" title="Stampa Etichette Colli"><i data-lucide="printer" class="w-3.5 h-3.5"></i></button>` : '';
 
-  return `<div draggable="true" ondragstart="handleDragStart(event)" id="card-${card.id}" data-id="${card.id}" onclick="${isMasterMode ? '' : `playSound('click'); openDetail('${card.id}')`}" style="${customCardStyle}" class="${baseCardClass} hover:border-indigo-500/50 p-3.5 rounded-lg shadow-md cursor-pointer transition-all active:scale-95 space-y-2 group relative ${isUrgent ? 'card-urgent' : ''}"><div class="flex justify-between items-start gap-1"><span class="px-2 py-0.5 rounded font-medium text-[11px] ${badgeStyle}">${card.jobType || 'Generico'}</span><span class="text-xs" style="${card.customColor ? customTextStyle : 'color: #64748b;'}">${card.createdAt ? new Date(card.createdAt).toLocaleDateString('it-IT', {day: 'numeric', month: 'short'}) : ''}</span></div><h4 class="font-bold text-sm leading-snug truncate transition-colors" style="${card.customColor ? customTextStyle : 'color: #f8fafc;'}">${card.title || 'Senza Titolo'}</h4>${card.client ? `<p class="truncate text-xs flex items-center gap-1.5 ${customSubTextStyle}"><i data-lucide="building-2" class="w-3.5 h-3.5 shrink-0"></i> ${card.client}${card.referent ? ` <span class="text-indigo-300 font-semibold">(${card.referent})</span>` : ''}</p>` : ''}${machineBadgeHTML}${deliveryHTML}${thumbnailHTML}<div class="pt-2 border-t flex justify-between items-center text-xs" style="${card.customColor ? 'border-color: rgba(0,0,0,0.15);' : 'border-color: #1e293b;'}" onclick="event.stopPropagation()"><div class="flex items-center gap-1"><span class="font-mono text-[11px]" style="${card.customColor ? customTextStyle : 'color: #475569;'}">#${cardIdShort}</span>${notifyIconHTML}${printLabelIconHTML}<div class="hide-in-master flex items-center bg-black/20 rounded ml-2"><button onclick="moveCardVertical('${card.id}', -1)" class="p-0.5 hover:bg-black/30 rounded px-1.5 cursor-pointer" title="Sposta su" style="${card.customColor ? customTextStyle : 'color: #cbd5e1;'}">▲</button><button onclick="moveCardVertical('${card.id}', 1)" class="p-0.5 hover:bg-black/30 rounded px-1.5 cursor-pointer" title="Sposta giù" style="${card.customColor ? customTextStyle : 'color: #cbd5e1;'}">▼</button></div></div><div class="flex gap-1.5 hide-in-master"><button onclick="moveCardStep('${card.id}', -1)" class="p-1 rounded bg-slate-900 hover:bg-slate-700 text-slate-400 hover:text-slate-200 transition-colors cursor-pointer" title="Indietro"><i data-lucide="chevron-left" class="w-4 h-4"></i></button><button onclick="moveCardStep('${card.id}', 1)" class="p-1 rounded bg-slate-900 hover:bg-slate-700 text-slate-400 hover:text-slate-200 transition-colors cursor-pointer" title="Avanti"><i data-lucide="chevron-right" class="w-4 h-4"></i></button></div></div></div>`;
+  return `<div draggable="true" ondragstart="handleDragStart(event)" id="card-${card.id}" data-id="${card.id}" onclick="${isMasterMode ? '' : `playSound('click'); openDetail('${card.id}')`}" style="${customCardStyle}" class="${baseCardClass} hover:border-indigo-500/50 p-3.5 rounded-lg shadow-md cursor-pointer transition-all active:scale-95 space-y-2 group relative ${isUrgent ? 'card-urgent' : ''}"><div class="flex justify-between items-start gap-1"><span class="px-2 py-0.5 rounded font-medium text-[11px] ${badgeStyle}">${card.jobType || 'Generico'}</span><span class="text-xs" style="${card.customColor ? customTextStyle : 'color: #64748b;'}">${card.createdAt ? new Date(card.createdAt).toLocaleDateString('it-IT', {day: 'numeric', month: 'short'}) : ''}</span></div><h4 class="font-bold text-sm leading-snug truncate transition-colors" style="${card.customColor ? customTextStyle : 'color: #f8fafc;'}">${card.title || 'Senza Titolo'}</h4>${orderRefHTML}${card.client ? `<p class="truncate text-xs flex items-center gap-1.5 ${customSubTextStyle}"><i data-lucide="building-2" class="w-3.5 h-3.5 shrink-0"></i> ${card.client}${card.referent ? ` <span class="text-indigo-300 font-semibold">(${card.referent})</span>` : ''}</p>` : ''}${machineBadgeHTML}${deliveryHTML}${thumbnailHTML}<div class="pt-2 border-t flex justify-between items-center text-xs" style="${card.customColor ? 'border-color: rgba(0,0,0,0.15);' : 'border-color: #1e293b;'}" onclick="event.stopPropagation()"><div class="flex items-center gap-1"><span class="font-mono text-[11px]" style="${card.customColor ? customTextStyle : 'color: #475569;'}">#${cardIdShort}</span>${notifyIconHTML}${printLabelIconHTML}<div class="hide-in-master flex items-center bg-black/20 rounded ml-2"><button onclick="moveCardVertical('${card.id}', -1)" class="p-0.5 hover:bg-black/30 rounded px-1.5 cursor-pointer" title="Sposta su" style="${card.customColor ? customTextStyle : 'color: #cbd5e1;'}">▲</button><button onclick="moveCardVertical('${card.id}', 1)" class="p-0.5 hover:bg-black/30 rounded px-1.5 cursor-pointer" title="Sposta giù" style="${card.customColor ? customTextStyle : 'color: #cbd5e1;'}">▼</button></div></div><div class="flex gap-1.5 hide-in-master"><button onclick="moveCardStep('${card.id}', -1)" class="p-1 rounded bg-slate-900 hover:bg-slate-700 text-slate-400 hover:text-slate-200 transition-colors cursor-pointer" title="Indietro"><i data-lucide="chevron-left" class="w-4 h-4"></i></button><button onclick="moveCardStep('${card.id}', 1)" class="p-1 rounded bg-slate-900 hover:bg-slate-700 text-slate-400 hover:text-slate-200 transition-colors cursor-pointer" title="Avanti"><i data-lucide="chevron-right" class="w-4 h-4"></i></button></div></div></div>`;
 }
 
 function moveCardVertical(cardId, direction) {
@@ -1019,6 +1103,7 @@ function handleFormFileSelect(event) { const file = event.target.files[0]; if (!
 async function createNewCard(event) {
   event.preventDefault(); playSound('success');
   const title = document.getElementById('formTitle').value.trim(); const client = title;
+  const orderRef = document.getElementById('formOrderRef') ? document.getElementById('formOrderRef').value.trim() : '';
   const referent = document.getElementById('formReferent') ? document.getElementById('formReferent').value.trim() : ''; const email = document.getElementById('formEmail') ? document.getElementById('formEmail').value.trim() : ''; const whatsapp = document.getElementById('formWhatsapp') ? document.getElementById('formWhatsapp').value.trim() : ''; const machine = document.getElementById('formMachine') ? document.getElementById('formMachine').value : ''; const deliveryDate = document.getElementById('formDeliveryDate') ? document.getElementById('formDeliveryDate').value : '';
   let jobType = document.getElementById('formJobType').value; if (jobType === 'custom') jobType = document.getElementById('formCustomJobType').value.trim() || 'Altro';
   const initialStage = document.getElementById('formInitialStage').value; const initialStageLabel = COLUMNS_CONFIG.find(col => col.id === initialStage)?.label || 'Prev. da fare'; const initialNote = document.getElementById('formNotes') ? document.getElementById('formNotes').value.trim() : '';
@@ -1042,7 +1127,7 @@ async function createNewCard(event) {
 
   const newCard = {
     id: 'c' + Date.now().toString(36) + Math.random().toString(36).substring(2, 7),
-    title, client, referent, email, whatsapp, machine, jobType, deliveryDate,
+    title, client, orderRef, referent, email, whatsapp, machine, jobType, deliveryDate,
     articles: extractedArticles, stage: initialStage, order: Date.now(), createdAt: new Date().toISOString(), photos: initialPhotos, history: [{ stage: initialStage, label: `Inserito in "${initialStageLabel}"`, timestamp: new Date().toISOString() }]
   };
 
@@ -1052,7 +1137,9 @@ async function createNewCard(event) {
 
 function saveCardEdits() {
   const card = state.cards.find(c => c.id === activeCardId); if (!card) return;
-  card.title = document.getElementById('editTitle').value.trim(); card.client = card.title; card.referent = document.getElementById('editReferent').value.trim(); card.email = document.getElementById('editEmail').value.trim(); card.whatsapp = document.getElementById('editWhatsapp').value.trim(); card.machine = document.getElementById('editMachine').value;
+  card.title = document.getElementById('editTitle').value.trim(); card.client = card.title; 
+  card.orderRef = document.getElementById('editOrderRef') ? document.getElementById('editOrderRef').value.trim() : '';
+  card.referent = document.getElementById('editReferent').value.trim(); card.email = document.getElementById('editEmail').value.trim(); card.whatsapp = document.getElementById('editWhatsapp').value.trim(); card.machine = document.getElementById('editMachine').value;
   if (card.client) registerClientAdvanced(card.client, card.referent, card.email, card.whatsapp);
   card.deliveryDate = document.getElementById('editDeliveryDate').value;
   const colorInput = document.getElementById('editCardColor'); const selectedColor = colorInput.value.toLowerCase(); const defaultColor = colorInput.dataset.defaultColor ? colorInput.dataset.defaultColor.toLowerCase() : "";
@@ -1068,7 +1155,16 @@ function renderArticlesTable(card) {
     const qty = parseFloat(art.qty) || 0, price = parseFloat(art.price) || 0, taxRate = parseFloat(art.tax) !== undefined ? parseFloat(art.tax) : 22;
     const rowTotalNet = qty * price, unitTaxPrice = price * (1 + taxRate / 100), rowTotalTaxed = rowTotalNet * (1 + taxRate / 100);
     const tr = document.createElement('tr'); tr.className = "hover:bg-slate-900/50 transition-colors";
-    tr.innerHTML = `<td class="py-1.5 px-1 text-center align-middle"><div class="flex items-center justify-center gap-0.5 bg-slate-900 rounded p-0.5 border border-slate-800"><button onclick="moveArticleRowVertical(${idx}, -1)" class="hover:bg-slate-800 text-slate-300 text-xs px-1 rounded cursor-pointer">▲</button><button onclick="moveArticleRowVertical(${idx}, 1)" class="hover:bg-slate-800 text-slate-300 text-xs px-1 rounded cursor-pointer">▼</button></div></td><td class="py-1.5 px-1"><input type="text" value="${art.code || ''}" data-field="code" data-index="${idx}" oninput="updateArticleField(this)" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-xs font-mono focus:outline-none"></td><td class="py-1.5 px-1"><input type="text" value="${art.desc || ''}" data-field="desc" data-index="${idx}" oninput="updateArticleField(this)" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-xs focus:outline-none"></td><td class="py-1.5 px-1"><input type="number" step="any" value="${art.qty !== undefined ? art.qty : ''}" data-field="qty" data-index="${idx}" oninput="updateArticleField(this)" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-xs text-center focus:outline-none"></td><td class="py-1.5 px-1"><input type="number" step="any" value="${art.price !== undefined ? art.price : ''}" data-field="price" data-index="${idx}" oninput="updateArticleField(this)" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-xs text-right focus:outline-none"></td><td class="py-1.5 px-1"><input type="number" step="any" value="${art.tax !== undefined ? art.tax : 22}" data-field="tax" data-index="${idx}" oninput="updateArticleField(this)" class="w-full bg-slate-900 border border-slate-700 rounded px-1 py-1 text-slate-200 text-xs text-center focus:outline-none"></td><td class="py-1.5 px-1 text-right font-mono text-slate-300 align-middle"><span id="row-net-${idx}">€ ${rowTotalNet.toFixed(2)}</span></td><td class="py-1.5 px-1 text-right font-mono text-slate-300 align-middle"><span id="row-unit-taxed-${idx}">€ ${unitTaxPrice.toFixed(2)}</span></td><td class="py-1.5 px-2 text-right font-mono font-bold text-slate-300 align-middle"><span id="row-total-${idx}">€ ${rowTotalTaxed.toFixed(2)}</span></td><td class="py-1.5 px-1 text-center align-middle"><button onclick="removeArticleRow(${idx})" class="text-red-400 hover:text-red-300 p-1 cursor-pointer"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button></td>`;
+    tr.innerHTML = `<td class="py-1.5 px-1 text-center align-middle"><div class="flex items-center justify-center gap-0.5 bg-slate-900 rounded p-0.5 border border-slate-800"><button onclick="moveArticleRowVertical(${idx}, -1)" class="hover:bg-slate-800 text-slate-300 text-xs px-1 rounded cursor-pointer">▲</button><button onclick="moveArticleRowVertical(${idx}, 1)" class="hover:bg-slate-800 text-slate-300 text-xs px-1 rounded cursor-pointer">▼</button></div></td>
+    <td class="py-1.5 px-1"><input type="text" list="dbArticleCodes" value="${art.code || ''}" data-field="code" data-index="${idx}" oninput="updateArticleField(this)" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-xs font-mono focus:outline-none"></td>
+    <td class="py-1.5 px-1"><input type="text" list="dbArticleDescs" value="${art.desc || ''}" data-field="desc" data-index="${idx}" oninput="updateArticleField(this)" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-xs focus:outline-none"></td>
+    <td class="py-1.5 px-1"><input type="number" step="any" value="${art.qty !== undefined ? art.qty : ''}" data-field="qty" data-index="${idx}" oninput="updateArticleField(this)" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-xs text-center focus:outline-none"></td>
+    <td class="py-1.5 px-1"><input type="number" step="any" value="${art.price !== undefined ? art.price : ''}" data-field="price" data-index="${idx}" oninput="updateArticleField(this)" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-xs text-right focus:outline-none"></td>
+    <td class="py-1.5 px-1"><input type="number" step="any" value="${art.tax !== undefined ? art.tax : 22}" data-field="tax" data-index="${idx}" oninput="updateArticleField(this)" class="w-full bg-slate-900 border border-slate-700 rounded px-1 py-1 text-slate-200 text-xs text-center focus:outline-none"></td>
+    <td class="py-1.5 px-1 text-right font-mono text-slate-300 align-middle"><span id="row-net-${idx}">€ ${rowTotalNet.toFixed(2)}</span></td>
+    <td class="py-1.5 px-1 text-right font-mono text-slate-300 align-middle"><span id="row-unit-taxed-${idx}">€ ${unitTaxPrice.toFixed(2)}</span></td>
+    <td class="py-1.5 px-2 text-right font-mono font-bold text-slate-300 align-middle"><span id="row-total-${idx}">€ ${rowTotalTaxed.toFixed(2)}</span></td>
+    <td class="py-1.5 px-1 text-center align-middle"><button onclick="removeArticleRow(${idx})" class="text-red-400 hover:text-red-300 p-1 cursor-pointer"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button></td>`;
     tbody.appendChild(tr);
   });
   calculateGrandTotals(); lucide.createIcons();
@@ -1080,17 +1176,41 @@ function moveArticleRowVertical(idx, direction) {
 }
 
 function updateArticleField(input) {
-  const idx = parseInt(input.dataset.index), field = input.dataset.field; const card = state.cards.find(c => c.id === activeCardId); if (!card || !card.articles[idx]) return; card.articles[idx][field] = input.value;
+  const idx = parseInt(input.dataset.index), field = input.dataset.field; const card = state.cards.find(c => c.id === activeCardId); if (!card || !card.articles[idx]) return; 
+  card.articles[idx][field] = input.value;
+
+  // AUTOCOMPILAZIONE INTELLIGENTE DA DATABASE
+  if (field === 'code' || field === 'desc') {
+    const val = input.value.trim().toLowerCase();
+    if (val) {
+      const match = ARTICLES_DB.find(a => (field === 'code' && a.code.toLowerCase() === val) || (field === 'desc' && a.desc.toLowerCase() === val));
+      if (match) {
+        if (field === 'code') card.articles[idx].desc = match.desc;
+        if (field === 'desc') card.articles[idx].code = match.code;
+        card.articles[idx].price = match.price;
+        renderArticlesTable(card);
+        return;
+      }
+    }
+  }
+
   if (['qty', 'price', 'tax'].includes(field)) {
     const qty = parseFloat(card.articles[idx].qty) || 0, price = parseFloat(card.articles[idx].price) || 0, taxRate = parseFloat(card.articles[idx].tax) || 22; const rowTotalNet = qty * price, unitTaxPrice = price * (1 + taxRate / 100), rowTotalTaxed = rowTotalNet * (1 + taxRate / 100);
-    document.getElementById(`row-net-${idx}`).innerText = `€ ${rowTotalNet.toFixed(2)}`; document.getElementById(`row-unit-taxed-${idx}`).innerText = `€ ${unitTaxPrice.toFixed(2)}`; document.getElementById(`row-total-${idx}`).innerText = `€ ${rowTotalTaxed.toFixed(2)}`; calculateGrandTotals();
+    const elNet = document.getElementById(`row-net-${idx}`), elUnitTax = document.getElementById(`row-unit-taxed-${idx}`), elTotal = document.getElementById(`row-total-${idx}`);
+    if(elNet) elNet.innerText = `€ ${rowTotalNet.toFixed(2)}`; 
+    if(elUnitTax) elUnitTax.innerText = `€ ${unitTaxPrice.toFixed(2)}`; 
+    if(elTotal) elTotal.innerText = `€ ${rowTotalTaxed.toFixed(2)}`; 
+    calculateGrandTotals();
   }
 }
 
 function calculateGrandTotals() {
   const card = state.cards.find(c => c.id === activeCardId); if (!card || !card.articles) return; let grandSubtotal = 0, grandTax = 0, grandTotalTaxed = 0;
   card.articles.forEach(art => { const qty = parseFloat(art.qty) || 0, price = parseFloat(art.price) || 0, taxRate = parseFloat(art.tax) || 22; const sub = qty * price, taxAmt = sub * (taxRate / 100); grandSubtotal += sub; grandTax += taxAmt; grandTotalTaxed += (sub + taxAmt); });
-  document.getElementById('grandSubtotalDisplay').innerText = `€ ${grandSubtotal.toFixed(2)}`; document.getElementById('grandTaxDisplay').innerText = `€ ${grandTax.toFixed(2)}`; document.getElementById('grandTotalDisplay').innerText = `€ ${grandTotalTaxed.toFixed(2)}`;
+  const subDisp = document.getElementById('grandSubtotalDisplay'), taxDisp = document.getElementById('grandTaxDisplay'), totDisp = document.getElementById('grandTotalDisplay');
+  if(subDisp) subDisp.innerText = `€ ${grandSubtotal.toFixed(2)}`; 
+  if(taxDisp) taxDisp.innerText = `€ ${grandTax.toFixed(2)}`; 
+  if(totDisp) totDisp.innerText = `€ ${grandTotalTaxed.toFixed(2)}`;
 }
 
 function addArticleRow() { const card = state.cards.find(c => c.id === activeCardId); if (!card) return; if (!Array.isArray(card.articles)) card.articles = []; card.articles.push({ code: '', desc: '', qty: 1, price: 0, tax: 22 }); renderArticlesTable(card); }
@@ -1108,7 +1228,9 @@ function openDetail(id) {
   badge.textContent = currentStageObj ? currentStageObj.label : (card.stage === 'archiviato' ? 'Archiviata' : 'N/A'); 
   badge.className = `px-2 py-0.5 rounded text-[11px] font-bold text-white uppercase ${currentStageObj ? currentStageObj.color.split(' ')[0] : 'bg-slate-600'}`;
   
-  document.getElementById('editClientSelector').value = ''; document.getElementById('editTitle').value = card.title || ''; document.getElementById('editReferent').value = card.referent || ''; document.getElementById('editEmail').value = card.email || ''; document.getElementById('editWhatsapp').value = card.whatsapp || ''; document.getElementById('editDeliveryDate').value = card.deliveryDate || ''; populateMachinesDropdowns(); document.getElementById('editMachine').value = card.machine || '';
+  document.getElementById('editClientSelector').value = ''; document.getElementById('editTitle').value = card.title || '';
+  if (document.getElementById('editOrderRef')) document.getElementById('editOrderRef').value = card.orderRef || '';
+  document.getElementById('editReferent').value = card.referent || ''; document.getElementById('editEmail').value = card.email || ''; document.getElementById('editWhatsapp').value = card.whatsapp || ''; document.getElementById('editDeliveryDate').value = card.deliveryDate || ''; populateMachinesDropdowns(); document.getElementById('editMachine').value = card.machine || '';
   const colDef = COLUMNS_CONFIG.find(col => col.id === card.stage); const defaultColor = colDef ? colDef.hexDefault : '#4f46e5'; const colorInput = document.getElementById('editCardColor'); colorInput.value = card.customColor || defaultColor; colorInput.dataset.defaultColor = defaultColor; 
   renderArticlesTable(card); renderAttachments(card);
   
@@ -1195,7 +1317,7 @@ function openLabelPrintModal(cardId) {
   if (card.articles && card.articles.length > 0) {
     card.articles.forEach(art => {
       if(!art.desc || art.desc.trim() === '') return;
-      window.tempLabelArticles.push({ desc: art.desc, qty: art.qty || 1, packageNum: 1 });
+      window.tempLabelArticles.push({ code: art.code || '', desc: art.desc, qty: art.qty || 1, packageNum: 1 });
     });
   }
   
@@ -1207,12 +1329,13 @@ function renderLabelArticlesTable() {
   const tbody = document.getElementById('labelArticlesBody');
   tbody.innerHTML = '';
   if (window.tempLabelArticles.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="4" class="py-4 text-center text-slate-500 italic">Nessun articolo associato.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="5" class="py-4 text-center text-slate-500 italic">Nessun articolo associato.</td></tr>`;
   } else {
     window.tempLabelArticles.forEach((art, idx) => {
       const tr = document.createElement('tr');
       tr.className = "hover:bg-slate-900/50 transition-colors";
       tr.innerHTML = `
+        <td class="py-2 px-2"><input type="text" value="${art.code}" onchange="updateLabelRow(${idx}, 'code', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-xs font-mono focus:outline-none"></td>
         <td class="py-2 px-2"><input type="text" value="${art.desc}" onchange="updateLabelRow(${idx}, 'desc', this.value)" class="w-full bg-transparent border-b border-slate-700 text-slate-200 text-xs focus:outline-none focus:border-blue-500"></td>
         <td class="py-2 px-2 text-center"><input type="number" min="1" value="${art.qty}" onchange="updateLabelRow(${idx}, 'qty', this.value)" class="w-16 bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-sm text-center focus:outline-none focus:border-blue-500"></td>
         <td class="py-2 px-2 text-center"><input type="number" min="1" value="${art.packageNum}" onchange="updateLabelRow(${idx}, 'packageNum', this.value)" class="w-16 bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-sm text-center focus:outline-none focus:border-blue-500"></td>
@@ -1230,7 +1353,7 @@ function updateLabelRow(index, field, value) {
 }
 function splitLabelRow(index) {
   playSound('click'); const item = window.tempLabelArticles[index];
-  const newItem = { desc: item.desc, qty: item.qty, packageNum: item.packageNum + 1 };
+  const newItem = { code: item.code, desc: item.desc, qty: item.qty, packageNum: item.packageNum + 1 };
   window.tempLabelArticles.splice(index + 1, 0, newItem); renderLabelArticlesTable();
 }
 function removeLabelRow(index) { playSound('click'); window.tempLabelArticles.splice(index, 1); renderLabelArticlesTable(); }
@@ -1247,12 +1370,12 @@ async function generateAndPrintLabels() {
       if(!art.desc || art.desc.trim() === '') return;
       const pkgNum = art.packageNum || 1;
       if (!packages[pkgNum]) packages[pkgNum] = [];
-      packages[pkgNum].push({ desc: art.desc, qty: art.qty });
+      packages[pkgNum].push({ code: art.code || '', desc: art.desc, qty: art.qty });
       hasValidArticles = true;
     });
   }
   
-  if (!hasValidArticles) { packages[1] = [{desc: 'Materiale Commessa (Varie)', qty: 1}]; }
+  if (!hasValidArticles) { packages[1] = [{code: '', desc: 'Materiale Commessa (Varie)', qty: 1}]; }
   
   const packageNumbers = Object.keys(packages).map(Number).sort((a, b) => a - b);
   const totalPackages = packageNumbers.length;
@@ -1272,13 +1395,15 @@ async function generateAndPrintLabels() {
   const senderText = "<strong style='font-size: 11px;'>Studio Grafico Associato di Gastaldi Antonio Francesco</strong><br>Via Mario Groppo 4 - 12048 Sommariva del Bosco (CN)<br>Tel: 0172 560087 - info@studiograficoassociato.com<br>www.studiograficoassociato.com";
   let logoHtml = sharedCompanyLogo ? `<img src="${sharedCompanyLogo}" class="print-logo">` : `<div class="logo-area">SGA</div><div class="logo-sub">STUDIO GRAFICO ASSOCIATO</div>`;
 
+  const orderRefHtml = card.orderRef ? `<div style="margin-top: 6px; font-size: 13px; font-weight: bold; color: #000;">RIF. ORDINE: ${card.orderRef}</div>` : '';
+
   packageNumbers.forEach((pkgNum, idx) => {
     const currentPkgIndex = idx + 1;
     const articlesInPkg = packages[pkgNum];
-    const articlesListHtml = articlesInPkg.map(a => `<tr><td style="width: 45px; font-weight: bold; text-align: center; vertical-align: top;">${a.qty}x</td><td style="padding-bottom: 4px;">${a.desc}</td></tr>`).join('');
+    const articlesListHtml = articlesInPkg.map(a => `<tr><td style="font-family: monospace; font-size: 11px;">${a.code}</td><td style="padding-bottom: 4px;">${a.desc}</td><td style="font-weight: bold; text-align: center;">${a.qty}</td></tr>`).join('');
     
     const notesBoxHtml = labelNotes ? `
-        <div class="box notes-box" style="margin-top: 3mm; height: 18mm; flex-shrink: 0;">
+        <div class="box notes-box" style="margin-top: 3mm; height: 16mm; flex-shrink: 0;">
           <div class="box-header" style="background: #555;">NOTE / RIFERIMENTI:</div>
           <div class="box-body" style="font-size: 12px;">
             ${labelNotes.replace(/\n/g, '<br>')}
@@ -1304,11 +1429,14 @@ async function generateAndPrintLabels() {
         </div>
         <div class="box content-box" style="flex: 1; display: flex; flex-direction: column;">
           <div class="box-header">CONTENUTO DEL COLLO:</div>
-          <div class="box-body" style="padding: 0; flex: 1;">
+          <div class="box-body" style="padding: 0; flex: 1; display: flex; flex-direction: column;">
             <table class="content-table">
-              <thead><tr><th style="width: 45px; text-align: center;">Q.TÀ</th><th>DESCRIZIONE MATERIALE</th></tr></thead>
+              <thead><tr><th style="width: 25%;">CODICE</th><th style="width: 60%;">DESCRIZIONE MATERIALE</th><th style="width: 15%; text-align: center;">Q.TÀ</th></tr></thead>
               <tbody>${articlesListHtml}</tbody>
             </table>
+            <div style="padding: 6px 8px; margin-top: auto; border-top: 1px solid #ddd; background: #D9D9D9;">
+              ${orderRefHtml}
+            </div>
           </div>
         </div>
         ${notesBoxHtml}
@@ -1316,7 +1444,6 @@ async function generateAndPrintLabels() {
     `;
   });
 
-  /* Misure corrette per permettere la generazione di PDF multi-pagina senza blocchi sul body */
   const fullHtml = `<!DOCTYPE html><html><head><title>Etichette_${card.title}</title><style>
     @page { size: 148mm 105mm; margin: 0; }
     body, html { margin: 0; padding: 0; width: 148mm; background: #fff; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
@@ -1332,11 +1459,12 @@ async function generateAndPrintLabels() {
     
     .box { border: 2px solid #333; border-radius: 6px; overflow: hidden; display: flex; flex-direction: column;}
     .box-header { background: #555; color: #fff; font-weight: bold; font-size: 11px; padding: 3px 8px; text-transform: uppercase; letter-spacing: 0.5px;}
-    .box-body { background: #EBE8D8; padding: 6px 8px; font-size: 12px; line-height: 1.25; color: #000; flex: 1; }
+    .box-body { background: #EBE8D8; font-size: 12px; line-height: 1.25; color: #000; flex: 1; }
     
     .middle-row { display: flex; gap: 3mm; height: 19mm; margin-bottom: 3mm;}
     .dest-box { flex: 1; }
     .dest-box .box-header { background: #444; }
+    .dest-box .box-body { padding: 6px 8px; }
     .collo-box { width: 42mm; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: bold; background: #EBE8D8; border: 2px solid #333; border-radius: 6px; color: #000;}
     
     .content-box { flex: 1; }
@@ -1406,7 +1534,7 @@ function printCard() {
       @page { size: auto; margin: 0mm; } body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; margin: 0; padding: 0; color: #0f172a; background: white; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
       .sheet { width: 100%; min-height: 100vh; padding: 12mm 15mm; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between; } .header { border-bottom: 3px solid #4f46e5; padding-bottom: 12mm; margin-bottom: 20px; } .logo-text { font-size: 12px; color: #64748b; font-weight: bold; letter-spacing: 1px; margin-bottom: 3px; } .title { font-size: 22px; font-weight: 800; margin: 0 0 5px; color: #1e293b; text-transform: uppercase; } .badge { font-size: 10px; font-weight: bold; background: #e0e7ff; color: #4338ca; padding: 3px 8px; border-radius: 4px; display: inline-block; } .section-title { font-size: 11px; font-weight: bold; text-transform: uppercase; color: #475569; margin-top: 15px; margin-bottom: 8px; border-bottom: 1px solid #e2e8f0; padding-bottom: 3px; } .details { display: grid; grid-template-columns: 1fr 1fr; gap: 12mm; margin-bottom: 10px; } .details div { background: #f8fafc; padding: 8px 10px; border-radius: 6px; border: 1px solid #e2e8f0; } .details label { font-size: 9px; color: #64748b; font-weight: bold; display: block; text-transform: uppercase; margin-bottom: 2px; } .details strong { font-size: 12px; color: #0f172a; } table.articles { width: 100%; border-collapse: collapse; margin-top: 5px; } table.articles th { background: #f1f5f9; color: #334155; font-size: 10px; text-transform: uppercase; padding: 6px 8px; text-align: left; border-bottom: 2px solid #cbd5e1; } .print-page { page-break-before: always; break-before: page; width: 100%; height: 98vh; display: block; text-align: center; padding: 0; margin: 0; box-sizing: border-box; } .print-page img { max-width: 100%; max-height: 100%; object-fit: contain; display: block; margin: 0 auto; }
     </style></head><body>
-      <div class="sheet"><div><div class="header"><div style="display: flex; justify-content: space-between; align-items: start;"><div><div class="logo-text">SGA STUDIO GRAFICO ASSOCIATO</div><h1 class="title">SCHEDA COMMESSA</h1><span class="badge">STATO: ${stageLabel}</span></div><div style="text-align: right; font-size: 11px; color: #64748b; line-height: 1.3;">Rif. Ordine: <strong style="color: #0f172a;">#${cardIdLabel}</strong><br>Data: <strong style="color: #0f172a;">${cardDateLabel}</strong></div></div></div><div class="details"><div><label>Cliente / Azienda</label><strong>${card.title || '-'}</strong></div><div><label>Tipo Lavorazione</label><strong>${card.jobType || '-'} ${card.machine ? ' | Macchina: ' + card.machine : ''}</strong></div><div><label>Referente & Contatti</label><strong>${card.client || 'N/D'} ${card.referent ? '(' + card.referent + ')' : ''}</strong></div><div><label>Data di Consegna</label><strong style="color: #ea580c;">${deliveryStr}</strong></div></div><div class="section-title">Articoli & Specifiche Lavorazione</div><table class="articles"><thead><tr><th style="width: 20%;">Codice</th><th>Descrizione</th><th style="width: 10%; text-align: center;">Q.tà</th><th style="width: 13%; text-align: right;">Prezzo Un.</th><th style="width: 8%; text-align: center;">IVA</th><th style="width: 13%; text-align: right;">Pr. Ivato</th><th style="width: 15%; text-align: right;">Tot. Ivato</th></tr></thead><tbody>${articlesRowsHtml}</tbody></table><div style="text-align: right; margin-top: 10px; font-size: 12px; color: #475569;">Imponibile: € ${grandSubtotal.toFixed(2)} &nbsp;|&nbsp; Totale IVA: € ${grandTax.toFixed(2)}</div><div style="text-align: right; margin-top: 4px; font-size: 14px;"><strong>Totale Ordine Ivato: <span style="color: #059669;">€ ${grandTotalTaxed.toFixed(2)}</span></strong></div></div><div><div class="section-title">Storyboard Lavorazione</div><div style="background: #f8fafc; padding: 10px; border-radius: 6px; border: 1px solid #e2e8f0;">${historyHtml}</div></div></div>${attachmentsPrintHtml}
+      <div class="sheet"><div><div class="header"><div style="display: flex; justify-content: space-between; align-items: start;"><div><div class="logo-text">SGA STUDIO GRAFICO ASSOCIATO</div><h1 class="title">SCHEDA COMMESSA</h1><span class="badge">STATO: ${stageLabel}</span></div><div style="text-align: right; font-size: 11px; color: #64748b; line-height: 1.3;">Rif. Ordine: <strong style="color: #0f172a;">${card.orderRef ? card.orderRef : 'Nessuno'}</strong><br>Data: <strong style="color: #0f172a;">${cardDateLabel}</strong></div></div></div><div class="details"><div><label>Cliente / Azienda</label><strong>${card.title || '-'}</strong></div><div><label>Tipo Lavorazione</label><strong>${card.jobType || '-'} ${card.machine ? ' | Macchina: ' + card.machine : ''}</strong></div><div><label>Referente & Contatti</label><strong>${card.client || 'N/D'} ${card.referent ? '(' + card.referent + ')' : ''}</strong></div><div><label>Data di Consegna</label><strong style="color: #ea580c;">${deliveryStr}</strong></div></div><div class="section-title">Articoli & Specifiche Lavorazione</div><table class="articles"><thead><tr><th style="width: 20%;">Codice</th><th>Descrizione</th><th style="width: 10%; text-align: center;">Q.tà</th><th style="width: 13%; text-align: right;">Prezzo Un.</th><th style="width: 8%; text-align: center;">IVA</th><th style="width: 13%; text-align: right;">Pr. Ivato</th><th style="width: 15%; text-align: right;">Tot. Ivato</th></tr></thead><tbody>${articlesRowsHtml}</tbody></table><div style="text-align: right; margin-top: 10px; font-size: 12px; color: #475569;">Imponibile: € ${grandSubtotal.toFixed(2)} &nbsp;|&nbsp; Totale IVA: € ${grandTax.toFixed(2)}</div><div style="text-align: right; margin-top: 4px; font-size: 14px;"><strong>Totale Ordine Ivato: <span style="color: #059669;">€ ${grandTotalTaxed.toFixed(2)}</span></strong></div></div><div><div class="section-title">Storyboard Lavorazione</div><div style="background: #f8fafc; padding: 10px; border-radius: 6px; border: 1px solid #e2e8f0;">${historyHtml}</div></div></div>${attachmentsPrintHtml}
     </body></html>
   `);
   printWindow.document.close();
@@ -1420,177 +1548,4 @@ function updateAlarmTime(id, val) { const alarm = USER_ALARMS.find(a => a.id ===
 function toggleAlarmActive(id, val) { const alarm = USER_ALARMS.find(a => a.id === id); if (alarm) alarm.active = val; }
 function toggleAlarmDay(id, dayVal) {
   playSound('click'); const alarm = USER_ALARMS.find(a => a.id === id);
-  if (alarm) { if (!Array.isArray(alarm.days)) alarm.days = []; const index = alarm.days.indexOf(dayVal); if (index >= 0) alarm.days.splice(index, 1); else alarm.days.push(dayVal); renderAlarmsList(); }
-}
-
-function renderAlarmsList() {
-  const container = document.getElementById('alarmsListContainer'); if (!container) return; container.innerHTML = '';
-  if (USER_ALARMS.length === 0) { container.innerHTML = `<p class="text-xs text-slate-500 italic py-3 text-center">Nessuna sveglia impostata.</p>`; return; }
-  const daysDef = [{val:1,label:"L"},{val:2,label:"M"},{val:3,label:"M"},{val:4,label:"G"},{val:5,label:"V"},{val:6,label:"S"},{val:0,label:"D"}];
-  USER_ALARMS.forEach(alarm => {
-    const card = document.createElement('div'); card.className = "bg-slate-900 p-3 rounded-lg border border-slate-800 space-y-3";
-    let daysBtnsHtml = daysDef.map(d => {
-      const isSelected = Array.isArray(alarm.days) && alarm.days.includes(d.val);
-      const btnClass = isSelected ? "w-7 h-7 rounded-full bg-indigo-600 text-white font-bold text-xs flex items-center justify-center shadow cursor-pointer transition-all" : "w-7 h-7 rounded-full bg-slate-950 text-slate-400 font-semibold text-xs flex items-center justify-center border border-slate-800 hover:border-slate-700 cursor-pointer transition-all";
-      return `<button type="button" onclick="toggleAlarmDay('${alarm.id}', ${d.val})" class="${btnClass}">${d.label}</button>`;
-    }).join('');
-    card.innerHTML = `<div class="flex items-center justify-between gap-3"><div class="flex items-center gap-3"><input type="time" value="${alarm.time || '09:00'}" onchange="updateAlarmTime('${alarm.id}', this.value)" class="bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-base text-emerald-400 font-mono font-bold focus:outline-none focus:border-indigo-500"><label class="flex items-center cursor-pointer select-none text-xs text-slate-300 gap-1.5"><input type="checkbox" ${alarm.active ? 'checked' : ''} onchange="toggleAlarmActive('${alarm.id}', this.checked)" class="w-4 h-4 rounded bg-slate-950 border-slate-700 text-indigo-600 cursor-pointer"><span>Attiva</span></label></div><button onclick="removeAlarmRule('${alarm.id}')" class="text-red-400 hover:text-red-300 p-1.5 rounded-lg bg-red-950/35 hover:bg-red-950/60 transition-colors cursor-pointer"><i data-lucide="trash-2" class="w-4 h-4"></i></button></div><div class="flex items-center justify-between pt-1 border-t border-slate-800/60 flex-wrap gap-2"><span class="text-[10px] text-slate-400 uppercase font-semibold">Giorni attivo:</span><div class="flex gap-1.5">${daysBtnsHtml}</div></div>`;
-    container.appendChild(card);
-  });
-  lucide.createIcons();
-}
-
-function openModal(modalId) { document.getElementById(modalId).classList.remove('hidden'); }
-function closeModal(modalId) { document.getElementById(modalId).classList.add('hidden'); }
-
-// ============================================
-// GESTIONE ARCHIVIO AVANZATA: ELIMINAZIONE, REPORT E SPAZIO
-// ============================================
-
-function deleteArchivedCard(cardId) {
-  const card = state.cards.find(c => c.id === cardId);
-  if (!card) return;
-  confirmDeletion(`Sei sicuro di voler eliminare DEFINITIVAMENTE l'ordine "${card.title}" dall'archivio? Questa operazione non è reversibile.`, () => {
-    state.cards = state.cards.filter(c => c.id !== cardId);
-    saveLocal();
-    syncDeleteToCloud(cardId);
-    const searchInput = document.getElementById('archiveSearchInput');
-    filterArchive(searchInput ? searchInput.value : '');
-    updateStorageIndicator();
-  });
-}
-
-function updateStorageIndicator() {
-  const indicator = document.getElementById('storageUsageIndicator');
-  if (!indicator) return;
-  
-  let lsTotal = 0;
-  for (let x in localStorage) {
-    if (!localStorage.hasOwnProperty(x)) continue;
-    lsTotal += ((localStorage[x].length + x.length) * 2);
-  }
-  
-  const kbTotal = (lsTotal / 1024).toFixed(2);
-  const maxKb = 5120;
-  const percentage = ((kbTotal / maxKb) * 100).toFixed(1);
-  
-  indicator.innerText = `${percentage}% (${kbTotal} KB)`;
-  
-  if (percentage > 80) {
-    indicator.classList.replace('text-emerald-400', 'text-red-500');
-    indicator.classList.add('animate-pulse');
-  } else if (percentage > 50) {
-    indicator.classList.replace('text-emerald-400', 'text-yellow-400');
-  } else {
-    indicator.classList.replace('text-red-500', 'text-emerald-400');
-    indicator.classList.replace('text-yellow-400', 'text-emerald-400');
-    indicator.classList.remove('animate-pulse');
-  }
-}
-
-function printArchiveReport() {
-  const archivedCards = state.cards.filter(c => c.stage === 'archiviato');
-  if (archivedCards.length === 0) {
-    alert("Nessuna commessa in archivio da stampare.");
-    return;
-  }
-  
-  const printWindow = window.open('', '_blank');
-  if (!printWindow) { alert("⚠️ ATTENZIONE: Il pop-up per la stampa è stato bloccato dal browser."); return; }
-
-  let rowsHtml = '';
-  let grandTotalNet = 0;
-  let grandTotalTax = 0;
-  let grandTotalGross = 0;
-
-  archivedCards.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt)).forEach(card => {
-    let cardNet = 0;
-    let cardTax = 0;
-    let cardGross = 0;
-    
-    if (card.articles && card.articles.length > 0) {
-      card.articles.forEach(art => {
-        const qty = parseFloat(art.qty) || 0;
-        const price = parseFloat(art.price) || 0;
-        const taxRate = parseFloat(art.tax) !== undefined ? parseFloat(art.tax) : 22;
-        
-        const sub = qty * price;
-        const taxAmt = sub * (taxRate / 100);
-        cardNet += sub;
-        cardTax += taxAmt;
-        cardGross += (sub + taxAmt);
-      });
-    }
-
-    grandTotalNet += cardNet;
-    grandTotalTax += cardTax;
-    grandTotalGross += cardGross;
-
-    const dateStr = card.createdAt ? new Date(card.createdAt).toLocaleDateString('it-IT') : '-';
-    rowsHtml += `
-      <tr>
-        <td style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0;">${dateStr}</td>
-        <td style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0; font-weight: bold;">${card.title}</td>
-        <td style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0;">${card.client || '-'}</td>
-        <td style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0; text-align: right;">€ ${cardNet.toFixed(2)}</td>
-        <td style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0; text-align: right; font-weight: bold; color: #0f172a;">€ ${cardGross.toFixed(2)}</td>
-      </tr>
-    `;
-  });
-
-  printWindow.document.write(`
-    <!DOCTYPE html>
-    <html><head><title>Report Archivio Fatturato SGA</title><style>
-      @page { size: A4 portrait; margin: 15mm; } 
-      body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; margin: 0; padding: 0; color: #0f172a; font-size: 11px; }
-      .header { border-bottom: 2px solid #4f46e5; padding-bottom: 10px; margin-bottom: 20px; text-align: center;} 
-      .title { font-size: 18px; font-weight: 800; margin: 0 0 5px; color: #1e293b; text-transform: uppercase; } 
-      .subtitle { color: #64748b; font-size: 11px; }
-      table { width: 100%; border-collapse: collapse; margin-bottom: 20px; } 
-      th { background: #f1f5f9; color: #334155; font-size: 10px; text-transform: uppercase; padding: 8px; text-align: left; border-bottom: 2px solid #cbd5e1; } 
-      .totals-box { width: 100%; border: 2px solid #e2e8f0; border-radius: 8px; padding: 15px; display: flex; justify-content: space-around; background: #f8fafc; margin-top: 20px; page-break-inside: avoid; }
-      .totals-box div { text-align: center; }
-      .totals-box label { display: block; font-size: 10px; text-transform: uppercase; color: #64748b; font-weight: bold; margin-bottom: 5px; }
-      .totals-box span { font-size: 16px; font-weight: bold; color: #0f172a; }
-      .totals-box .highlight span { color: #059669; font-size: 18px; }
-    </style></head><body>
-      <div class="header">
-        <h1 class="title">Report Archivio Commesse Fatturate</h1>
-        <div class="subtitle">SGA Studio Grafico Associato - Generato il ${new Date().toLocaleString('it-IT')}</div>
-      </div>
-      
-      <table>
-        <thead>
-          <tr>
-            <th style="width: 15%;">Data</th>
-            <th style="width: 35%;">Titolo Commessa</th>
-            <th style="width: 25%;">Cliente</th>
-            <th style="width: 12%; text-align: right;">Imponibile</th>
-            <th style="width: 13%; text-align: right;">Tot. Ivato</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${rowsHtml}
-        </tbody>
-      </table>
-
-      <div class="totals-box">
-        <div>
-          <label>Totale Imponibile</label>
-          <span>€ ${grandTotalNet.toFixed(2)}</span>
-        </div>
-        <div>
-          <label>Totale IVA</label>
-          <span>€ ${grandTotalTax.toFixed(2)}</span>
-        </div>
-        <div class="highlight">
-          <label>Fatturato Totale (Ivato)</label>
-          <span>€ ${grandTotalGross.toFixed(2)}</span>
-        </div>
-      </div>
-    </body></html>
-  `);
-  printWindow.document.close();
-  
-  setTimeout(() => { printWindow.focus(); printWindow.print(); }, 800);
-}
+  if (alarm) { if (!Array.isArray(alarm.days)) alarm.days = []; const index = alarm.days.indexOf(dayVal); if (index >=
