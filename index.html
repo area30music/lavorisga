@@ -104,24 +104,21 @@
           <table class="w-full text-left text-xs">
             <thead>
               <tr class="border-b border-slate-800 text-slate-400 uppercase text-[10px]">
+                <th class="py-2 px-2 w-24">Codice</th>
                 <th class="py-2 px-2">Descrizione Articolo</th>
-                <th class="py-2 px-2 w-24 text-center">Q.tà in questo collo</th>
+                <th class="py-2 px-2 w-24 text-center">Q.tà nel collo</th>
                 <th class="py-2 px-2 w-24 text-center">Assegna a Collo N°</th>
                 <th class="py-2 px-2 w-20 text-center">Azioni</th>
               </tr>
             </thead>
-            <tbody id="labelArticlesBody" class="divide-y divide-slate-900">
-              <!-- Righe dinamiche via JS -->
-            </tbody>
+            <tbody id="labelArticlesBody" class="divide-y divide-slate-900"></tbody>
           </table>
         </div>
 
-        <!-- NUOVO BOX NOTE -->
         <div class="bg-slate-950 p-3.5 rounded-xl border border-slate-800">
           <label class="block text-xs font-bold text-slate-400 mb-2 uppercase tracking-wider">Note Aggiuntive Etichetta</label>
-          <textarea id="labelNotesInput" rows="2" placeholder="Note da stampare sul collo (es. Attenzione fragile, consegnare a mano...)" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-slate-200 text-xs focus:outline-none focus:border-blue-500 resize-none"></textarea>
+          <textarea id="labelNotesInput" rows="2" placeholder="Note da stampare sul collo..." class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-slate-200 text-xs focus:outline-none focus:border-blue-500 resize-none"></textarea>
         </div>
-
       </div>
 
       <div class="pt-4 mt-2 border-t border-slate-800 flex justify-between gap-3">
@@ -153,7 +150,6 @@
 
       <div class="bg-slate-950 p-3.5 rounded-xl border border-slate-800 space-y-2 text-xs">
         <div><strong class="text-slate-400">Cliente / Azienda:</strong> <span id="notifyClientName" class="text-slate-200 font-semibold">--</span></div>
-        <div><strong class="text-slate-400">Referente:</strong> <span id="notifyClientRef" class="text-indigo-400 font-semibold">--</span></div>
         <div><strong class="text-slate-400">Contatto WhatsApp:</strong> <span id="notifyClientWa" class="text-emerald-400 font-mono">--</span></div>
         <div><strong class="text-slate-400">Email:</strong> <span id="notifyClientEmail" class="text-blue-400 font-mono">--</span></div>
       </div>
@@ -210,60 +206,40 @@
         <img id="logoImageDisplay" src="" class="hidden w-full h-full object-contain p-1">
         <input type="file" accept="image/png, image/jpeg" class="absolute inset-0 opacity-0 cursor-pointer hide-in-master" onchange="uploadCompanyLogo(event)" title="Carica Logo Aziendale">
       </div>
-      <button onclick="toggleMasterMode(); playSound('close');" class="master-back-btn hidden bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-2 rounded-lg text-xs md:text-sm font-extrabold items-center gap-2 active:scale-95 transition-transform shadow-lg shadow-indigo-900/40 border border-indigo-400 cursor-pointer" title="Torna a Programmazione">
-        <i data-lucide="arrow-left" class="w-5 h-5"></i> Torna a Programmazione
-      </button>
-      <div class="show-in-master hidden items-center gap-2 ml-2">
-        <button id="masterPlayPauseBtn" onclick="togglePlayPauseMaster(); playSound('click');" class="bg-slate-800 hover:bg-slate-700 text-white px-3 py-2 rounded-lg text-xs md:text-sm font-bold flex items-center gap-1.5 border border-slate-700 shadow-lg cursor-pointer transition-colors" title="Play/Pausa Scorrimento">
-            <i data-lucide="pause" id="masterPlayPauseIcon" class="w-4 h-4 text-amber-400"></i> <span id="masterPlayPauseText">Pausa</span>
-        </button>
-        <div class="flex items-center gap-2 bg-slate-950 border border-indigo-500/40 px-3 py-1.5 rounded-xl shadow-lg h-[38px]">
-          <i data-lucide="gauge" class="w-4 h-4 text-indigo-400"></i>
-          <span class="text-xs text-slate-300 font-semibold hidden md:inline">Velocità:</span>
-          <input type="range" id="masterSpeedRange" min="0.02" max="0.30" value="0.08" step="0.01" oninput="updateMasterSpeed(this.value)" class="w-20 md:w-28 accent-indigo-500 cursor-pointer h-1.5 bg-slate-900 rounded-lg">
-        </div>
-      </div>
-      <div class="hide-in-master">
+      <div>
         <h1 class="font-bold text-sm md:text-base leading-tight text-white flex items-center gap-2">Workflow SGA</h1>
-        <p id="cloudStatus" onclick="playSound('click'); openModal('cloudModal');" class="text-[11px] flex items-center gap-1 cursor-pointer transition-colors mt-0.5" title="Clicca per impostazioni Backup/Foto">
-          <i data-lucide="hard-drive" class="w-3 h-3 text-slate-400"></i> <span class="text-slate-400 hover:text-slate-200">Modalità Locale</span>
+        <p id="cloudStatus" class="text-[11px] flex items-center gap-1 cursor-pointer transition-colors mt-0.5">
+          <i data-lucide="hard-drive" class="w-3 h-3 text-slate-400"></i> <span class="text-slate-400">Modalità Locale</span>
         </p>
       </div>
     </div>
-    <div class="hide-in-master flex items-center gap-2 bg-slate-950 border border-slate-800 px-3 py-1.5 rounded-xl shadow-inner flex-1 max-w-md mx-2">
+    
+    <div class="flex items-center gap-2 bg-slate-950 border border-slate-800 px-3 py-1.5 rounded-xl shadow-inner flex-1 max-w-md mx-2">
       <i data-lucide="search" class="w-4 h-4 text-slate-400 shrink-0"></i>
-      <input type="text" id="globalSearchInput" oninput="handleGlobalSearch(this.value)" placeholder="Cerca commessa, cliente, referente..." class="w-full bg-transparent border-0 text-xs text-slate-200 focus:outline-none">
-      <select id="globalFilterType" onchange="handleGlobalFilterChange()" class="bg-slate-900 border border-slate-700 text-slate-300 text-[11px] rounded px-2 py-1 focus:outline-none focus:border-indigo-500">
+      <input type="text" id="globalSearchInput" oninput="handleGlobalSearch(this.value)" placeholder="Cerca commessa, cliente..." class="w-full bg-transparent border-0 text-xs text-slate-200 focus:outline-none">
+      <select id="globalFilterType" onchange="handleGlobalFilterChange()" class="bg-slate-900 border border-slate-700 text-slate-300 text-[11px] rounded px-2 py-1 focus:outline-none">
         <option value="">Tutte le lavorazioni</option>
       </select>
-      <button onclick="clearGlobalSearch()" id="btnClearSearch" class="hidden text-slate-400 hover:text-white p-0.5"><i data-lucide="x" class="w-3.5 h-3.5"></i></button>
     </div>
+
     <div class="flex space-x-2 md:space-x-3 items-center flex-wrap">
-      <div id="liveClockWidget" class="flex items-center gap-2 bg-slate-950 border border-slate-700 px-3 md:px-4 py-1.5 rounded-xl text-sm md:text-base font-mono text-emerald-400 font-bold shadow-lg">
-        <i data-lucide="clock" class="w-4 h-4 md:w-5 md:h-5 text-indigo-400 animate-pulse"></i>
-        <span id="headerClockTime" class="tracking-wider">--:--:--</span>
-        <span class="text-slate-600 font-normal">|</span>
-        <span id="headerClockDate" class="text-slate-300 font-medium">--/--/----</span>
+      <div id="liveClockWidget" class="flex items-center gap-2 bg-slate-950 border border-slate-700 px-3 py-1.5 rounded-xl text-sm font-mono text-emerald-400 font-bold shadow-lg">
+        <i data-lucide="clock" class="w-4 h-4 text-indigo-400"></i>
+        <span id="headerClockTime">--:--:--</span>
       </div>
-      <button onclick="playSound('click'); openSettingsModal();" class="hide-in-master bg-slate-800 hover:bg-slate-700 text-slate-300 px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 active:scale-95 transition-transform" title="Impostazioni">
+      <button onclick="playSound('click'); openSettingsModal();" class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 cursor-pointer">
         <i data-lucide="sliders" class="w-3.5 h-3.5"></i> Impostazioni
       </button>
-      <div class="hide-in-master w-px h-5 bg-slate-700 mx-0.5"></div>
-      <button onclick="playSound('click'); toggleMasterMode();" class="hide-in-master bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-emerald-900/50 px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 active:scale-95 transition-transform" title="Master View">
-        <i data-lucide="monitor" class="w-4 h-4"></i> Master View
-      </button>
-      <button onclick="playSound('click'); openModal('addCardModal');" class="hide-in-master bg-indigo-600 hover:bg-indigo-500 text-white px-3.5 py-1.5 rounded-lg text-xs md:text-sm font-semibold flex items-center gap-1.5 active:scale-95 transition-transform shadow-lg shadow-indigo-900/20">
+      <button onclick="playSound('click'); openModal('addCardModal');" class="bg-indigo-600 hover:bg-indigo-500 text-white px-3.5 py-1.5 rounded-lg text-xs md:text-sm font-semibold flex items-center gap-1.5 cursor-pointer shadow-lg">
         <i data-lucide="plus" class="w-4 h-4"></i> Nuova Commessa
       </button>
     </div>
   </header>
 
   <!-- WORKSPACE A SCORRIMENTO ORIZZONTALE -->
-  <main id="board" class="flex-1 overflow-x-auto overflow-y-hidden flex gap-4 p-3 md:p-4 items-start select-none relative scroll-smooth">
-    <!-- Colonne generate via JS -->
-  </main>
+  <main id="board" class="flex-1 overflow-x-auto overflow-y-hidden flex gap-4 p-3 md:p-4 items-start select-none relative scroll-smooth"></main>
 
-  <!-- MODAL: MENU PRINCIPALE IMPOSTAZIONI A CARD -->
+  <!-- MODAL: MENU PRINCIPALE IMPOSTAZIONI -->
   <div id="settingsModal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
     <div class="bg-slate-900 border border-slate-800 rounded-xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden shadow-2xl">
       <div class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-850">
@@ -276,100 +252,56 @@
       </div>
 
       <div class="p-5 overflow-y-auto space-y-4 flex-1 text-sm">
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4">
-          <div onclick="playSound('click'); openSubSettings('crm');" class="bg-slate-950 hover:bg-slate-850 border border-slate-800 hover:border-indigo-500/50 p-4 rounded-xl cursor-pointer transition-all flex items-start gap-3.5 group">
-            <div class="bg-indigo-600/20 text-indigo-400 p-3 rounded-lg border border-indigo-500/30 group-hover:scale-105 transition-transform">
-              <i data-lucide="users" class="w-6 h-6"></i>
-            </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div onclick="playSound('click'); openSubSettings('crm');" class="bg-slate-950 hover:bg-slate-850 border border-slate-800 p-4 rounded-xl cursor-pointer transition-all flex items-start gap-3.5">
+            <div class="bg-indigo-600/20 text-indigo-400 p-3 rounded-lg border border-indigo-500/30"><i data-lucide="users" class="w-6 h-6"></i></div>
             <div>
               <h4 class="font-bold text-slate-200 text-sm">Gestione Clienti (CRM)</h4>
-              <p class="text-xs text-slate-400 mt-0.5">Database clienti, aziende, email e WhatsApp.</p>
+              <p class="text-xs text-slate-400 mt-0.5">Database clienti, aziende e contatti.</p>
             </div>
           </div>
-          <div onclick="playSound('click'); openSubSettings('archive');" class="bg-slate-950 hover:bg-slate-850 border border-slate-800 hover:border-slate-500/50 p-4 rounded-xl cursor-pointer transition-all flex items-start gap-3.5 group">
-            <div class="bg-slate-600/20 text-slate-400 p-3 rounded-lg border border-slate-500/30 group-hover:scale-105 transition-transform">
-              <i data-lucide="archive" class="w-6 h-6"></i>
+
+          <!-- SEZIONE AGGIUNTA: GESTIONE ARTICOLI -->
+          <div onclick="playSound('click'); openSubSettings('articles_mgmt');" class="bg-slate-950 hover:bg-slate-850 border border-slate-800 p-4 rounded-xl cursor-pointer transition-all flex items-start gap-3.5">
+            <div class="bg-blue-600/20 text-blue-400 p-3 rounded-lg border border-blue-500/30"><i data-lucide="package" class="w-6 h-6"></i></div>
+            <div>
+              <h4 class="font-bold text-slate-200 text-sm">Gestione Articoli (Database)</h4>
+              <p class="text-xs text-slate-400 mt-0.5">Gestisci codici, descrizioni e prezzi frequenti.</p>
             </div>
+          </div>
+
+          <div onclick="playSound('click'); openSubSettings('archive');" class="bg-slate-950 hover:bg-slate-850 border border-slate-800 p-4 rounded-xl cursor-pointer transition-all flex items-start gap-3.5">
+            <div class="bg-slate-600/20 text-slate-400 p-3 rounded-lg border border-slate-500/30"><i data-lucide="archive" class="w-6 h-6"></i></div>
             <div>
               <h4 class="font-bold text-slate-200 text-sm">Archivio Commesse</h4>
-              <p class="text-xs text-slate-400 mt-0.5">Storico lavorazioni fatturate e archiviate (dopo 7gg).</p>
+              <p class="text-xs text-slate-400 mt-0.5">Storico lavorazioni fatturate.</p>
             </div>
           </div>
-          <div onclick="playSound('click'); openSubSettings('messages');" class="bg-slate-950 hover:bg-slate-850 border border-slate-800 hover:border-pink-500/50 p-4 rounded-xl cursor-pointer transition-all flex items-start gap-3.5 group">
-            <div class="bg-pink-600/20 text-pink-400 p-3 rounded-lg border border-pink-500/30 group-hover:scale-105 transition-transform">
-              <i data-lucide="message-square" class="w-6 h-6"></i>
-            </div>
+          <div onclick="playSound('click'); openSubSettings('messages');" class="bg-slate-950 hover:bg-slate-850 border border-slate-800 p-4 rounded-xl cursor-pointer transition-all flex items-start gap-3.5">
+            <div class="bg-pink-600/20 text-pink-400 p-3 rounded-lg border border-pink-500/30"><i data-lucide="message-square" class="w-6 h-6"></i></div>
             <div>
               <h4 class="font-bold text-slate-200 text-sm">Testo Notifiche</h4>
-              <p class="text-xs text-slate-400 mt-0.5">Personalizza messaggi WhatsApp ed Email sincronizzati in Cloud.</p>
+              <p class="text-xs text-slate-400 mt-0.5">Personalizza messaggi WhatsApp ed Email.</p>
             </div>
           </div>
-          <div onclick="playSound('click'); openSubSettings('machines');" class="bg-slate-950 hover:bg-slate-850 border border-slate-800 hover:border-cyan-500/50 p-4 rounded-xl cursor-pointer transition-all flex items-start gap-3.5 group">
-            <div class="bg-cyan-600/20 text-cyan-400 p-3 rounded-lg border border-cyan-500/30 group-hover:scale-105 transition-transform">
-              <i data-lucide="cpu" class="w-6 h-6"></i>
-            </div>
+          <div onclick="playSound('click'); openSubSettings('machines');" class="bg-slate-950 hover:bg-slate-850 border border-slate-800 p-4 rounded-xl cursor-pointer transition-all flex items-start gap-3.5">
+            <div class="bg-cyan-600/20 text-cyan-400 p-3 rounded-lg border border-cyan-500/30"><i data-lucide="cpu" class="w-6 h-6"></i></div>
             <div>
               <h4 class="font-bold text-slate-200 text-sm">Macchinari Utilizzati</h4>
-              <p class="text-xs text-slate-400 mt-0.5">Aggiungi o rimuovi stampanti, plotter e attrezzature.</p>
+              <p class="text-xs text-slate-400 mt-0.5">Gestisci stampanti e attrezzature.</p>
             </div>
           </div>
-          <div onclick="playSound('click'); closeModal('settingsModal'); openModal('cloudModal');" class="bg-slate-950 hover:bg-slate-850 border border-slate-800 hover:border-emerald-500/50 p-4 rounded-xl cursor-pointer transition-all flex items-start gap-3.5 group">
-            <div class="bg-emerald-600/20 text-emerald-400 p-3 rounded-lg border border-emerald-500/30 group-hover:scale-105 transition-transform">
-              <i data-lucide="cloud" class="w-6 h-6"></i>
-            </div>
-            <div>
-              <h4 class="font-bold text-slate-200 text-sm">Impostazioni Cloud Dati</h4>
-              <p class="text-xs text-slate-400 mt-0.5">Configura ImgBB 4K e gestisci Backup Dati.</p>
-            </div>
-          </div>
-          <div onclick="playSound('click'); openSubSettings('logo');" class="bg-slate-950 hover:bg-slate-850 border border-slate-800 hover:border-blue-500/50 p-4 rounded-xl cursor-pointer transition-all flex items-start gap-3.5 group">
-            <div class="bg-blue-600/20 text-blue-400 p-3 rounded-lg border border-blue-500/30 group-hover:scale-105 transition-transform">
-              <i data-lucide="image" class="w-6 h-6"></i>
-            </div>
-            <div>
-              <h4 class="font-bold text-slate-200 text-sm">Logo Aziendale</h4>
-              <p class="text-xs text-slate-400 mt-0.5">Carica o sostituisci il logo condiviso nella top bar.</p>
-            </div>
-          </div>
-          <div onclick="playSound('click'); openSubSettings('alarms');" class="bg-slate-950 hover:bg-slate-850 border border-slate-800 hover:border-rose-500/50 p-4 rounded-xl cursor-pointer transition-all flex items-start gap-3.5 group">
-            <div class="bg-rose-600/20 text-rose-400 p-3 rounded-lg border border-rose-500/30 group-hover:scale-105 transition-transform">
-              <i data-lucide="alarm-clock" class="w-6 h-6"></i>
-            </div>
+          <div onclick="playSound('click'); openSubSettings('alarms');" class="bg-slate-950 hover:bg-slate-850 border border-slate-800 p-4 rounded-xl cursor-pointer transition-all flex items-start gap-3.5">
+            <div class="bg-amber-600/20 text-amber-400 p-3 rounded-lg border border-amber-500/30"><i data-lucide="alarm-clock" class="w-6 h-6"></i></div>
             <div>
               <h4 class="font-bold text-slate-200 text-sm">Programmazione Sveglie</h4>
-              <p class="text-xs text-slate-400 mt-0.5">Imposta orari e giorni per gli alert scadenze.</p>
-            </div>
-          </div>
-          <div onclick="playSound('click'); openSubSettings('colors');" class="bg-slate-950 hover:bg-slate-850 border border-slate-800 hover:border-amber-500/50 p-4 rounded-xl cursor-pointer transition-all flex items-start gap-3.5 group">
-            <div class="bg-amber-600/20 text-amber-400 p-3 rounded-lg border border-amber-500/30 group-hover:scale-105 transition-transform">
-              <i data-lucide="palette" class="w-6 h-6"></i>
-            </div>
-            <div>
-              <h4 class="font-bold text-slate-200 text-sm">Colori delle Colonne</h4>
-              <p class="text-xs text-slate-400 mt-0.5">Personalizza le tonalità cromatiche delle fasi di lavoro.</p>
-            </div>
-          </div>
-          <div onclick="playSound('click'); openSubSettings('zoom');" class="bg-slate-950 hover:bg-slate-850 border border-slate-800 hover:border-violet-500/50 p-4 rounded-xl cursor-pointer transition-all flex items-start gap-3.5 group">
-            <div class="bg-violet-600/20 text-violet-400 p-3 rounded-lg border border-violet-500/30 group-hover:scale-105 transition-transform">
-              <i data-lucide="type" class="w-6 h-6"></i>
-            </div>
-            <div>
-              <h4 class="font-bold text-slate-200 text-sm">Visualizzazione & Zoom</h4>
-              <p class="text-xs text-slate-400 mt-0.5">Regola la dimensione dei caratteri per app e proiettore.</p>
+              <p class="text-xs text-slate-400 mt-0.5">Orari e giorni di controllo scadenze.</p>
             </div>
           </div>
         </div>
       </div>
-
-      <div class="p-4 border-t border-slate-800 bg-slate-950 flex justify-between items-center">
-        <div class="flex gap-3">
-          <button onclick="logoutApp()" class="text-xs text-red-400 hover:text-red-300 transition-colors font-bold cursor-pointer"><i data-lucide="log-out" class="w-3 h-3 inline"></i> Esci (Logout)</button>
-          <span class="text-slate-600">|</span>
-          <button onclick="playSound('click'); resetDefaultSettings();" class="text-xs text-slate-400 hover:text-white transition-colors underline cursor-pointer">Ripristina Predefiniti</button>
-        </div>
-        <button onclick="playSound('close'); closeModal('settingsModal');" class="bg-slate-800 hover:bg-slate-700 text-white font-bold px-5 py-2 rounded-lg text-xs active:scale-95 transition-transform cursor-pointer">
-          Chiudi
-        </button>
+      <div class="p-4 border-t border-slate-800 bg-slate-950 flex justify-end">
+        <button onclick="playSound('close'); closeModal('settingsModal');" class="bg-slate-800 hover:bg-slate-700 text-white font-bold px-5 py-2 rounded-lg text-xs cursor-pointer">Chiudi</button>
       </div>
     </div>
   </div>
@@ -385,20 +317,17 @@
       </div>
       <div id="subSettingsContent" class="p-5 overflow-y-auto space-y-4 flex-1 text-sm"></div>
       <div class="p-4 border-t border-slate-800 bg-slate-950 flex justify-between items-center">
-        <button onclick="playSound('close'); closeSubSettings();" class="text-xs text-slate-400 hover:text-slate-200 transition-colors cursor-pointer">Indietro</button>
-        <button onclick="playSound('success'); saveSubSettings();" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-5 py-2 rounded-lg text-xs active:scale-95 transition-transform cursor-pointer">Salva Modifiche</button>
+        <button onclick="playSound('close'); closeSubSettings();" class="text-xs text-slate-400 cursor-pointer">Indietro</button>
+        <button onclick="playSound('success'); saveSubSettings();" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-5 py-2 rounded-lg text-xs cursor-pointer">Salva Modifiche</button>
       </div>
     </div>
   </div>
 
-  <!-- MODAL: DETTAGLIO SCHEDA (Z-INDEX SUPERIORE PER NON INTERFERIRE CON LE IMPOSTAZIONI) -->
+  <!-- MODAL: DETTAGLIO SCHEDA -->
   <div id="detailModal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[60] flex items-center justify-center p-2 md:p-4">
-    <div class="bg-slate-900 border border-slate-800 rounded-xl w-full max-w-6xl max-h-[96vh] md:max-h-[92vh] flex flex-col overflow-hidden shadow-2xl">
+    <div class="bg-slate-900 border border-slate-800 rounded-xl w-full max-w-6xl max-h-[96vh] flex flex-col overflow-hidden shadow-2xl">
       <div class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-850">
-        <div class="flex items-center gap-2">
-          <span id="detailBadge" class="px-2 py-0.5 rounded text-xs font-bold text-white uppercase"></span>
-          <h2 class="text-lg font-bold">Dettaglio Commessa</h2>
-        </div>
+        <h2 class="text-lg font-bold">Dettaglio Commessa</h2>
         <button onclick="playSound('close'); closeModal('detailModal');" class="text-slate-400 hover:text-slate-200 bg-slate-800 rounded-full p-1 cursor-pointer">
           <i data-lucide="x" class="w-5 h-5"></i>
         </button>
@@ -407,168 +336,66 @@
       <div class="p-3 md:p-5 overflow-y-auto space-y-5 flex-1 text-sm">
         <div class="space-y-3 bg-slate-950 p-3.5 rounded-lg border border-slate-800">
           <div>
-            <div class="flex justify-between items-end gap-2 mb-1">
-              <label class="text-[10px] text-indigo-400 font-semibold uppercase tracking-wider block">Cliente / Titolo Progetto</label>
-              <!-- SELETTORE CLIENTI CRM -->
-              <div class="flex items-center gap-1.5 w-1/2 md:w-1/3">
-                <i data-lucide="users" class="w-3.5 h-3.5 text-slate-400"></i>
-                <select id="editClientSelector" onchange="autofillClientFromSelect(this.value, 'edit')" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-[11px] text-slate-300 focus:outline-none focus:border-indigo-500 cursor-pointer">
-                  <option value="">-- Seleziona dal CRM --</option>
-                </select>
-              </div>
-            </div>
-            <div class="relative">
-              <input type="text" id="editTitle" autocomplete="off" oninput="handleClientInput(this.value, 'editClientSuggestions', 'editReferent', 'editEmail', 'editWhatsapp')" class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-1.5 text-slate-100 font-semibold text-base focus:outline-none focus:border-indigo-500">
-              <div id="editClientSuggestions" class="hidden absolute left-0 right-0 top-full mt-1 bg-slate-900 border border-slate-700 rounded-lg shadow-xl z-30 max-h-40 overflow-y-auto"></div>
-            </div>
+            <label class="text-[10px] text-indigo-400 font-semibold uppercase tracking-wider block mb-1">Cliente / Titolo Progetto</label>
+            <input type="text" id="editTitle" class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-1.5 text-slate-100 font-semibold text-base focus:outline-none">
+          </div>
+
+          <!-- CAMPO RIFERIMENTO ORDINE NEL DETTAGLIO -->
+          <div>
+            <label class="text-[10px] text-indigo-400 font-semibold uppercase tracking-wider block mb-1">Riferimento Ordine</label>
+            <input type="text" id="editOrderRef" placeholder="Inserisci rif. ordine..." class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-1.5 text-slate-200 text-sm focus:outline-none">
           </div>
           
           <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
               <label class="text-[10px] text-indigo-400 font-semibold uppercase tracking-wider block mb-1">Referente</label>
-              <input type="text" id="editReferent" placeholder="Nome referente..." class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-1.5 text-slate-200 text-sm focus:outline-none focus:border-indigo-500">
-            </div>
-            <div>
-              <label class="text-[10px] text-indigo-400 font-semibold uppercase tracking-wider block mb-1">Data Consegna</label>
-              <input type="date" id="editDeliveryDate" class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-1.5 text-slate-200 text-sm focus:outline-none focus:border-indigo-500">
-            </div>
-          </div>
-
-          <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
-            <div>
-              <label class="text-[10px] text-indigo-400 font-semibold uppercase tracking-wider block mb-1">Tipo Lavorazione</label>
-              <select id="editJobType" onchange="checkEditCustomJobType(this.value)" class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-1.5 text-slate-200 text-sm focus:outline-none focus:border-indigo-500">
-                <option value="Stampa Digitale / Banner">Stampa Digitale / Banner</option>
-                <option value="Abbigliamento / Ricamo">Abbigliamento / Ricamo</option>
-                <option value="Insegne & Vetrofanie">Insegne & Vetrofanie</option>
-                <option value="Etichette & Adesivi">Etichette & Adesivi</option>
-                <option value="Grafica / Progettazione">Grafica / Progettazione</option>
-                <option value="Altro">Altro</option>
-                <option value="custom">Personalizza...</option>
-              </select>
-              <input type="text" id="editCustomJobType" placeholder="Specifica nuovo tipo..." class="hidden mt-2 w-full bg-slate-900 border border-indigo-500 rounded px-3 py-1.5 text-slate-200 text-xs focus:outline-none">
-            </div>
-            <div>
-              <label class="text-[10px] text-cyan-400 font-semibold uppercase tracking-wider block mb-1">Macchinario Utilizzato</label>
-              <select id="editMachine" class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-1.5 text-slate-200 text-sm focus:outline-none focus:border-cyan-500">
-                <option value="">Nessuno / Manuale</option>
-              </select>
+              <input type="text" id="editReferent" class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-1.5 text-slate-200 text-sm focus:outline-none">
             </div>
             <div>
               <label class="text-[10px] text-indigo-400 font-semibold uppercase tracking-wider block mb-1">Email Referente</label>
-              <input type="email" id="editEmail" placeholder="email@azienda.it" class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-1.5 text-slate-200 text-sm focus:outline-none focus:border-indigo-500">
+              <input type="email" id="editEmail" class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-1.5 text-slate-200 text-sm focus:outline-none">
             </div>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
               <label class="text-[10px] text-indigo-400 font-semibold uppercase tracking-wider block mb-1">WhatsApp Referente</label>
-              <input type="text" id="editWhatsapp" placeholder="+39..." class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-1.5 text-slate-200 text-sm focus:outline-none focus:border-indigo-500">
+              <input type="text" id="editWhatsapp" class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-1.5 text-slate-200 text-sm focus:outline-none">
             </div>
-          </div>
-          
-          <div class="pt-2 border-t border-slate-900 flex items-center justify-between">
             <div>
-              <label class="text-[10px] text-indigo-400 font-semibold uppercase tracking-wider block">Colore Evidenziazione Scheda</label>
-              <p class="text-[10px] text-slate-400">Assegna un colore personalizzato a questa specifica commessa.</p>
-            </div>
-            <div class="flex items-center gap-2">
-              <input type="color" id="editCardColor" class="w-9 h-9 rounded bg-transparent cursor-pointer border border-slate-700">
-              <button onclick="resetCardCustomColor()" class="text-xs bg-slate-900 hover:bg-slate-800 text-slate-300 px-2.5 py-1.5 rounded border border-slate-700 cursor-pointer">Predefinito</button>
+              <label class="text-[10px] text-cyan-400 font-semibold uppercase tracking-wider block mb-1">Macchinario Utilizzato</label>
+              <select id="editMachine" class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-1.5 text-slate-200 text-sm focus:outline-none">
+                <option value="">Nessuno / Manuale</option>
+              </select>
             </div>
           </div>
-
-          <button onclick="playSound('success'); saveCardEdits();" class="bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-300 border border-indigo-500/30 text-xs px-3 py-1.5 rounded font-semibold flex items-center gap-1.5 transition-colors mt-2 cursor-pointer">
-            <i data-lucide="save" class="w-3.5 h-3.5"></i> Aggiorna Anagrafica e Colore
-          </button>
+          <button onclick="playSound('success'); saveCardEdits();" class="bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-300 text-xs px-3 py-1.5 rounded font-semibold cursor-pointer">Aggiorna Anagrafica</button>
         </div>
 
         <div class="space-y-3 bg-slate-950 p-3.5 rounded-lg border border-slate-800">
           <div class="flex justify-between items-center">
             <label class="text-xs text-indigo-400 font-bold uppercase tracking-wider block">Dettagli Articoli & Preventivo</label>
-            <button onclick="playSound('click'); addArticleRow();" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs px-2.5 py-1 rounded font-semibold flex items-center gap-1 active:scale-95 transition-transform shadow cursor-pointer">
-              <i data-lucide="plus" class="w-3.5 h-3.5"></i> Aggiungi Riga
-            </button>
+            <button onclick="playSound('click'); addArticleRow();" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs px-2.5 py-1 rounded font-semibold cursor-pointer">Aggiungi Riga</button>
           </div>
           
           <div class="overflow-x-auto">
             <table class="w-full text-left text-xs min-w-[700px]">
               <thead>
                 <tr class="border-b border-slate-800 text-slate-400 uppercase text-[10px]">
-                  <th class="py-2 px-1 w-16 text-center">Sposta</th>
-                  <th class="py-2 px-2 w-24">Codice</th>
+                  <th class="py-2 px-2 w-28">Codice</th>
                   <th class="py-2 px-2">Descrizione</th>
                   <th class="py-2 px-2 w-16 text-center">Q.tà</th>
-                  <th class="py-2 px-2 w-20 text-right">Prezzo Un.</th>
-                  <th class="py-2 px-2 w-16 text-center">IVA %</th>
-                  <th class="py-2 px-2 w-20 text-right">Tot. Netto</th>
-                  <th class="py-2 px-2 w-20 text-right">Prezzo Ivato</th>
-                  <th class="py-2 px-2 w-24 text-right">Tot. Ivato</th>
+                  <th class="py-2 px-2 w-24 text-right">Prezzo Un.</th>
                   <th class="py-2 px-2 w-10"></th>
                 </tr>
               </thead>
               <tbody id="articlesTableBody" class="divide-y divide-slate-900"></tbody>
             </table>
           </div>
-
-          <div class="flex justify-between items-center pt-3 border-t border-slate-800 flex-wrap gap-3">
-            <button onclick="playSound('success'); saveArticlesEdits();" class="bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-300 border border-indigo-500/30 text-xs px-3 py-1.5 rounded font-semibold flex items-center gap-1.5 transition-colors cursor-pointer">
-              <i data-lucide="save" class="w-3.5 h-3.5"></i> Salva Articoli
-            </button>
-            <div class="flex gap-4 text-right">
-              <div>
-                <span class="text-[10px] text-slate-400 uppercase block font-bold">Imponibile:</span>
-                <span id="grandSubtotalDisplay" class="text-xs font-semibold text-slate-300">€ 0,00</span>
-              </div>
-              <div>
-                <span class="text-[10px] text-slate-400 uppercase block font-bold">Totale IVA:</span>
-                <span id="grandTaxDisplay" class="text-xs font-semibold text-slate-300">€ 0,00</span>
-              </div>
-              <div>
-                <span class="text-[10px] text-slate-400 uppercase block font-bold">Totale Ordine Ivato:</span>
-                <span id="grandTotalDisplay" class="text-base font-extrabold text-emerald-400">€ 0,00</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div>
-          <div class="flex justify-between items-center mb-2">
-            <label class="text-xs text-slate-400 font-semibold uppercase tracking-wider block">Foto & Documenti PDF</label>
-            <label id="uploadLabelBtn" class="bg-slate-800 hover:bg-slate-700 text-xs px-3 py-1.5 rounded-lg cursor-pointer flex items-center gap-1.5 text-slate-200 transition-colors">
-              <span id="uploadLabelIcon"><i data-lucide="paperclip" class="w-3.5 h-3.5"></i></span>
-              <span id="uploadLabelText">Allega Foto / PDF</span>
-              <input type="file" id="photoInput" accept="image/*,.pdf" multiple class="hidden" onchange="handleDocumentUpload(event)">
-            </label>
-          </div>
-          <div id="attachmentsContainer" class="grid grid-cols-2 md:grid-cols-4 gap-2 bg-slate-950 p-2 rounded-lg border border-slate-800 max-h-36 overflow-y-auto"></div>
-        </div>
-
-        <div>
-          <label class="text-xs text-slate-400 font-semibold uppercase tracking-wider block mb-3">Storyboard Lavorazione</label>
-          <div id="storyboardTimeline" class="relative pl-6 space-y-3 before:absolute before:left-2 before:top-1.5 before:bottom-1.5 before:w-0.5 before:bg-slate-800"></div>
+          <button onclick="playSound('success'); saveArticlesEdits();" class="bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-300 text-xs px-3 py-1.5 rounded font-semibold cursor-pointer">Salva Articoli</button>
         </div>
       </div>
-
-      <div class="p-4 border-t border-slate-800 bg-slate-950 flex justify-between gap-3">
-        <div class="flex gap-2">
-          <button onclick="deleteCurrentCard();" class="bg-red-950/40 hover:bg-red-900/60 text-red-400 border border-red-900/50 px-4 py-2 rounded-lg font-semibold flex items-center gap-2 active:scale-95 transition-all text-xs cursor-pointer">
-            <i data-lucide="trash-2" class="w-4 h-4"></i> Elimina
-          </button>
-          
-          <!-- PULSANTE RIPRISTINO (MOSTRATO SOLO SE LA CARD E' ARCHIVIATA) -->
-          <div id="restoreCardBtnContainer" class="hidden">
-            <button onclick="restoreCardFromArchive()" class="bg-emerald-600/30 hover:bg-emerald-600/50 text-emerald-400 border border-emerald-500/50 px-4 py-2 rounded-lg font-semibold flex items-center gap-2 active:scale-95 transition-all text-xs cursor-pointer">
-              <i data-lucide="refresh-cw" class="w-4 h-4"></i> Ripristina in Fatturato
-            </button>
-          </div>
-        </div>
-        
-        <div class="flex gap-2">
-          <button onclick="playSound('click'); printCard();" class="bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded-lg font-semibold flex items-center gap-2 active:scale-95 transition-all text-xs cursor-pointer">
-            <i data-lucide="printer" class="w-4 h-4"></i> Stampa Scheda
-          </button>
-          <button onclick="playSound('close'); closeModal('detailModal');" class="bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-2 rounded-lg font-semibold active:scale-95 transition-all text-xs shadow-lg shadow-indigo-900/20 cursor-pointer">
-            Chiudi Scheda
-          </button>
-        </div>
+      <div class="p-4 border-t border-slate-800 bg-slate-950 flex justify-end">
+        <button onclick="playSound('close'); closeModal('detailModal');" class="bg-indigo-600 text-white px-5 py-2 rounded-lg text-xs cursor-pointer">Chiudi Scheda</button>
       </div>
     </div>
   </div>
@@ -583,167 +410,72 @@
         </button>
       </div>
       <form id="newCardForm" class="space-y-4 text-sm" onsubmit="createNewCard(event)">
-        
-        <div class="relative">
-          <div class="flex justify-between items-end gap-2 mb-1">
-            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400">Cliente / Titolo Progetto</label>
-            <!-- SELETTORE CLIENTI CRM -->
-            <div class="flex items-center gap-1.5 w-1/2 md:w-1/3">
-              <i data-lucide="users" class="w-3.5 h-3.5 text-slate-400"></i>
-              <select id="formClientSelector" onchange="autofillClientFromSelect(this.value, 'form')" class="w-full bg-slate-950 border border-slate-800 rounded px-2 py-1 text-[11px] text-slate-300 focus:outline-none focus:border-indigo-500 cursor-pointer">
-                <option value="">-- Seleziona dal CRM --</option>
-              </select>
-            </div>
-          </div>
-          <input type="text" id="formTitle" required autocomplete="off" placeholder="Es. Rossi S.r.l." oninput="handleClientInput(this.value, 'formClientSuggestions', 'formReferent', 'formEmail', 'formWhatsapp')" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-indigo-500">
-          <div id="formClientSuggestions" class="hidden absolute left-0 right-0 top-full mt-1 bg-slate-900 border border-slate-700 rounded-lg shadow-xl z-30 max-h-40 overflow-y-auto"></div>
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Cliente / Titolo Progetto</label>
+          <input type="text" id="formTitle" required placeholder="Es. Rossi S.r.l." class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none">
         </div>
-        
+
+        <!-- CAMPO RIFERIMENTO ORDINE NELLA NUOVA COMMESSA -->
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Riferimento Ordine</label>
+          <input type="text" id="formOrderRef" placeholder="Es. Rif. Ordine..." class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none">
+        </div>
+
         <div class="grid grid-cols-2 gap-3">
           <div>
             <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Referente</label>
-            <input type="text" id="formReferent" placeholder="Es. Marco Rossi" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-indigo-500">
+            <input type="text" id="formReferent" placeholder="Nome referente..." class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none">
           </div>
           <div>
-            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Data Consegna (Opz.)</label>
-            <input type="date" id="formDeliveryDate" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-indigo-500">
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Data Consegna</label>
+            <input type="date" id="formDeliveryDate" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none">
           </div>
         </div>
 
         <div class="grid grid-cols-2 gap-3">
           <div>
             <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Email Referente</label>
-            <input type="email" id="formEmail" placeholder="email@azienda.it" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-indigo-500">
+            <input type="email" id="formEmail" placeholder="email@azienda.it" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none">
           </div>
           <div>
             <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">WhatsApp Referente</label>
-            <input type="text" id="formWhatsapp" placeholder="+39..." class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-indigo-500">
+            <input type="text" id="formWhatsapp" placeholder="+39..." class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none">
           </div>
         </div>
 
         <div class="grid grid-cols-2 gap-3">
           <div>
             <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Tipo Lavorazione</label>
-            <select id="formJobType" onchange="checkNewCustomJobType(this.value)" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-indigo-500">
+            <select id="formJobType" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none">
               <option value="Stampa Digitale / Banner">Stampa Digitale / Banner</option>
               <option value="Abbigliamento / Ricamo">Abbigliamento / Ricamo</option>
               <option value="Insegne & Vetrofanie">Insegne & Vetrofanie</option>
               <option value="Etichette & Adesivi">Etichette & Adesivi</option>
               <option value="Grafica / Progettazione">Grafica / Progettazione</option>
               <option value="Altro">Altro</option>
-              <option value="custom">Personalizza...</option>
             </select>
-            <input type="text" id="formCustomJobType" placeholder="Specifica nuovo tipo..." class="hidden mt-2 w-full bg-slate-950 border border-indigo-500 rounded-lg px-3 py-2 text-slate-200 text-xs focus:outline-none">
           </div>
           <div>
-            <label class="block text-xs font-semibold uppercase tracking-wider text-cyan-400 mb-1">Macchinario Utilizzato</label>
-            <select id="formMachine" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-cyan-500">
+            <label class="block text-xs font-semibold uppercase tracking-wider text-cyan-400 mb-1">Macchinario</label>
+            <select id="formMachine" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none">
               <option value="">Nessuno / Manuale</option>
             </select>
           </div>
         </div>
 
         <div>
-          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Stato / Passaggio Iniziale</label>
-          <select id="formInitialStage" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-indigo-500">
+          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Passaggio Iniziale</label>
+          <select id="formInitialStage" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none">
             <option value="prev-da-fare">Prev. da fare</option>
             <option value="prev-inviato">Prev. inviato</option>
             <option value="da-ordinare">Da ordinare</option>
-            <option value="ordinato">Ordinato</option>
-            <option value="magazzino">In magazzino</option>
-            <option value="da-lavorare">Da lavorare</option>
-            <option value="in-lavorazione">In lavorazione</option>
-            <option value="lavorato-da-bollettare">Lavorato da bollettare</option>
-            <option value="bollettato-da-consegnare">Bollettato da consegnare</option>
-            <option value="fatturato">Fatturato</option>
           </select>
         </div>
 
-        <div>
-          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Note / Descrizione Iniziale</label>
-          <textarea id="formNotes" placeholder="Dettagli lavorazione, finiture..." rows="2" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-indigo-500 resize-none"></textarea>
-        </div>
-
-        <div class="bg-slate-950 p-3 rounded-lg border border-slate-800 space-y-2">
-          <label class="block text-xs font-bold uppercase tracking-wider text-indigo-400">Allega Preventivo PDF o Foto Iniziale</label>
-          <label class="w-full bg-slate-900 hover:bg-slate-800 border border-dashed border-slate-700 rounded-lg p-3 flex items-center justify-center gap-2 cursor-pointer text-xs text-slate-300 transition-colors">
-            <i data-lucide="paperclip" class="w-4 h-4 text-indigo-400"></i>
-            <span id="formFileLabel">Seleziona PDF o Foto (Opzionale)</span>
-            <input type="file" id="formFileInput" accept="image/*,.pdf" class="hidden" onchange="handleFormFileSelect(event)">
-          </label>
-          <div id="formFilePreview" class="hidden text-[11px] text-emerald-400 font-mono text-center truncate"></div>
-        </div>
-
-        <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2.5 px-4 rounded-lg active:scale-[0.98] transition-transform flex items-center justify-center gap-2 shadow-lg shadow-indigo-900/20 cursor-pointer">
-          <i data-lucide="plus" class="w-4 h-4"></i> Inserisci in Workflow
+        <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2.5 px-4 rounded-lg cursor-pointer shadow-lg">
+          Inserisci in Workflow
         </button>
       </form>
-    </div>
-  </div>
-
-  <!-- MODAL: CONFIGURAZIONE CLOUD E IMGBB -->
-  <div id="cloudModal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-    <div class="bg-slate-900 border border-slate-800 rounded-xl w-full max-w-md p-5 shadow-2xl">
-      <div class="flex justify-between items-center mb-4">
-        <h3 class="font-bold text-lg text-slate-100 flex items-center gap-2">
-          <i data-lucide="settings" class="w-5 h-5 text-indigo-400"></i> Impostazioni Cloud Dati
-        </h3>
-        <button onclick="playSound('close'); closeModal('cloudModal');" class="text-slate-400 hover:text-slate-200 bg-slate-800 rounded-full p-1 cursor-pointer">
-          <i data-lucide="x" class="w-4 h-4"></i>
-        </button>
-      </div>
-      
-      <div class="space-y-4 text-sm">
-        <div class="bg-slate-950 p-3 rounded-lg border border-slate-800">
-          <h4 class="text-xs font-bold text-emerald-400 mb-1 uppercase tracking-wider">1. ImgBB (Immagini 4K Gratuite)</h4>
-          <p class="text-[10px] text-slate-400 mb-2">Salva le immagini in cloud in alta risoluzione (opzionale).</p>
-          <input type="text" id="cfgImgbbKey" placeholder="ImgBB API Key (Opzionale)" class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-slate-200 focus:outline-none focus:border-emerald-500 font-mono text-xs">
-        </div>
-
-        <div class="bg-slate-950 p-3 rounded-lg border border-slate-800">
-          <h4 class="text-xs font-bold text-amber-400 mb-1 uppercase tracking-wider">2. Backup Locale (JSON)</h4>
-          <p class="text-[10px] text-slate-400 mb-2">Salva una copia completa delle commesse o ripristina un salvataggio precedente.</p>
-          <div class="flex gap-2">
-            <button onclick="playSound('success'); exportBackup();" class="flex-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 hover:border-amber-500/50 text-slate-200 font-semibold py-1.5 px-3 rounded text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer">
-              <i data-lucide="download-cloud" class="w-3.5 h-3.5"></i> Backup Dati
-            </button>
-            <label class="flex-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 hover:border-amber-500/50 text-slate-200 font-semibold py-1.5 px-3 rounded text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer">
-              <i data-lucide="upload-cloud" class="w-3.5 h-3.5"></i> Ripristina
-              <input type="file" accept=".json" class="hidden" onchange="importBackup(event)">
-            </label>
-          </div>
-        </div>
-
-        <div class="flex gap-2 pt-2">
-          <button onclick="playSound('success'); saveImgbbConfig();" class="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2 px-4 rounded-lg active:scale-[0.98] transition-transform flex items-center justify-center gap-2 shadow-lg shadow-indigo-900/20 cursor-pointer">
-            <i data-lucide="check" class="w-4 h-4"></i> Salva ImgBB Key
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- MODAL: VISUALIZZATORE IMMAGINI / PDF -->
-  <div id="galleryModal" class="hidden fixed inset-0 bg-black/95 z-[70] flex flex-col items-center justify-center select-none">
-    <div class="absolute top-0 w-full p-4 flex justify-between items-center z-10 bg-gradient-to-b from-black/80 to-transparent">
-      <div id="galleryCounter" class="text-white font-mono text-sm font-bold bg-black/50 px-3 py-1 rounded-full"></div>
-      <div class="flex gap-4 items-center">
-        <button id="btnRotate" onclick="playSound('click'); rotateGalleryImage();" class="text-white p-2 bg-slate-800 hover:bg-slate-700 rounded-full transition-colors cursor-pointer" title="Ruota immagine">
-          <i data-lucide="rotate-cw" class="w-5 h-5"></i>
-        </button>
-        <button onclick="playSound('close'); closeGallery();" class="text-white p-2 bg-slate-800 hover:bg-slate-700 rounded-full transition-colors cursor-pointer" title="Chiudi">
-          <i data-lucide="x" class="w-5 h-5"></i>
-        </button>
-      </div>
-    </div>
-    <div class="relative w-full h-full flex items-center justify-center p-4">
-      <img id="galleryImage" src="" class="max-w-full max-h-[90vh] object-contain transition-transform duration-300 bg-white shadow-2xl">
-      <button onclick="playSound('click'); prevGalleryImage();" class="absolute left-4 top-1/2 -translate-y-1/2 text-white p-3 bg-slate-800/80 hover:bg-slate-700 rounded-full transition-colors cursor-pointer" id="btnPrevGallery">
-        <i data-lucide="chevron-left" class="w-6 h-6"></i>
-      </button>
-      <button onclick="playSound('click'); nextGalleryImage();" class="absolute right-4 top-1/2 -translate-y-1/2 text-white p-3 bg-slate-800/80 hover:bg-slate-700 rounded-full transition-colors cursor-pointer" id="btnNextGallery">
-        <i data-lucide="chevron-right" class="w-6 h-6"></i>
-      </button>
     </div>
   </div>
 
