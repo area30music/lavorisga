@@ -1104,14 +1104,17 @@ function renderArticlesTable(card) {
     const tr = document.createElement('tr'); tr.className = "hover:bg-slate-900/50 transition-colors";
     tr.innerHTML = `
       <td class="py-1.5 px-1 text-center align-middle"><div class="flex items-center justify-center gap-0.5 bg-slate-900 rounded p-0.5 border border-slate-800"><button onclick="moveArticleRowVertical(${idx}, -1)" class="hover:bg-slate-800 text-slate-300 text-xs px-1 rounded cursor-pointer">▲</button><button onclick="moveArticleRowVertical(${idx}, 1)" class="hover:bg-slate-800 text-slate-300 text-xs px-1 rounded cursor-pointer">▼</button></div></td>
-      <td class="py-1.5 px-1"><input type="text" value="${art.code || ''}" data-field="code" data-index="${idx}" onchange="updateArticleField(this)" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-xs font-mono focus:outline-none focus:border-indigo-500"></td>
       <td class="py-1.5 px-1 relative">
-        <input type="text" value="${art.desc || ''}" data-field="desc" data-index="${idx}" autocomplete="off" oninput="updateArticleField(this); handleArticleAutocomplete(this.value, ${idx})" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-xs focus:outline-none focus:border-indigo-500">
+        <input type="text" value="${art.code || ''}" data-field="code" data-index="${idx}" autocomplete="off" oninput="updateArticleField(this, event); handleCodeAutocomplete(this.value, ${idx})" onchange="updateArticleField(this, event)" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-xs focus:outline-none focus:border-indigo-500">
+        <div id="codeSuggestions-${idx}" class="hidden absolute left-0 min-w-[200px] top-full mt-1 bg-slate-800 border border-slate-600 rounded shadow-xl z-50 max-h-32 overflow-y-auto"></div>
+      </td>
+      <td class="py-1.5 px-1 relative">
+        <input type="text" value="${art.desc || ''}" data-field="desc" data-index="${idx}" autocomplete="off" oninput="updateArticleField(this, event); handleArticleAutocomplete(this.value, ${idx})" onchange="updateArticleField(this, event)" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-xs focus:outline-none focus:border-indigo-500">
         <div id="articleSuggestions-${idx}" class="hidden absolute left-0 right-0 top-full mt-1 bg-slate-800 border border-slate-600 rounded shadow-xl z-50 max-h-32 overflow-y-auto"></div>
       </td>
-      <td class="py-1.5 px-1"><input type="number" step="any" value="${art.qty !== undefined ? art.qty : ''}" data-field="qty" data-index="${idx}" oninput="updateArticleField(this)" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-xs text-center focus:outline-none"></td>
-      <td class="py-1.5 px-1"><input type="number" step="any" value="${art.price !== undefined ? art.price : ''}" data-field="price" data-index="${idx}" oninput="updateArticleField(this)" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-xs text-right focus:outline-none"></td>
-      <td class="py-1.5 px-1"><input type="number" step="any" value="${art.tax !== undefined ? art.tax : 22}" data-field="tax" data-index="${idx}" oninput="updateArticleField(this)" class="w-full bg-slate-900 border border-slate-700 rounded px-1 py-1 text-slate-200 text-xs text-center focus:outline-none"></td>
+      <td class="py-1.5 px-1"><input type="number" step="any" value="${art.qty !== undefined ? art.qty : ''}" data-field="qty" data-index="${idx}" oninput="updateArticleField(this, event)" onchange="updateArticleField(this, event)" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-xs text-center focus:outline-none"></td>
+      <td class="py-1.5 px-1"><input type="number" step="any" value="${art.price !== undefined ? art.price : ''}" data-field="price" data-index="${idx}" oninput="updateArticleField(this, event)" onchange="updateArticleField(this, event)" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-xs text-right focus:outline-none"></td>
+      <td class="py-1.5 px-1"><input type="number" step="any" value="${art.tax !== undefined ? art.tax : 22}" data-field="tax" data-index="${idx}" oninput="updateArticleField(this, event)" onchange="updateArticleField(this, event)" class="w-full bg-slate-900 border border-slate-700 rounded px-1 py-1 text-slate-200 text-xs text-center focus:outline-none"></td>
       <td class="py-1.5 px-1 text-right font-mono text-slate-300 align-middle"><span id="row-net-${idx}">€ ${rowTotalNet.toFixed(2)}</span></td>
       <td class="py-1.5 px-1 text-right font-mono text-slate-300 align-middle"><span id="row-unit-taxed-${idx}">€ ${unitTaxPrice.toFixed(2)}</span></td>
       <td class="py-1.5 px-2 text-right font-mono font-bold text-slate-300 align-middle"><span id="row-total-${idx}">€ ${rowTotalTaxed.toFixed(2)}</span></td>
@@ -1122,13 +1125,23 @@ function renderArticlesTable(card) {
   calculateGrandTotals(); lucide.createIcons();
 }
 
+function handleCodeAutocomplete(query, idx) {
+  const container = document.getElementById(`codeSuggestions-${idx}`);
+  if(!query.trim()) { container.classList.add('hidden'); return; }
+  const q = query.toLowerCase();
+  const matches = ARTICLES_DB.filter(a => (a.code && a.code.toLowerCase().includes(q)) || (a.desc && a.desc.toLowerCase().includes(q)));
+  if(matches.length === 0) { container.classList.add('hidden'); return; }
+  container.innerHTML = matches.map(m => `<div onclick="selectArticleSuggestion('${m.code ? m.code.replace(/'/g, "\\'") : ''}', '${m.desc ? m.desc.replace(/'/g, "\\'") : ''}', ${m.price}, ${idx})" class="px-2 py-1.5 hover:bg-indigo-600/50 cursor-pointer text-xs border-b border-slate-700 last:border-0"><div class="font-bold text-white">${m.code || 'N/D'}</div><div class="text-[10px] text-slate-400 truncate">${m.desc}</div></div>`).join('');
+  container.classList.remove('hidden');
+}
+
 function handleArticleAutocomplete(query, idx) {
   const container = document.getElementById(`articleSuggestions-${idx}`);
   if(!query.trim()) { container.classList.add('hidden'); return; }
   const q = query.toLowerCase();
-  const matches = ARTICLES_DB.filter(a => a.desc.toLowerCase().includes(q) || a.code.toLowerCase().includes(q));
+  const matches = ARTICLES_DB.filter(a => a.desc.toLowerCase().includes(q) || (a.code && a.code.toLowerCase().includes(q)));
   if(matches.length === 0) { container.classList.add('hidden'); return; }
-  container.innerHTML = matches.map(m => `<div onclick="selectArticleSuggestion('${m.code.replace(/'/g, "\\'")}', '${m.desc.replace(/'/g, "\\'")}', ${m.price}, ${idx})" class="px-2 py-1.5 hover:bg-indigo-600/50 cursor-pointer text-xs border-b border-slate-700 last:border-0"><div class="font-bold text-white">${m.desc}</div><div class="text-[10px] text-slate-400 font-mono">Cod: ${m.code || 'N/D'} | Prezzo base: € ${m.price}</div></div>`).join('');
+  container.innerHTML = matches.map(m => `<div onclick="selectArticleSuggestion('${m.code ? m.code.replace(/'/g, "\\'") : ''}', '${m.desc ? m.desc.replace(/'/g, "\\'") : ''}', ${m.price}, ${idx})" class="px-2 py-1.5 hover:bg-indigo-600/50 cursor-pointer text-xs border-b border-slate-700 last:border-0"><div class="font-bold text-white">${m.desc}</div><div class="text-[10px] text-slate-400 font-mono">Cod: ${m.code || 'N/D'} | Prezzo base: € ${m.price}</div></div>`).join('');
   container.classList.remove('hidden');
 }
 
@@ -1148,21 +1161,21 @@ function moveArticleRowVertical(idx, direction) {
   if (targetIdx >= 0 && targetIdx < card.articles.length) { const temp = card.articles[idx]; card.articles[idx] = card.articles[targetIdx]; card.articles[targetIdx] = temp; renderArticlesTable(card); saveLocal(); syncCardToCloud(card); }
 }
 
-function updateArticleField(input) {
+function updateArticleField(input, ev) {
   const idx = parseInt(input.dataset.index), field = input.dataset.field; const card = state.cards.find(c => c.id === activeCardId); if (!card || !card.articles[idx]) return; 
   card.articles[idx][field] = input.value;
 
-  // MODIFICA: Autocompilazione da Codice Articolo
-  if (field === 'code' && input.value.trim() !== '') {
+  // MODIFICA: Autocompilazione da Codice Articolo tramite match esatto su onchange (es. sparando barcode o premendo invio)
+  if (field === 'code' && ev && ev.type === 'change' && input.value.trim() !== '') {
     const match = ARTICLES_DB.find(a => a.code && a.code.toLowerCase() === input.value.trim().toLowerCase());
     if (match) {
       card.articles[idx].desc = match.desc;
       card.articles[idx].price = match.price;
       if (!card.articles[idx].qty) card.articles[idx].qty = 1;
-      renderArticlesTable(card); // Aggiorna graficamente la riga
+      renderArticlesTable(card); 
       saveLocal(); syncCardToCloud(card);
       playSound('success');
-      return; // Esci per non ricalcolare inutilmente qui (lo fa già renderArticlesTable)
+      return; 
     }
   }
 
@@ -1277,7 +1290,6 @@ function openLabelPrintModal(cardId) {
   
   const notesInput = document.getElementById('labelNotesInput');
   if (notesInput) {
-    // MODIFICA: Se non ci sono note sull'etichetta ma c'è un riferimento ordine, autocompila
     if (card.labelNotes !== undefined && card.labelNotes !== '') {
       notesInput.value = card.labelNotes;
     } else if (card.orderRef) {
@@ -1291,7 +1303,6 @@ function openLabelPrintModal(cardId) {
   if (card.articles && card.articles.length > 0) {
     card.articles.forEach(art => {
       if(!art.desc || art.desc.trim() === '') return;
-      // MODIFICA: Passa il codice articolo
       window.tempLabelArticles.push({ code: art.code || '', desc: art.desc, qty: art.qty || 1, packageNum: 1 });
     });
   }
@@ -1309,7 +1320,6 @@ function renderLabelArticlesTable() {
     window.tempLabelArticles.forEach((art, idx) => {
       const tr = document.createElement('tr');
       tr.className = "hover:bg-slate-900/50 transition-colors";
-      // MODIFICA: Aggiunto campo per visualizzare/modificare il Codice
       tr.innerHTML = `
         <td class="py-2 px-2 w-24"><input type="text" value="${art.code || ''}" onchange="updateLabelRow(${idx}, 'code', this.value)" class="w-full bg-transparent border-b border-slate-700 text-slate-200 text-xs font-mono focus:outline-none focus:border-blue-500"></td>
         <td class="py-2 px-2"><input type="text" value="${art.desc}" onchange="updateLabelRow(${idx}, 'desc', this.value)" class="w-full bg-transparent border-b border-slate-700 text-slate-200 text-xs focus:outline-none focus:border-blue-500"></td>
@@ -1346,7 +1356,6 @@ async function generateAndPrintLabels() {
       if(!art.desc || art.desc.trim() === '') return;
       const pkgNum = art.packageNum || 1;
       if (!packages[pkgNum]) packages[pkgNum] = [];
-      // MODIFICA: Includiamo il codice nella stampa
       packages[pkgNum].push({ code: art.code || '', desc: art.desc, qty: art.qty });
       hasValidArticles = true;
     });
@@ -1375,14 +1384,15 @@ async function generateAndPrintLabels() {
   packageNumbers.forEach((pkgNum, idx) => {
     const currentPkgIndex = idx + 1;
     const articlesInPkg = packages[pkgNum];
-    // MODIFICA: Inclusione della colonna codice nella tabella del collo stampato
-    const articlesListHtml = articlesInPkg.map(a => `<tr><td style="width: 45px; font-weight: bold; text-align: center; vertical-align: top;">${a.qty}x</td><td style="width: 65px; font-family: monospace; font-size: 10px; vertical-align: top;">${a.code}</td><td style="padding-bottom: 4px;">${a.desc}</td></tr>`).join('');
     
-    // Il box note includerà in automatico ciò che è scritto in #labelNotesInput (quindi anche il Rif. Ordine autocompilato)
+    // MODIFICA: Utilizzati stili inline diretti, rimosso monospace. Ridotto padding per non sforare.
+    const articlesListHtml = articlesInPkg.map(a => `<tr><td style="width: 40px; font-weight: bold; text-align: center; vertical-align: top;">${a.qty}x</td><td style="width: 75px; font-weight: 600; vertical-align: top;">${a.code}</td><td style="padding-bottom: 3px;">${a.desc}</td></tr>`).join('');
+    
+    // MODIFICA: Gestione dinamica box note con min-height per non occupare spazio inutile se vuoto (e scompare completamente se labelNotes è assente).
     const notesBoxHtml = labelNotes ? `
-        <div class="box notes-box" style="margin-top: 3mm; height: 18mm; flex-shrink: 0;">
-          <div class="box-header" style="background: #555;">NOTE / RIFERIMENTI:</div>
-          <div class="box-body" style="font-size: 12px;">
+        <div class="box notes-box" style="margin-top: 2mm; min-height: 12mm; height: auto; flex-shrink: 0;">
+          <div class="box-header" style="background: #555;">NOTE / RIFERIMENTI ORDINE:</div>
+          <div class="box-body" style="font-size: 11px; padding: 4px 8px;">
             ${labelNotes.replace(/\n/g, '<br>')}
           </div>
         </div>
@@ -1408,7 +1418,7 @@ async function generateAndPrintLabels() {
           <div class="box-header">CONTENUTO DEL COLLO:</div>
           <div class="box-body" style="padding: 0; flex: 1;">
             <table class="content-table">
-              <thead><tr><th style="width: 45px; text-align: center;">Q.TÀ</th><th style="width: 65px;">CODICE</th><th>DESCRIZIONE MATERIALE</th></tr></thead>
+              <thead><tr><th style="width: 40px; text-align: center;">Q.TÀ</th><th style="width: 75px;">CODICE</th><th>DESCRIZIONE MATERIALE</th></tr></thead>
               <tbody>${articlesListHtml}</tbody>
             </table>
           </div>
@@ -1442,9 +1452,9 @@ async function generateAndPrintLabels() {
     
     .content-box { flex: 1; }
     .content-box .box-header { background: #fff; color: #000; border-bottom: 2px solid #333;}
-    .content-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-    .content-table th { background: #D9D9D9; border-bottom: 2px solid #888; text-align: left; padding: 4px 6px; font-size: 11px; font-weight: bold;}
-    .content-table td { padding: 5px 6px; border-bottom: 1px solid #ddd; background: #EBE8D8;}
+    .content-table { width: 100%; border-collapse: collapse; font-size: 11.5px; } /* MODIFICA: Ridotto font-size a 11.5px per evitare overflow righe */
+    .content-table th { background: #D9D9D9; border-bottom: 2px solid #888; text-align: left; padding: 3px 6px; font-size: 10px; font-weight: bold;}
+    .content-table td { padding: 3px 6px; border-bottom: 1px solid #ddd; background: #EBE8D8;} /* MODIFICA: Ridotto padding per far stare più righe */
     .content-table tr:nth-child(even) td { background: #E1DECD; }
   </style></head><body>${labelsHtml}</body></html>`;
 
