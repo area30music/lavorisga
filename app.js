@@ -1083,7 +1083,8 @@ async function createNewCard(event) {
   document.getElementById('newCardForm').reset(); document.getElementById('formClientSelector').value = ''; document.getElementById('formCustomJobType').classList.add('hidden'); document.getElementById('formFilePreview').classList.add('hidden'); tempFormFile = null; closeModal('addCardModal');
 }
 
-function saveCardEdits() {
+// MODIFICATO: accetta il parametro "silent" per non far apparire l'alert
+function saveCardEdits(silent = false) {
   const card = state.cards.find(c => c.id === activeCardId); if (!card) return;
   card.title = document.getElementById('editTitle').value.trim(); card.client = card.title; card.referent = document.getElementById('editReferent').value.trim(); card.email = document.getElementById('editEmail').value.trim(); card.whatsapp = document.getElementById('editWhatsapp').value.trim(); card.machine = document.getElementById('editMachine').value;
   card.orderRef = document.getElementById('editOrderRef') ? document.getElementById('editOrderRef').value.trim() : '';
@@ -1092,7 +1093,15 @@ function saveCardEdits() {
   const colorInput = document.getElementById('editCardColor'); const selectedColor = colorInput.value.toLowerCase(); const defaultColor = colorInput.dataset.defaultColor ? colorInput.dataset.defaultColor.toLowerCase() : "";
   if (selectedColor === defaultColor) { card.customColor = ""; } else { card.customColor = colorInput.value; }
   let newJobType = document.getElementById('editJobType').value; if (newJobType === 'custom') newJobType = document.getElementById('editCustomJobType').value.trim() || card.jobType; card.jobType = newJobType;
-  saveLocal(); syncCardToCloud(card); populateGlobalFilterDropdown(); playSound('success'); alert("Aggiornato con successo!");
+  
+  saveLocal(); 
+  syncCardToCloud(card); 
+  populateGlobalFilterDropdown(); 
+  
+  if (!silent) { 
+    playSound('success'); 
+    alert("Aggiornato con successo!"); 
+  }
 }
 
 function renderArticlesTable(card) {
@@ -1103,7 +1112,6 @@ function renderArticlesTable(card) {
     const rowTotalNet = qty * price, unitTaxPrice = price * (1 + taxRate / 100), rowTotalTaxed = rowTotalNet * (1 + taxRate / 100);
     const tr = document.createElement('tr'); tr.className = "hover:bg-slate-900/50 transition-colors";
     
-    // AGGIUNTO: Tendina anche per il Codice (handleArticleCodeAutocomplete)
     tr.innerHTML = `
       <td class="py-1.5 px-1 text-center align-middle"><div class="flex items-center justify-center gap-0.5 bg-slate-900 rounded p-0.5 border border-slate-800"><button onclick="moveArticleRowVertical(${idx}, -1)" class="hover:bg-slate-800 text-slate-300 text-xs px-1 rounded cursor-pointer">▲</button><button onclick="moveArticleRowVertical(${idx}, 1)" class="hover:bg-slate-800 text-slate-300 text-xs px-1 rounded cursor-pointer">▼</button></div></td>
       <td class="py-1.5 px-1 relative">
@@ -1127,12 +1135,10 @@ function renderArticlesTable(card) {
   calculateGrandTotals(); lucide.createIcons();
 }
 
-// NUOVO: Autocompilazione da campo Codice
 function handleArticleCodeAutocomplete(query, idx) {
   const container = document.getElementById(`articleCodeSuggestions-${idx}`);
   if(!query.trim()) { container.classList.add('hidden'); return; }
   const q = query.toLowerCase();
-  // Ricerca sia per codice che per descrizione
   const matches = ARTICLES_DB.filter(a => (a.code && a.code.toLowerCase().includes(q)) || (a.desc && a.desc.toLowerCase().includes(q)));
   if(matches.length === 0) { container.classList.add('hidden'); return; }
   container.innerHTML = matches.map(m => `<div onclick="selectArticleSuggestion('${(m.code||'').replace(/'/g, "\\'")}', '${m.desc.replace(/'/g, "\\'")}', ${m.price}, ${idx})" class="px-2 py-1.5 hover:bg-indigo-600/50 cursor-pointer text-xs border-b border-slate-700 last:border-0"><div class="font-bold text-white">${m.desc}</div><div class="text-[10px] text-slate-400 font-mono">Cod: ${m.code || 'N/D'} | Prezzo base: € ${m.price}</div></div>`).join('');
@@ -1156,7 +1162,7 @@ function selectArticleSuggestion(code, desc, price, idx) {
   card.articles[idx].desc = desc;
   card.articles[idx].price = price;
   if (!card.articles[idx].qty) card.articles[idx].qty = 1;
-  renderArticlesTable(card); // Aggiornando graficamente scompare anche la tendina in automatico
+  renderArticlesTable(card);
   saveLocal(); syncCardToCloud(card); playSound('click');
 }
 
@@ -1169,7 +1175,6 @@ function updateArticleField(input) {
   const idx = parseInt(input.dataset.index), field = input.dataset.field; const card = state.cards.find(c => c.id === activeCardId); if (!card || !card.articles[idx]) return; 
   card.articles[idx][field] = input.value;
 
-  // Lascio anche il controllo esatto per chi incolla direttamente un codice per intero
   if (field === 'code' && input.value.trim() !== '') {
     const match = ARTICLES_DB.find(a => a.code && a.code.toLowerCase() === input.value.trim().toLowerCase());
     if (match && card.articles[idx].desc !== match.desc) {
@@ -1211,7 +1216,15 @@ function openDetail(id) {
   badge.className = `px-2 py-0.5 rounded text-[11px] font-bold text-white uppercase ${currentStageObj ? currentStageObj.color.split(' ')[0] : 'bg-slate-600'}`;
   
   document.getElementById('editClientSelector').value = ''; document.getElementById('editTitle').value = card.title || ''; document.getElementById('editReferent').value = card.referent || ''; document.getElementById('editEmail').value = card.email || ''; document.getElementById('editWhatsapp').value = card.whatsapp || ''; document.getElementById('editDeliveryDate').value = card.deliveryDate || ''; populateMachinesDropdowns(); document.getElementById('editMachine').value = card.machine || '';
-  if(document.getElementById('editOrderRef')) document.getElementById('editOrderRef').value = card.orderRef || '';
+  
+  // MODIFICATO: Sostituito l'evento inline con una gestione che invoca il salvataggio silenzioso
+  const editOrderRefEl = document.getElementById('editOrderRef');
+  if (editOrderRefEl) {
+    editOrderRefEl.value = card.orderRef || '';
+    editOrderRefEl.onchange = function() {
+      saveCardEdits(true); // Parametro "true" attiva il salvataggio in DB senza mostrare alert
+    };
+  }
   
   const colDef = COLUMNS_CONFIG.find(col => col.id === card.stage); const defaultColor = colDef ? colDef.hexDefault : '#4f46e5'; const colorInput = document.getElementById('editCardColor'); colorInput.value = card.customColor || defaultColor; colorInput.dataset.defaultColor = defaultColor; 
   renderArticlesTable(card); renderAttachments(card);
@@ -1296,8 +1309,6 @@ function openLabelPrintModal(cardId) {
   if (notesInput) {
     if (card.labelNotes !== undefined && card.labelNotes !== '') {
       notesInput.value = card.labelNotes;
-    } else if (card.orderRef) {
-      notesInput.value = 'Rif. Ordine: ' + card.orderRef;
     } else {
       notesInput.value = '';
     }
@@ -1348,6 +1359,7 @@ function splitLabelRow(index) {
 }
 function removeLabelRow(index) { playSound('click'); window.tempLabelArticles.splice(index, 1); renderLabelArticlesTable(); }
 
+// MODIFICATO: Stampa etichette con le correzioni per il font e per le righe
 async function generateAndPrintLabels() {
   const card = state.cards.find(c => c.id === activeLabelCardId); 
   if (!card) return;
@@ -1385,15 +1397,23 @@ async function generateAndPrintLabels() {
   const senderText = "<strong style='font-size: 11px;'>Studio Grafico Associato di Gastaldi Antonio Francesco</strong><br>Via Mario Groppo 4 - 12048 Sommariva del Bosco (CN)<br>Tel: 0172 560087 - info@studiograficoassociato.com<br>www.studiograficoassociato.com";
   let logoHtml = sharedCompanyLogo ? `<img src="${sharedCompanyLogo}" class="print-logo">` : `<div class="logo-area">SGA</div><div class="logo-sub">STUDIO GRAFICO ASSOCIATO</div>`;
 
+  // Creazione Box Riferimento Ordine se presente
+  let orderRefHtml = "";
+  if (card.orderRef && card.orderRef.trim() !== "") {
+    orderRefHtml = `
+      <div style="margin-top: 8px; font-size: 11.5px; font-weight: bold; border-top: 1px dashed #888; padding-top: 4px;">
+        Rif. Ordine: <span style="font-weight: normal;">${card.orderRef}</span>
+      </div>
+    `;
+  }
+
   packageNumbers.forEach((pkgNum, idx) => {
     const currentPkgIndex = idx + 1;
     const articlesInPkg = packages[pkgNum];
     
-    // AGGIUNTO: Rimosso "font-family: monospace" - Ora usa il font della descrizione. 
-    // Spaziature regolate per assicurare l'inserimento di più righe
-    const articlesListHtml = articlesInPkg.map(a => `<tr><td style="width: 45px; font-weight: bold; text-align: center; vertical-align: top;">${a.qty}x</td><td style="width: 75px; vertical-align: top;">${a.code}</td><td style="padding-bottom: 2px;">${a.desc}</td></tr>`).join('');
+    // Rimosso il font monospace per allineare Codice e Descrizione. Le righe ora usano il font di base del body
+    const articlesListHtml = articlesInPkg.map(a => `<tr><td style="width: 45px; font-weight: bold; text-align: center; vertical-align: top;">${a.qty}x</td><td style="width: 75px; vertical-align: top; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">${a.code}</td><td style="padding-bottom: 2px;">${a.desc}</td></tr>`).join('');
     
-    // AGGIUNTO: Box dinamico in altezza per occupare meno spazio in caso di poche righe (max-height ridotto a 16mm)
     const notesBoxHtml = labelNotes ? `
         <div class="box notes-box" style="margin-top: 2mm; flex-shrink: 0; min-height: 10mm; max-height: 16mm;">
           <div class="box-header" style="background: #555; padding: 2px 6px;">NOTE / RIFERIMENTI:</div>
@@ -1421,11 +1441,12 @@ async function generateAndPrintLabels() {
         </div>
         <div class="box content-box" style="flex: 1; display: flex; flex-direction: column;">
           <div class="box-header">CONTENUTO DEL COLLO:</div>
-          <div class="box-body" style="padding: 0; flex: 1; overflow: hidden;">
-            <table class="content-table">
+          <div class="box-body" style="padding: 4px; flex: 1; overflow: hidden; display: flex; flex-direction: column;">
+            <table class="content-table" style="flex: 1; margin-bottom: auto;">
               <thead><tr><th style="width: 45px; text-align: center;">Q.TÀ</th><th style="width: 75px;">CODICE</th><th>DESCRIZIONE MATERIALE</th></tr></thead>
               <tbody>${articlesListHtml}</tbody>
             </table>
+            ${orderRefHtml}
           </div>
         </div>
         ${notesBoxHtml}
@@ -1433,6 +1454,7 @@ async function generateAndPrintLabels() {
     `;
   });
 
+  // Aggiunto "page-break-inside: avoid" a .content-table tr per non far tagliare la riga a metà
   const fullHtml = `<!DOCTYPE html><html><head><title>Etichette_${card.title}</title><style>
     @page { size: 148mm 105mm; margin: 0; }
     body, html { margin: 0; padding: 0; width: 148mm; background: #fff; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
@@ -1457,8 +1479,8 @@ async function generateAndPrintLabels() {
     
     .content-box { flex: 1; }
     .content-box .box-header { background: #fff; color: #000; border-bottom: 2px solid #333;}
-    .content-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-    /* Padding ridotti della tabella per far stare più righe all'interno della view */
+    .content-table { width: 100%; border-collapse: collapse; font-size: 13px; table-layout: auto; }
+    .content-table tr { page-break-inside: avoid; height: auto !important; }
     .content-table th { background: #D9D9D9; border-bottom: 2px solid #888; text-align: left; padding: 3px 4px; font-size: 10.5px; font-weight: bold;}
     .content-table td { padding: 3px 4px; border-bottom: 1px solid #ddd; background: #EBE8D8; font-size: 11.5px;}
     .content-table tr:nth-child(even) td { background: #E1DECD; }
