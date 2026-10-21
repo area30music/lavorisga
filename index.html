@@ -5,23 +5,18 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Workflow SGA</title>
   
-  <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Icone Lucide -->
   <script src="https://unpkg.com/lucide@latest"></script>
-  <!-- PDF.js -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <script>
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
   </script>
   
-  <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
   
-  <!-- FOGLIO DI STILE ESTERNO -->
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style_2.css">
 </head>
 <body class="bg-slate-950 text-slate-100 font-sans h-screen flex flex-col overflow-hidden">
 
@@ -90,10 +85,11 @@
       </div>
 
       <div class="overflow-y-auto flex-1 pr-2 space-y-4">
-        <div class="bg-slate-950 p-3.5 rounded-xl border border-slate-800 space-y-2 text-sm flex justify-between">
+        <div class="bg-slate-950 p-3.5 rounded-xl border border-slate-800 space-y-2 text-sm flex justify-between flex-wrap gap-2">
           <div>
             <div><strong class="text-slate-400">Cliente / Azienda:</strong> <span id="labelClientName" class="text-slate-200 font-semibold">--</span></div>
-            <div><strong class="text-slate-400">Rif. Commessa:</strong> <span id="labelTaskTitle" class="text-slate-200 font-semibold">--</span></div>
+            <div><strong class="text-slate-400">Titolo Commessa:</strong> <span id="labelTaskTitle" class="text-slate-200 font-semibold">--</span></div>
+            <div><strong class="text-slate-400">Rif. Ordine:</strong> <span id="labelOrderRef" class="text-slate-200 font-semibold">--</span></div>
           </div>
           <div class="text-right">
             <span class="text-[10px] bg-blue-900/30 text-blue-300 border border-blue-800 px-2 py-1 rounded">Formato di Stampa: A6 (148x105mm)</span>
@@ -106,7 +102,7 @@
               <tr class="border-b border-slate-800 text-slate-400 uppercase text-[10px]">
                 <th class="py-2 px-2 w-24">Codice</th>
                 <th class="py-2 px-2">Descrizione Articolo</th>
-                <th class="py-2 px-2 w-24 text-center">Q.tà in questo collo</th>
+                <th class="py-2 px-2 w-24 text-center">Q.tà (questo collo)</th>
                 <th class="py-2 px-2 w-24 text-center">Assegna a Collo N°</th>
                 <th class="py-2 px-2 w-20 text-center">Azioni</th>
               </tr>
@@ -260,7 +256,6 @@
 
   <!-- WORKSPACE A SCORRIMENTO ORIZZONTALE -->
   <main id="board" class="flex-1 overflow-x-auto overflow-y-hidden flex gap-4 p-3 md:p-4 items-start select-none relative scroll-smooth">
-    <!-- Colonne generate via JS -->
   </main>
 
   <!-- MODAL: MENU PRINCIPALE IMPOSTAZIONI A CARD -->
@@ -286,18 +281,15 @@
               <p class="text-xs text-slate-400 mt-0.5">Database clienti, aziende, email e WhatsApp.</p>
             </div>
           </div>
-          
-          <!-- NUOVA VOCE GESTIONE ARTICOLI -->
-          <div onclick="playSound('click'); openSubSettings('articles_mgmt');" class="bg-slate-950 hover:bg-slate-850 border border-slate-800 hover:border-blue-500/50 p-4 rounded-xl cursor-pointer transition-all flex items-start gap-3.5 group">
-            <div class="bg-blue-600/20 text-blue-400 p-3 rounded-lg border border-blue-500/30 group-hover:scale-105 transition-transform">
+          <div onclick="playSound('click'); openSubSettings('articles');" class="bg-slate-950 hover:bg-slate-850 border border-slate-800 hover:border-emerald-500/50 p-4 rounded-xl cursor-pointer transition-all flex items-start gap-3.5 group">
+            <div class="bg-emerald-600/20 text-emerald-400 p-3 rounded-lg border border-emerald-500/30 group-hover:scale-105 transition-transform">
               <i data-lucide="package" class="w-6 h-6"></i>
             </div>
             <div>
-              <h4 class="font-bold text-slate-200 text-sm">Gestione Articoli (Database)</h4>
-              <p class="text-xs text-slate-400 mt-0.5">Database codici, descrizioni e prezzi frequenti.</p>
+              <h4 class="font-bold text-slate-200 text-sm">Database Articoli</h4>
+              <p class="text-xs text-slate-400 mt-0.5">Aggiungi articoli per l'autocompletamento rapido.</p>
             </div>
           </div>
-
           <div onclick="playSound('click'); openSubSettings('archive');" class="bg-slate-950 hover:bg-slate-850 border border-slate-800 hover:border-slate-500/50 p-4 rounded-xl cursor-pointer transition-all flex items-start gap-3.5 group">
             <div class="bg-slate-600/20 text-slate-400 p-3 rounded-lg border border-slate-500/30 group-hover:scale-105 transition-transform">
               <i data-lucide="archive" class="w-6 h-6"></i>
@@ -403,7 +395,7 @@
     </div>
   </div>
 
-  <!-- MODAL: DETTAGLIO SCHEDA (Z-INDEX SUPERIORE) -->
+  <!-- MODAL: DETTAGLIO SCHEDA -->
   <div id="detailModal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[60] flex items-center justify-center p-2 md:p-4">
     <div class="bg-slate-900 border border-slate-800 rounded-xl w-full max-w-6xl max-h-[96vh] md:max-h-[92vh] flex flex-col overflow-hidden shadow-2xl">
       <div class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-850">
@@ -438,11 +430,11 @@
           <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
             <div>
               <label class="text-[10px] text-indigo-400 font-semibold uppercase tracking-wider block mb-1">Riferimento Ordine</label>
-              <input type="text" id="editOrderRef" placeholder="Es. PO 12345..." class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-1.5 text-slate-200 text-sm focus:outline-none focus:border-indigo-500">
+              <input type="text" id="editOrderRef" class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-1.5 text-slate-200 text-sm focus:outline-none focus:border-indigo-500">
             </div>
             <div>
               <label class="text-[10px] text-indigo-400 font-semibold uppercase tracking-wider block mb-1">Referente</label>
-              <input type="text" id="editReferent" placeholder="Nome referente..." class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-1.5 text-slate-200 text-sm focus:outline-none focus:border-indigo-500">
+              <input type="text" id="editReferent" class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-1.5 text-slate-200 text-sm focus:outline-none focus:border-indigo-500">
             </div>
             <div>
               <label class="text-[10px] text-indigo-400 font-semibold uppercase tracking-wider block mb-1">Data Consegna</label>
@@ -462,7 +454,7 @@
                 <option value="Altro">Altro</option>
                 <option value="custom">Personalizza...</option>
               </select>
-              <input type="text" id="editCustomJobType" placeholder="Specifica nuovo tipo..." class="hidden mt-2 w-full bg-slate-900 border border-indigo-500 rounded px-3 py-1.5 text-slate-200 text-xs focus:outline-none">
+              <input type="text" id="editCustomJobType" class="hidden mt-2 w-full bg-slate-900 border border-indigo-500 rounded px-3 py-1.5 text-slate-200 text-xs focus:outline-none">
             </div>
             <div>
               <label class="text-[10px] text-cyan-400 font-semibold uppercase tracking-wider block mb-1">Macchinario Utilizzato</label>
@@ -472,11 +464,11 @@
             </div>
             <div>
               <label class="text-[10px] text-indigo-400 font-semibold uppercase tracking-wider block mb-1">Email Referente</label>
-              <input type="email" id="editEmail" placeholder="email@azienda.it" class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-1.5 text-slate-200 text-sm focus:outline-none focus:border-indigo-500">
+              <input type="email" id="editEmail" class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-1.5 text-slate-200 text-sm focus:outline-none focus:border-indigo-500">
             </div>
             <div>
               <label class="text-[10px] text-indigo-400 font-semibold uppercase tracking-wider block mb-1">WhatsApp Referente</label>
-              <input type="text" id="editWhatsapp" placeholder="+39..." class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-1.5 text-slate-200 text-sm focus:outline-none focus:border-indigo-500">
+              <input type="text" id="editWhatsapp" class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-1.5 text-slate-200 text-sm focus:outline-none focus:border-indigo-500">
             </div>
           </div>
           
@@ -509,7 +501,7 @@
               <thead>
                 <tr class="border-b border-slate-800 text-slate-400 uppercase text-[10px]">
                   <th class="py-2 px-1 w-16 text-center">Sposta</th>
-                  <th class="py-2 px-2 w-28">Codice</th>
+                  <th class="py-2 px-2 w-32">Codice</th>
                   <th class="py-2 px-2">Descrizione</th>
                   <th class="py-2 px-2 w-16 text-center">Q.tà</th>
                   <th class="py-2 px-2 w-20 text-right">Prezzo Un.</th>
@@ -568,7 +560,6 @@
           <button onclick="deleteCurrentCard();" class="bg-red-950/40 hover:bg-red-900/60 text-red-400 border border-red-900/50 px-4 py-2 rounded-lg font-semibold flex items-center gap-2 active:scale-95 transition-all text-xs cursor-pointer">
             <i data-lucide="trash-2" class="w-4 h-4"></i> Elimina
           </button>
-          
           <div id="restoreCardBtnContainer" class="hidden">
             <button onclick="restoreCardFromArchive()" class="bg-emerald-600/30 hover:bg-emerald-600/50 text-emerald-400 border border-emerald-500/50 px-4 py-2 rounded-lg font-semibold flex items-center gap-2 active:scale-95 transition-all text-xs cursor-pointer">
               <i data-lucide="refresh-cw" class="w-4 h-4"></i> Ripristina in Fatturato
@@ -613,11 +604,12 @@
           <div id="formClientSuggestions" class="hidden absolute left-0 right-0 top-full mt-1 bg-slate-900 border border-slate-700 rounded-lg shadow-xl z-30 max-h-40 overflow-y-auto"></div>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-2">
-          <div class="col-span-1 md:col-span-2">
-            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Riferimento Ordine</label>
-            <input type="text" id="formOrderRef" placeholder="Es. Ordine 12345 / PO..." class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-indigo-500">
-          </div>
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Riferimento Ordine</label>
+          <input type="text" id="formOrderRef" placeholder="Es. PO-2026-123..." class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-indigo-500">
+        </div>
+        
+        <div class="grid grid-cols-2 gap-3">
           <div>
             <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Referente</label>
             <input type="text" id="formReferent" placeholder="Es. Marco Rossi" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-indigo-500">
@@ -631,11 +623,11 @@
         <div class="grid grid-cols-2 gap-3">
           <div>
             <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Email Referente</label>
-            <input type="email" id="formEmail" placeholder="email@azienda.it" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-indigo-500">
+            <input type="email" id="formEmail" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-indigo-500">
           </div>
           <div>
             <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">WhatsApp Referente</label>
-            <input type="text" id="formWhatsapp" placeholder="+39..." class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-indigo-500">
+            <input type="text" id="formWhatsapp" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-indigo-500">
           </div>
         </div>
 
@@ -651,7 +643,7 @@
               <option value="Altro">Altro</option>
               <option value="custom">Personalizza...</option>
             </select>
-            <input type="text" id="formCustomJobType" placeholder="Specifica nuovo tipo..." class="hidden mt-2 w-full bg-slate-950 border border-indigo-500 rounded-lg px-3 py-2 text-slate-200 text-xs focus:outline-none">
+            <input type="text" id="formCustomJobType" class="hidden mt-2 w-full bg-slate-950 border border-indigo-500 rounded-lg px-3 py-2 text-slate-200 text-xs focus:outline-none">
           </div>
           <div>
             <label class="block text-xs font-semibold uppercase tracking-wider text-cyan-400 mb-1">Macchinario Utilizzato</label>
@@ -679,7 +671,7 @@
 
         <div>
           <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Note / Descrizione Iniziale</label>
-          <textarea id="formNotes" placeholder="Dettagli lavorazione, finiture..." rows="2" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-indigo-500 resize-none"></textarea>
+          <textarea id="formNotes" rows="2" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-indigo-500 resize-none"></textarea>
         </div>
 
         <div class="bg-slate-950 p-3 rounded-lg border border-slate-800 space-y-2">
@@ -765,11 +757,6 @@
     </div>
   </div>
 
-  <!-- Datalist per autocompilazione Articoli Database -->
-  <datalist id="dbArticleCodes"></datalist>
-  <datalist id="dbArticleDescs"></datalist>
-
-  <!-- SCRIPT DELL'APPLICAZIONE -->
-  <script src="app.js"></script>
+  <script src="app_4.js"></script>
 </body>
 </html>
