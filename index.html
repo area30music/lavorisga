@@ -22,6 +22,18 @@
   
   <!-- FOGLIO DI STILE ESTERNO -->
   <link rel="stylesheet" href="style.css">
+
+  <style>
+    /* Fix per garantire che la tendina degli articoli sia sempre in primo piano rispetto alle altre righe */
+    #articlesTableBody tr:focus-within {
+      position: relative;
+      z-index: 50;
+    }
+    /* Fix per prevenire il taglio della tendina nel container con scroll */
+    .table-scroll-container {
+       padding-bottom: 8rem; /* Spazio extra per permettere alla tendina di aprirsi completamente */
+    }
+  </style>
 </head>
 <body class="bg-slate-950 text-slate-100 font-sans h-screen flex flex-col overflow-hidden">
 
@@ -433,7 +445,8 @@
             
             <div class="mt-2">
               <label class="text-[10px] text-indigo-400 font-semibold uppercase tracking-wider block mb-1">Rif. Ordine</label>
-              <input type="text" id="editOrderRef" placeholder="Codice ordine o preventivo..." class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-1.5 text-slate-200 text-sm focus:outline-none focus:border-indigo-500">
+              <!-- AGGIUNTO onchange="saveCardEdits()" PER AUTOSALVATAGGIO -->
+              <input type="text" id="editOrderRef" onchange="saveCardEdits()" placeholder="Codice ordine o preventivo..." class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-1.5 text-slate-200 text-sm focus:outline-none focus:border-indigo-500">
             </div>
           </div>
           
@@ -502,7 +515,8 @@
             </button>
           </div>
           
-          <div class="overflow-x-auto overflow-y-visible">
+          <!-- AGGIUNTE LE CLASSI PER LA GESTIONE DELLO Z-INDEX E DEL PADDING INFERIORE -->
+          <div class="overflow-x-auto table-scroll-container relative z-30">
             <table class="w-full text-left text-xs min-w-[700px]">
               <thead>
                 <tr class="border-b border-slate-800 text-slate-400 uppercase text-[10px]">
@@ -524,7 +538,8 @@
             </table>
           </div>
 
-          <div class="flex justify-between items-center pt-3 border-t border-slate-800 flex-wrap gap-3">
+          <!-- LA BARRA SOTTOSTANTE ORA RIMANE DIETRO LE TENDINE CON z-10 -->
+          <div class="flex justify-between items-center pt-3 border-t border-slate-800 flex-wrap gap-3 relative z-10">
             <button onclick="playSound('success'); saveArticlesEdits();" class="bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-300 border border-indigo-500/30 text-xs px-3 py-1.5 rounded font-semibold flex items-center gap-1.5 transition-colors cursor-pointer">
               <i data-lucide="save" class="w-3.5 h-3.5"></i> Salva Articoli
             </button>
