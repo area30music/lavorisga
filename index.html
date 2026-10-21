@@ -2,481 +2,752 @@
 <html lang="it">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SGA Workflow & Management</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Workflow SGA</title>
+  
+  <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Icone Lucide -->
   <script src="https://unpkg.com/lucide@latest"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+  <!-- PDF.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <script>
-    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
   </script>
-  <style>
-    body { background-color: #030712; color: #f8fafc; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; }
-    ::-webkit-scrollbar { width: 6px; height: 6px; }
-    ::-webkit-scrollbar-track { background: #0f172a; }
-    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
-    ::-webkit-scrollbar-thumb:hover { background: #475569; }
-    @keyframes pulse-border {
-      0%, 100% { border-color: rgba(239, 68, 68, 0.9); box-shadow: 0 0 15px rgba(239, 68, 68, 0.4); }
-      50% { border-color: rgba(239, 68, 68, 0.2); box-shadow: 0 0 5px rgba(239, 68, 68, 0.1); }
-    }
-    .card-urgent { animation: pulse-border 2s infinite; }
-  </style>
+  
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+  
+  <!-- FOGLIO DI STILE ESTERNO -->
+  <link rel="stylesheet" href="style.css">
 </head>
-<body class="h-screen flex flex-col overflow-hidden select-none">
+<body class="bg-slate-950 text-slate-100 font-sans h-screen flex flex-col overflow-hidden">
 
-  <!-- LOGIN SCREEN -->
-  <div id="loginScreen" class="fixed inset-0 z-50 bg-slate-950 flex items-center justify-center p-4 hidden">
-    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-8 max-w-md w-full shadow-2xl space-y-6">
+  <!-- ALERT VIDEOGAME POPUP -->
+  <div id="arcadeAlertModal" class="hidden fixed inset-0 bg-black/85 backdrop-blur-md z-[150] flex items-center justify-center p-4">
+    <div class="arcade-alert-box rounded-3xl w-full max-w-2xl p-8 shadow-2xl relative space-y-6 pointer-events-auto">
+      <button type="button" onclick="closeArcadeAlert()" class="absolute top-4 right-4 bg-red-600 hover:bg-red-500 text-white rounded-full p-2 shadow-lg active:scale-95 transition-all cursor-pointer z-10" title="Chiudi avviso">
+        <i data-lucide="x" class="w-6 h-6"></i>
+      </button>
       <div class="text-center space-y-2">
-        <div class="w-16 h-16 bg-indigo-600 rounded-2xl mx-auto flex items-center justify-center text-white shadow-lg shadow-indigo-900/50">
-          <i data-lucide="printer" class="w-8 h-8"></i>
+        <div class="inline-flex items-center justify-center bg-red-600/35 p-4 rounded-full border-2 border-red-50 mb-1 animate-bounce">
+          <i data-lucide="alert-triangle" class="w-10 h-10 text-red-500"></i>
         </div>
-        <h1 class="text-xl font-bold tracking-tight text-white">SGA Workflow & Management</h1>
-        <p class="text-xs text-slate-400">Inserisci le credenziali di accesso aziendali</p>
+        <h2 class="text-3xl font-black text-red-500 arcade-text uppercase">⚠️ ATTENZIONE: SCADENZE IMMINENTI! ⚠️</h2>
+        <p class="text-sm text-yellow-400 font-bold uppercase tracking-widest">Le seguenti commesse richiedono azione immediata</p>
+      </div>
+      <div id="arcadeAlertList" class="space-y-3 max-h-80 overflow-y-auto pr-2"></div>
+      <div class="pt-2 text-center space-y-3">
+        <button type="button" onclick="closeArcadeAlert()" class="bg-red-600 hover:bg-red-500 text-white font-black px-8 py-3.5 rounded-xl text-base uppercase tracking-wider shadow-xl shadow-red-900/50 active:scale-95 transition-transform border border-red-400 cursor-pointer">
+          Ricevuto / Chiudi Avviso
+        </button>
+        <div>
+          <p class="text-xs text-slate-400 mb-1.5 italic">Questo avviso si chiuderà automaticamente tra 1 minuto...</p>
+          <div class="w-full bg-slate-900 h-2 rounded-full overflow-hidden border border-red-500/40 shadow-inner">
+            <div id="arcadeProgressBar" class="bg-red-500 h-full w-full"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: CONFERMA ELIMINAZIONE GLOBALE -->
+  <div id="deleteConfirmModal" class="hidden fixed inset-0 bg-slate-950/85 backdrop-blur-md z-[200] flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-red-500/50 rounded-2xl w-full max-w-sm p-6 shadow-2xl text-center space-y-4">
+      <div class="inline-flex items-center justify-center bg-red-900/30 p-4 rounded-full border border-red-500/30 mb-2">
+        <i data-lucide="trash-2" class="w-8 h-8 text-red-500"></i>
+      </div>
+      <h3 class="text-lg font-bold text-white">Conferma Eliminazione</h3>
+      <p class="text-sm text-slate-300">Sei sicuro di voler eliminare definitivamente questo elemento?</p>
+      <div class="bg-red-950/20 p-3 rounded-lg border border-red-900/50 my-3">
+        <p id="deleteConfirmText" class="text-sm font-bold text-red-400 break-words"></p>
+      </div>
+      <div class="flex gap-3 pt-2">
+        <button onclick="playSound('close'); closeModal('deleteConfirmModal')" class="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-2.5 rounded-xl transition-colors cursor-pointer">Annulla</button>
+        <button id="btnConfirmDelete" class="flex-1 bg-red-600 hover:bg-red-500 text-white font-bold py-2.5 rounded-xl shadow-lg shadow-red-900/20 active:scale-95 transition-all cursor-pointer">Sì, Elimina</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: STAMPA ETICHETTE COLLI -->
+  <div id="labelPrintModal" class="hidden fixed inset-0 bg-slate-950/85 backdrop-blur-md z-[160] flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-blue-500/50 rounded-2xl w-full max-w-4xl p-6 shadow-2xl flex flex-col max-h-[90vh]">
+      <div class="flex items-center justify-between mb-4 border-b border-slate-800 pb-3">
+        <div class="flex items-center gap-3">
+          <div class="bg-blue-600/20 text-blue-400 p-2 rounded-xl border border-blue-500/30">
+            <i data-lucide="printer" class="w-6 h-6"></i>
+          </div>
+          <div>
+            <h3 class="font-bold text-lg text-white">Stampa Etichette Colli (A6)</h3>
+            <p class="text-xs text-slate-400">Dividi e assegna le quantità ai vari colli prima di stampare</p>
+          </div>
+        </div>
+        <button onclick="closeModal('labelPrintModal')" class="text-slate-400 hover:text-slate-200 bg-slate-800 rounded-full p-1.5 cursor-pointer">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div class="overflow-y-auto flex-1 pr-2 space-y-4">
+        <div class="bg-slate-950 p-3.5 rounded-xl border border-slate-800 space-y-2 text-sm flex justify-between">
+          <div>
+            <div><strong class="text-slate-400">Cliente / Azienda:</strong> <span id="labelClientName" class="text-slate-200 font-semibold">--</span></div>
+            <div><strong class="text-slate-400">Rif. Commessa:</strong> <span id="labelTaskTitle" class="text-slate-200 font-semibold">--</span></div>
+          </div>
+          <div class="text-right">
+            <span class="text-[10px] bg-blue-900/30 text-blue-300 border border-blue-800 px-2 py-1 rounded">Formato di Stampa: A6 (148x105mm)</span>
+          </div>
+        </div>
+        
+        <div class="bg-slate-950 p-3.5 rounded-xl border border-slate-800">
+          <table class="w-full text-left text-xs">
+            <thead>
+              <tr class="border-b border-slate-800 text-slate-400 uppercase text-[10px]">
+                <th class="py-2 px-2">Descrizione Articolo</th>
+                <th class="py-2 px-2 w-24 text-center">Q.tà in questo collo</th>
+                <th class="py-2 px-2 w-24 text-center">Assegna a Collo N°</th>
+                <th class="py-2 px-2 w-20 text-center">Azioni</th>
+              </tr>
+            </thead>
+            <tbody id="labelArticlesBody" class="divide-y divide-slate-900">
+              <!-- Righe dinamiche via JS -->
+            </tbody>
+          </table>
+        </div>
+
+        <!-- NUOVO BOX NOTE -->
+        <div class="bg-slate-950 p-3.5 rounded-xl border border-slate-800">
+          <label class="block text-xs font-bold text-slate-400 mb-2 uppercase tracking-wider">Note Aggiuntive Etichetta</label>
+          <textarea id="labelNotesInput" rows="2" placeholder="Note da stampare sul collo (es. Attenzione fragile, consegnare a mano...)" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-slate-200 text-xs focus:outline-none focus:border-blue-500 resize-none"></textarea>
+        </div>
+
+      </div>
+
+      <div class="pt-4 mt-2 border-t border-slate-800 flex justify-between gap-3">
+        <button onclick="closeModal('labelPrintModal')" class="bg-slate-800 hover:bg-slate-700 text-white font-bold py-2.5 px-6 rounded-xl transition-colors cursor-pointer text-sm">Annulla</button>
+        <button onclick="generateAndPrintLabels()" class="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-bold py-2.5 px-4 rounded-xl flex items-center justify-center gap-2 text-sm shadow-lg shadow-blue-900/30 active:scale-95 transition-transform cursor-pointer">
+          <i data-lucide="printer" class="w-4 h-4"></i> Genera e Stampa Etichette
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: NOTIFICA CLIENTE PRONTO -->
+  <div id="clientNotifyModal" class="hidden fixed inset-0 bg-slate-950/85 backdrop-blur-md z-[150] flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-emerald-500/50 rounded-2xl w-full max-w-md p-6 shadow-2xl space-y-5">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="bg-emerald-600/20 text-emerald-400 p-3 rounded-xl border border-emerald-500/30">
+            <i data-lucide="bell-ring" class="w-6 h-6"></i>
+          </div>
+          <div>
+            <h3 class="font-bold text-base text-white">Commessa Pronta!</h3>
+            <p class="text-xs text-slate-400">Vuoi avvisare il cliente?</p>
+          </div>
+        </div>
+        <button onclick="closeModal('clientNotifyModal')" class="text-slate-400 hover:text-slate-200 bg-slate-800 rounded-full p-1.5 cursor-pointer">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <div class="bg-slate-950 p-3.5 rounded-xl border border-slate-800 space-y-2 text-xs">
+        <div><strong class="text-slate-400">Cliente / Azienda:</strong> <span id="notifyClientName" class="text-slate-200 font-semibold">--</span></div>
+        <div><strong class="text-slate-400">Referente:</strong> <span id="notifyClientRef" class="text-indigo-400 font-semibold">--</span></div>
+        <div><strong class="text-slate-400">Contatto WhatsApp:</strong> <span id="notifyClientWa" class="text-emerald-400 font-mono">--</span></div>
+        <div><strong class="text-slate-400">Email:</strong> <span id="notifyClientEmail" class="text-blue-400 font-mono">--</span></div>
+      </div>
+
+      <div class="space-y-2 pt-1">
+        <button type="button" onclick="sendWhatsAppNotification()" id="btnSendWa" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 px-4 rounded-xl flex items-center justify-center gap-2 text-xs shadow-lg shadow-emerald-900/30 active:scale-95 transition-transform cursor-pointer">
+          <i data-lucide="message-circle" class="w-4 h-4"></i> Invia Messaggio WhatsApp
+        </button>
+        <button type="button" onclick="sendEmailNotification()" id="btnSendEmail" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-2.5 px-4 rounded-xl flex items-center justify-center gap-2 text-xs shadow-lg shadow-blue-900/30 active:scale-95 transition-transform cursor-pointer">
+          <i data-lucide="mail" class="w-4 h-4"></i> Invia Email di Notifica
+        </button>
+      </div>
+
+      <div class="pt-2 text-center">
+        <button type="button" onclick="closeModal('clientNotifyModal')" class="text-xs text-slate-400 hover:text-slate-200 underline cursor-pointer">
+          Salta / Chiudi
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCHERMATA DI LOGIN FIREBASE AUTH -->
+  <div id="loginScreen" class="fixed inset-0 bg-slate-950 z-[100] flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-sm p-6 shadow-2xl space-y-6">
+      <div class="text-center space-y-2">
+        <div class="bg-indigo-600 w-12 h-12 rounded-xl mx-auto flex items-center justify-center text-white shadow-lg shadow-indigo-900/40">
+          <i data-lucide="lock" class="w-6 h-6"></i>
+        </div>
+        <h2 class="text-xl font-bold text-white">Workflow SGA</h2>
+        <p class="text-xs text-slate-400">Accedi con le credenziali Firebase per entrare nell'area di lavoro.</p>
       </div>
       <form onsubmit="handleLogin(event)" class="space-y-4">
         <div>
-          <label class="block text-[11px] uppercase font-bold text-slate-400 mb-1">Email Aziendale</label>
-          <input type="email" id="loginEmail" required class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-indigo-500" placeholder="nome@studiograficoassociato.com">
+          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Email</label>
+          <input type="email" id="loginEmail" required placeholder="Email Firebase..." class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2.5 text-slate-200 focus:outline-none focus:border-indigo-500 text-sm">
         </div>
         <div>
-          <label class="block text-[11px] uppercase font-bold text-slate-400 mb-1">Password</label>
-          <input type="password" id="loginPassword" required class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-indigo-500" placeholder="••••••••">
+          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Password</label>
+          <input type="password" id="loginPassword" required placeholder="Password Firebase..." class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-2.5 text-slate-200 focus:outline-none focus:border-indigo-500 text-sm">
+          <p id="loginError" class="hidden mt-2 text-red-400 text-xs font-bold text-center">Credenziali errate. Riprova.</p>
         </div>
-        <div id="loginError" class="text-red-400 text-xs text-center hidden font-medium">Credenziali non valide o errore di connessione.</div>
-        <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-3 rounded-lg text-sm shadow-lg shadow-indigo-900/30 transition-all cursor-pointer">Accedi al Sistema</button>
+        <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2.5 px-4 rounded-lg active:scale-[0.98] transition-transform flex items-center justify-center gap-2 shadow-lg shadow-indigo-900/20 text-sm cursor-pointer">
+          <i data-lucide="log-in" class="w-4 h-4"></i> Accedi al Programma
+        </button>
       </form>
     </div>
   </div>
 
-  <!-- HEADER -->
-  <header class="bg-slate-950 border-b border-slate-800 px-4 py-3 flex justify-between items-center shrink-0 z-20">
-    <div class="flex items-center gap-3">
-      <div id="companyLogoContainer" onclick="openSubSettings('logo')" class="relative group cursor-pointer w-12 h-12 bg-indigo-600 rounded-lg text-white shadow-lg shadow-indigo-900/20 flex items-center justify-center overflow-hidden shrink-0" title="Modifica Logo Aziendale">
-        <i id="logoDefaultIcon" data-lucide="printer" class="w-6 h-6"></i>
-        <img id="logoImageDisplay" class="max-h-full max-w-full object-contain hidden">
-        <div class="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-[9px] font-bold uppercase tracking-wider">Logo</div>
+  <!-- TOP BAR -->
+  <header class="bg-slate-900 border-b border-slate-800 px-3 md:px-4 py-2 flex justify-between items-center shrink-0 flex-wrap gap-2 z-10 relative">
+    <div class="flex items-center space-x-2 md:space-x-3">
+      <div id="companyLogoContainer" class="relative group cursor-pointer bg-indigo-600 rounded-lg text-white shadow-lg shadow-indigo-900/20 flex items-center justify-center overflow-hidden shrink-0" style="width: 120px; height: 44px;" title="Logo Aziendale Condiviso">
+        <div id="logoDefaultIcon" class="flex items-center justify-center"><i data-lucide="layers" class="w-6 h-6"></i></div>
+        <img id="logoImageDisplay" src="" class="hidden w-full h-full object-contain p-1">
+        <input type="file" accept="image/png, image/jpeg" class="absolute inset-0 opacity-0 cursor-pointer hide-in-master" onchange="uploadCompanyLogo(event)" title="Carica Logo Aziendale">
       </div>
-      <div>
-        <h1 class="text-base font-bold text-white tracking-wide flex items-center gap-2">
-          SGA Workflow
-        </h1>
-        <div class="flex items-center gap-2.5 text-xs text-slate-300 mt-0.5">
-          <span id="cloudStatus" class="flex items-center gap-1"><i data-lucide="wifi" class="w-3.5 h-3.5 text-emerald-500"></i> <span class="text-emerald-400 font-medium">Cloud Sincronizzato</span></span>
-          <span class="text-slate-600">•</span>
-          <span id="headerClockDate" class="font-bold text-slate-200 text-sm">--/--/----</span>
-          <span class="text-slate-600">•</span>
-          <span id="headerClockTime" class="font-mono font-black text-indigo-400 text-sm">--:--:--</span>
+      <button onclick="toggleMasterMode(); playSound('close');" class="master-back-btn hidden bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-2 rounded-lg text-xs md:text-sm font-extrabold items-center gap-2 active:scale-95 transition-transform shadow-lg shadow-indigo-900/40 border border-indigo-400 cursor-pointer" title="Torna a Programmazione">
+        <i data-lucide="arrow-left" class="w-5 h-5"></i> Torna a Programmazione
+      </button>
+      <div class="show-in-master hidden items-center gap-2 ml-2">
+        <button id="masterPlayPauseBtn" onclick="togglePlayPauseMaster(); playSound('click');" class="bg-slate-800 hover:bg-slate-700 text-white px-3 py-2 rounded-lg text-xs md:text-sm font-bold flex items-center gap-1.5 border border-slate-700 shadow-lg cursor-pointer transition-colors" title="Play/Pausa Scorrimento">
+            <i data-lucide="pause" id="masterPlayPauseIcon" class="w-4 h-4 text-amber-400"></i> <span id="masterPlayPauseText">Pausa</span>
+        </button>
+        <div class="flex items-center gap-2 bg-slate-950 border border-indigo-500/40 px-3 py-1.5 rounded-xl shadow-lg h-[38px]">
+          <i data-lucide="gauge" class="w-4 h-4 text-indigo-400"></i>
+          <span class="text-xs text-slate-300 font-semibold hidden md:inline">Velocità:</span>
+          <input type="range" id="masterSpeedRange" min="0.02" max="0.30" value="0.08" step="0.01" oninput="updateMasterSpeed(this.value)" class="w-20 md:w-28 accent-indigo-500 cursor-pointer h-1.5 bg-slate-900 rounded-lg">
         </div>
       </div>
-    </div>
-
-    <div class="hidden md:flex items-center gap-2 flex-1 max-w-xl mx-6">
-      <div class="relative flex-1">
-        <i data-lucide="search" class="w-4 h-4 absolute left-3 top-2.5 text-slate-400"></i>
-        <input type="text" id="globalSearchInput" oninput="handleGlobalSearch(this.value)" placeholder="Cerca commessa, cliente, ID o articolo..." class="w-full bg-slate-900 border border-slate-700/80 rounded-lg pl-9 pr-8 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">
-        <button id="btnClearSearch" onclick="clearGlobalSearch()" class="absolute right-2.5 top-2.5 text-slate-400 hover:text-white hidden"><i data-lucide="x" class="w-3.5 h-3.5"></i></button>
+      <div class="hide-in-master">
+        <h1 class="font-bold text-sm md:text-base leading-tight text-white flex items-center gap-2">Workflow SGA</h1>
+        <p id="cloudStatus" onclick="playSound('click'); openModal('cloudModal');" class="text-[11px] flex items-center gap-1 cursor-pointer transition-colors mt-0.5" title="Clicca per impostazioni Backup/Foto">
+          <i data-lucide="hard-drive" class="w-3 h-3 text-slate-400"></i> <span class="text-slate-400 hover:text-slate-200">Modalità Locale</span>
+        </p>
       </div>
-      <select id="globalFilterType" onchange="handleGlobalFilterChange()" class="bg-slate-900 border border-slate-700/80 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">
+    </div>
+    <div class="hide-in-master flex items-center gap-2 bg-slate-950 border border-slate-800 px-3 py-1.5 rounded-xl shadow-inner flex-1 max-w-md mx-2">
+      <i data-lucide="search" class="w-4 h-4 text-slate-400 shrink-0"></i>
+      <input type="text" id="globalSearchInput" oninput="handleGlobalSearch(this.value)" placeholder="Cerca commessa, cliente, referente..." class="w-full bg-transparent border-0 text-xs text-slate-200 focus:outline-none">
+      <select id="globalFilterType" onchange="handleGlobalFilterChange()" class="bg-slate-900 border border-slate-700 text-slate-300 text-[11px] rounded px-2 py-1 focus:outline-none focus:border-indigo-500">
         <option value="">Tutte le lavorazioni</option>
       </select>
+      <button onclick="clearGlobalSearch()" id="btnClearSearch" class="hidden text-slate-400 hover:text-white p-0.5"><i data-lucide="x" class="w-3.5 h-3.5"></i></button>
     </div>
-
-    <div class="flex items-center gap-2.5">
-      <button onclick="playSound('click'); openModal('addCardModal');" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs px-3.5 py-2 rounded-lg font-semibold flex items-center gap-1.5 shadow-lg shadow-indigo-900/30 cursor-pointer transition-transform active:scale-95">
-        <i data-lucide="plus" class="w-4 h-4"></i> <span class="hidden sm:inline">Nuova Commessa</span>
+    <div class="flex space-x-2 md:space-x-3 items-center flex-wrap">
+      <div id="liveClockWidget" class="flex items-center gap-2 bg-slate-950 border border-slate-700 px-3 md:px-4 py-1.5 rounded-xl text-sm md:text-base font-mono text-emerald-400 font-bold shadow-lg">
+        <i data-lucide="clock" class="w-4 h-4 md:w-5 md:h-5 text-indigo-400 animate-pulse"></i>
+        <span id="headerClockTime" class="tracking-wider">--:--:--</span>
+        <span class="text-slate-600 font-normal">|</span>
+        <span id="headerClockDate" class="text-slate-300 font-medium">--/--/----</span>
+      </div>
+      <button onclick="playSound('click'); openSettingsModal();" class="hide-in-master bg-slate-800 hover:bg-slate-700 text-slate-300 px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 active:scale-95 transition-transform" title="Impostazioni">
+        <i data-lucide="sliders" class="w-3.5 h-3.5"></i> Impostazioni
       </button>
-      <button onclick="playSound('click'); toggleMasterMode();" class="bg-slate-800 hover:bg-slate-700 text-emerald-400 text-xs px-3.5 py-2 rounded-lg font-semibold flex items-center gap-1.5 border border-slate-700 cursor-pointer transition-colors" title="Attiva Schermata Master TV">
-        <i data-lucide="tv" class="w-4 h-4"></i> <span class="hidden sm:inline">Master View</span>
+      <div class="hide-in-master w-px h-5 bg-slate-700 mx-0.5"></div>
+      <button onclick="playSound('click'); toggleMasterMode();" class="hide-in-master bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-emerald-900/50 px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 active:scale-95 transition-transform" title="Master View">
+        <i data-lucide="monitor" class="w-4 h-4"></i> Master View
       </button>
-      <button onclick="playSound('click'); openSettingsModal();" class="bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white p-2 rounded-lg border border-slate-700 cursor-pointer transition-colors" title="Impostazioni & Archivio">
-        <i data-lucide="settings" class="w-4 h-4"></i>
-      </button>
-      <button onclick="logoutApp()" class="bg-slate-900 hover:bg-red-950/40 text-red-400 p-2 rounded-lg border border-slate-800 hover:border-red-900/50 cursor-pointer transition-colors" title="Disconnetti">
-        <i data-lucide="log-out" class="w-4 h-4"></i>
+      <button onclick="playSound('click'); openModal('addCardModal');" class="hide-in-master bg-indigo-600 hover:bg-indigo-500 text-white px-3.5 py-1.5 rounded-lg text-xs md:text-sm font-semibold flex items-center gap-1.5 active:scale-95 transition-transform shadow-lg shadow-indigo-900/20">
+        <i data-lucide="plus" class="w-4 h-4"></i> Nuova Commessa
       </button>
     </div>
   </header>
 
-  <!-- MASTER TOOLBAR -->
-  <div id="masterToolbar" class="master-back-btn hidden bg-slate-950 border-b border-emerald-500/30 px-6 py-2.5 flex justify-between items-center shrink-0 z-30">
-    <div class="flex items-center gap-3">
-      <span class="w-3 h-3 rounded-full bg-emerald-500 animate-pulse"></span>
-      <span class="text-xs font-bold text-emerald-400 uppercase tracking-widest">Modalità Master TV Attiva</span>
-    </div>
-    <div class="flex items-center gap-4">
-      <button onclick="togglePlayPauseMaster()" class="bg-slate-900 hover:bg-slate-800 text-amber-400 border border-slate-700 px-3 py-1 rounded text-xs font-semibold flex items-center gap-1.5 cursor-pointer">
-        <i id="masterPlayPauseIcon" data-lucide="pause" class="w-3.5 h-3.5 text-amber-400"></i> <span id="masterPlayPauseText">Pausa</span>
-      </button>
-      <div class="flex items-center gap-2 text-xs text-slate-300">
-        <span>Velocità Scorrimento:</span>
-        <input type="range" min="0.02" max="0.3" step="0.02" value="0.08" oninput="updateMasterSpeed(this.value)" class="accent-emerald-500 cursor-pointer w-24">
-      </div>
-      <button onclick="toggleMasterMode()" class="bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold text-xs px-4 py-1.5 rounded-lg flex items-center gap-1.5 cursor-pointer shadow-lg">
-        <i data-lucide="arrow-left" class="w-4 h-4"></i> Torna a Gestione
-      </button>
-    </div>
-  </div>
-
-  <!-- MAIN KANBAN BOARD -->
-  <main class="flex-1 overflow-x-auto p-4 bg-slate-950">
-    <div id="board" class="flex gap-4 h-full items-start min-w-max"></div>
+  <!-- WORKSPACE A SCORRIMENTO ORIZZONTALE -->
+  <main id="board" class="flex-1 overflow-x-auto overflow-y-hidden flex gap-4 p-3 md:p-4 items-start select-none relative scroll-smooth">
+    <!-- Colonne generate via JS -->
   </main>
 
-  <!-- MODALE: NUOVA COMMESSA -->
-  <div id="addCardModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 hidden">
-    <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-xl w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
-      <div class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-950">
-        <h3 class="font-bold text-sm text-white flex items-center gap-2"><i data-lucide="plus-circle" class="w-4 h-4 text-indigo-400"></i> Nuova Commessa / Lavorazione</h3>
-        <button onclick="closeModal('addCardModal')" class="text-slate-400 hover:text-white p-1 cursor-pointer"><i data-lucide="x" class="w-4 h-4"></i></button>
+  <!-- MODAL: MENU PRINCIPALE IMPOSTAZIONI A CARD -->
+  <div id="settingsModal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden shadow-2xl">
+      <div class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-850">
+        <h3 class="font-bold text-base text-slate-100 flex items-center gap-2">
+          <i data-lucide="sliders" class="w-5 h-5 text-indigo-400"></i> Impostazioni Generali
+        </h3>
+        <button onclick="playSound('close'); closeModal('settingsModal');" class="text-slate-400 hover:text-slate-200 bg-slate-800 rounded-full p-1 cursor-pointer">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
       </div>
-      <form id="newCardForm" onsubmit="createNewCard(event)" class="p-5 overflow-y-auto space-y-4 flex-1">
-        <div class="grid grid-cols-2 gap-3">
-          <div class="col-span-2">
-            <label class="block text-[10px] uppercase font-bold text-slate-400 mb-1">Azienda / Cliente *</label>
-            <div class="relative">
-              <input type="text" id="formTitle" required oninput="handleClientInput(this.value, 'formClientSuggestions', 'formReferent', 'formEmail', 'formWhatsapp')" placeholder="Nome Cliente o Azienda..." class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500" autocomplete="off">
-              <div id="formClientSuggestions" class="absolute left-0 right-0 top-full mt-1 bg-slate-900 border border-slate-700 rounded-lg shadow-xl z-30 hidden max-h-40 overflow-y-auto"></div>
-            </div>
-            <div class="mt-1.5"><select id="formClientSelector" onchange="autofillClientFromSelect(this.value, 'form')" class="w-full bg-slate-950 border border-slate-800 rounded px-2 py-1 text-xs text-slate-400 focus:outline-none"><option value="">Seleziona rapido dal CRM...</option></select></div>
-          </div>
-          <div>
-            <label class="block text-[10px] uppercase font-bold text-slate-400 mb-1">Referente</label>
-            <input type="text" id="formReferent" placeholder="Nome referente" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">
-          </div>
-          <div>
-            <label class="block text-[10px] uppercase font-bold text-slate-400 mb-1">Tipo Lavorazione</label>
-            <select id="formJobType" onchange="checkNewCustomJobType(this.value)" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">
-              <option value="Stampa Digitale / Banner">Stampa Digitale / Banner</option>
-              <option value="Abbigliamento / Ricamo">Abbigliamento / Ricamo</option>
-              <option value="Insegne & Vetrofanie">Insegne & Vetrofanie</option>
-              <option value="Etichette & Adesivi">Etichette & Adesivi</option>
-              <option value="Grafica / Progettazione">Grafica / Progettazione</option>
-              <option value="custom">+ Altro (Personalizzato)</option>
-            </select>
-            <input type="text" id="formCustomJobType" placeholder="Nome lavorazione..." class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 mt-2 hidden">
-          </div>
-          <div>
-            <label class="block text-[10px] uppercase font-bold text-slate-400 mb-1">Email Cliente</label>
-            <input type="email" id="formEmail" placeholder="email@client.com" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">
-          </div>
-          <div>
-            <label class="block text-[10px] uppercase font-bold text-slate-400 mb-1">WhatsApp</label>
-            <input type="text" id="formWhatsapp" placeholder="+39 333..." class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">
-          </div>
-          <div>
-            <label class="block text-[10px] uppercase font-bold text-slate-400 mb-1">Macchinario</label>
-            <select id="formMachine" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"><option value="">Nessuno / Manuale</option></select>
-          </div>
-          <div>
-            <label class="block text-[10px] uppercase font-bold text-slate-400 mb-1">Data Consegna Prevista</label>
-            <input type="date" id="formDeliveryDate" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">
-          </div>
-          
-          <div class="col-span-2">
-            <label class="block text-[10px] uppercase font-bold text-slate-400 mb-1">Riferimento Ordine Cliente</label>
-            <input type="text" id="formCustomerRef" placeholder="Es. Numero d'ordine, PO..." class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">
-          </div>
 
-          <div class="col-span-2">
-            <label class="block text-[10px] uppercase font-bold text-slate-400 mb-1">Stato / Colonna Iniziale</label>
-            <select id="formInitialStage" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">
-              <option value="prev-da-fare">Prev. da fare</option>
-              <option value="prev-inviato">Prev. inviato</option>
-              <option value="da-ordinare">Da ordinare</option>
-              <option value="ordinato">Ordinato</option>
-              <option value="da-lavorare">In magazzino da lavorare</option>
-              <option value="in-lavorazione" selected>In lavorazione</option>
-            </select>
+      <div class="p-5 overflow-y-auto space-y-4 flex-1 text-sm">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4">
+          <div onclick="playSound('click'); openSubSettings('crm');" class="bg-slate-950 hover:bg-slate-850 border border-slate-800 hover:border-indigo-500/50 p-4 rounded-xl cursor-pointer transition-all flex items-start gap-3.5 group">
+            <div class="bg-indigo-600/20 text-indigo-400 p-3 rounded-lg border border-indigo-500/30 group-hover:scale-105 transition-transform">
+              <i data-lucide="users" class="w-6 h-6"></i>
+            </div>
+            <div>
+              <h4 class="font-bold text-slate-200 text-sm">Gestione Clienti (CRM)</h4>
+              <p class="text-xs text-slate-400 mt-0.5">Database clienti, aziende, email e WhatsApp.</p>
+            </div>
           </div>
-          <div class="col-span-2">
-            <label class="block text-[10px] uppercase font-bold text-slate-400 mb-1">Note Iniziali / Articolo</label>
-            <textarea id="formNotes" rows="2" placeholder="Dettagli rapidi..." class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"></textarea>
+          <div onclick="playSound('click'); openSubSettings('archive');" class="bg-slate-950 hover:bg-slate-850 border border-slate-800 hover:border-slate-500/50 p-4 rounded-xl cursor-pointer transition-all flex items-start gap-3.5 group">
+            <div class="bg-slate-600/20 text-slate-400 p-3 rounded-lg border border-slate-500/30 group-hover:scale-105 transition-transform">
+              <i data-lucide="archive" class="w-6 h-6"></i>
+            </div>
+            <div>
+              <h4 class="font-bold text-slate-200 text-sm">Archivio Commesse</h4>
+              <p class="text-xs text-slate-400 mt-0.5">Storico lavorazioni fatturate e archiviate (dopo 7gg).</p>
+            </div>
           </div>
-          <div class="col-span-2 border border-dashed border-slate-700 rounded-lg p-3 text-center bg-slate-950/40">
-            <label class="cursor-pointer flex flex-col items-center justify-center gap-1">
-              <i data-lucide="upload-cloud" class="w-6 h-6 text-indigo-400"></i>
-              <span class="text-xs font-semibold text-slate-200">Allega Preventivo (PDF) o Foto</span>
-              <span id="formFilePreview" class="text-[10px] text-indigo-300 italic hidden">Nessun file selezionato</span>
-              <input type="file" accept="image/*, application/pdf" onchange="handleFormFileSelect(event)" class="hidden">
-            </label>
+          <div onclick="playSound('click'); openSubSettings('messages');" class="bg-slate-950 hover:bg-slate-850 border border-slate-800 hover:border-pink-500/50 p-4 rounded-xl cursor-pointer transition-all flex items-start gap-3.5 group">
+            <div class="bg-pink-600/20 text-pink-400 p-3 rounded-lg border border-pink-500/30 group-hover:scale-105 transition-transform">
+              <i data-lucide="message-square" class="w-6 h-6"></i>
+            </div>
+            <div>
+              <h4 class="font-bold text-slate-200 text-sm">Testo Notifiche</h4>
+              <p class="text-xs text-slate-400 mt-0.5">Personalizza messaggi WhatsApp ed Email sincronizzati in Cloud.</p>
+            </div>
+          </div>
+          <div onclick="playSound('click'); openSubSettings('machines');" class="bg-slate-950 hover:bg-slate-850 border border-slate-800 hover:border-cyan-500/50 p-4 rounded-xl cursor-pointer transition-all flex items-start gap-3.5 group">
+            <div class="bg-cyan-600/20 text-cyan-400 p-3 rounded-lg border border-cyan-500/30 group-hover:scale-105 transition-transform">
+              <i data-lucide="cpu" class="w-6 h-6"></i>
+            </div>
+            <div>
+              <h4 class="font-bold text-slate-200 text-sm">Macchinari Utilizzati</h4>
+              <p class="text-xs text-slate-400 mt-0.5">Aggiungi o rimuovi stampanti, plotter e attrezzature.</p>
+            </div>
+          </div>
+          <div onclick="playSound('click'); closeModal('settingsModal'); openModal('cloudModal');" class="bg-slate-950 hover:bg-slate-850 border border-slate-800 hover:border-emerald-500/50 p-4 rounded-xl cursor-pointer transition-all flex items-start gap-3.5 group">
+            <div class="bg-emerald-600/20 text-emerald-400 p-3 rounded-lg border border-emerald-500/30 group-hover:scale-105 transition-transform">
+              <i data-lucide="cloud" class="w-6 h-6"></i>
+            </div>
+            <div>
+              <h4 class="font-bold text-slate-200 text-sm">Impostazioni Cloud Dati</h4>
+              <p class="text-xs text-slate-400 mt-0.5">Configura ImgBB 4K e gestisci Backup Dati.</p>
+            </div>
+          </div>
+          <div onclick="playSound('click'); openSubSettings('logo');" class="bg-slate-950 hover:bg-slate-850 border border-slate-800 hover:border-blue-500/50 p-4 rounded-xl cursor-pointer transition-all flex items-start gap-3.5 group">
+            <div class="bg-blue-600/20 text-blue-400 p-3 rounded-lg border border-blue-500/30 group-hover:scale-105 transition-transform">
+              <i data-lucide="image" class="w-6 h-6"></i>
+            </div>
+            <div>
+              <h4 class="font-bold text-slate-200 text-sm">Logo Aziendale</h4>
+              <p class="text-xs text-slate-400 mt-0.5">Carica o sostituisci il logo condiviso nella top bar.</p>
+            </div>
+          </div>
+          <div onclick="playSound('click'); openSubSettings('alarms');" class="bg-slate-950 hover:bg-slate-850 border border-slate-800 hover:border-rose-500/50 p-4 rounded-xl cursor-pointer transition-all flex items-start gap-3.5 group">
+            <div class="bg-rose-600/20 text-rose-400 p-3 rounded-lg border border-rose-500/30 group-hover:scale-105 transition-transform">
+              <i data-lucide="alarm-clock" class="w-6 h-6"></i>
+            </div>
+            <div>
+              <h4 class="font-bold text-slate-200 text-sm">Programmazione Sveglie</h4>
+              <p class="text-xs text-slate-400 mt-0.5">Imposta orari e giorni per gli alert scadenze.</p>
+            </div>
+          </div>
+          <div onclick="playSound('click'); openSubSettings('colors');" class="bg-slate-950 hover:bg-slate-850 border border-slate-800 hover:border-amber-500/50 p-4 rounded-xl cursor-pointer transition-all flex items-start gap-3.5 group">
+            <div class="bg-amber-600/20 text-amber-400 p-3 rounded-lg border border-amber-500/30 group-hover:scale-105 transition-transform">
+              <i data-lucide="palette" class="w-6 h-6"></i>
+            </div>
+            <div>
+              <h4 class="font-bold text-slate-200 text-sm">Colori delle Colonne</h4>
+              <p class="text-xs text-slate-400 mt-0.5">Personalizza le tonalità cromatiche delle fasi di lavoro.</p>
+            </div>
+          </div>
+          <div onclick="playSound('click'); openSubSettings('zoom');" class="bg-slate-950 hover:bg-slate-850 border border-slate-800 hover:border-violet-500/50 p-4 rounded-xl cursor-pointer transition-all flex items-start gap-3.5 group">
+            <div class="bg-violet-600/20 text-violet-400 p-3 rounded-lg border border-violet-500/30 group-hover:scale-105 transition-transform">
+              <i data-lucide="type" class="w-6 h-6"></i>
+            </div>
+            <div>
+              <h4 class="font-bold text-slate-200 text-sm">Visualizzazione & Zoom</h4>
+              <p class="text-xs text-slate-400 mt-0.5">Regola la dimensione dei caratteri per app e proiettore.</p>
+            </div>
           </div>
         </div>
-        <div class="flex justify-end gap-2 pt-2 border-t border-slate-800">
-          <button type="button" onclick="closeModal('addCardModal')" class="bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs px-4 py-2 rounded-lg cursor-pointer">Annulla</button>
-          <button type="submit" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs px-4 py-2 rounded-lg font-semibold cursor-pointer shadow">Crea Commessa</button>
+      </div>
+
+      <div class="p-4 border-t border-slate-800 bg-slate-950 flex justify-between items-center">
+        <div class="flex gap-3">
+          <button onclick="logoutApp()" class="text-xs text-red-400 hover:text-red-300 transition-colors font-bold cursor-pointer"><i data-lucide="log-out" class="w-3 h-3 inline"></i> Esci (Logout)</button>
+          <span class="text-slate-600">|</span>
+          <button onclick="playSound('click'); resetDefaultSettings();" class="text-xs text-slate-400 hover:text-white transition-colors underline cursor-pointer">Ripristina Predefiniti</button>
         </div>
-      </form>
+        <button onclick="playSound('close'); closeModal('settingsModal');" class="bg-slate-800 hover:bg-slate-700 text-white font-bold px-5 py-2 rounded-lg text-xs active:scale-95 transition-transform cursor-pointer">
+          Chiudi
+        </button>
+      </div>
     </div>
   </div>
 
-  <!-- MODALE: DETTAGLIO COMMESSA -->
-  <div id="detailModal" class="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 hidden">
-    <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-5xl w-full max-h-[95vh] flex flex-col shadow-2xl overflow-hidden">
-      <div class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-950 shrink-0">
-        <div class="flex items-center gap-3">
-          <h3 id="detailModalTitle" class="font-bold text-sm text-white flex items-center gap-2">Gestione Commessa & Preventivo</h3>
-          <span id="detailBadge" class="px-2 py-0.5 rounded text-[11px] font-bold text-white uppercase bg-slate-700">Stato</span>
-        </div>
-        <div class="flex items-center gap-2">
-          <button onclick="printCard()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs px-3 py-1.5 rounded-lg font-semibold flex items-center gap-1.5 cursor-pointer border border-slate-700"><i data-lucide="printer" class="w-3.5 h-3.5 text-indigo-400"></i> Stampa</button>
-          <button onclick="deleteCurrentCard()" class="bg-red-950/40 hover:bg-red-900/50 text-red-400 text-xs px-3 py-1.5 rounded-lg font-semibold flex items-center gap-1.5 cursor-pointer border border-red-900/50"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Elimina</button>
-          <button onclick="closeModal('detailModal')" class="text-slate-400 hover:text-white p-1 cursor-pointer ml-2"><i data-lucide="x" class="w-5 h-5"></i></button>
-        </div>
+  <!-- MODAL: SOTTO-SCHERMATA IMPOSTAZIONI SPECIFICA -->
+  <div id="subSettingsModal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-xl w-full max-w-xl max-h-[90vh] flex flex-col overflow-hidden shadow-2xl">
+      <div class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-850">
+        <h3 id="subSettingsTitle" class="font-bold text-base text-slate-100 flex items-center gap-2"></h3>
+        <button onclick="playSound('close'); closeSubSettings();" class="text-slate-400 hover:text-slate-200 bg-slate-800 rounded-full p-1 cursor-pointer">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
       </div>
+      <div id="subSettingsContent" class="p-5 overflow-y-auto space-y-4 flex-1 text-sm"></div>
+      <div class="p-4 border-t border-slate-800 bg-slate-950 flex justify-between items-center">
+        <button onclick="playSound('close'); closeSubSettings();" class="text-xs text-slate-400 hover:text-slate-200 transition-colors cursor-pointer">Indietro</button>
+        <button onclick="playSound('success'); saveSubSettings();" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-5 py-2 rounded-lg text-xs active:scale-95 transition-transform cursor-pointer">Salva Modifiche</button>
+      </div>
+    </div>
+  </div>
 
-      <div class="p-5 overflow-y-auto space-y-5 flex-1">
-        <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3">
-          <div class="flex justify-between items-center"><h4 class="text-xs font-bold text-indigo-400 uppercase tracking-wider">Dati Commessa & Anagrafica</h4></div>
-          <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <div class="col-span-2">
-              <label class="block text-[10px] uppercase font-bold text-slate-400 mb-1">Azienda / Cliente</label>
-              <div class="relative">
-                <input type="text" id="editTitle" oninput="handleClientInput(this.value, 'editClientSuggestions', 'editReferent', 'editEmail', 'editWhatsapp')" class="w-full bg-slate-900 border border-slate-700 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500" autocomplete="off">
-                <div id="editClientSuggestions" class="absolute left-0 right-0 top-full mt-1 bg-slate-900 border border-slate-700 rounded-lg shadow-xl z-30 hidden max-h-40 overflow-y-auto"></div>
+  <!-- MODAL: DETTAGLIO SCHEDA (Z-INDEX SUPERIORE PER NON INTERFERIRE CON LE IMPOSTAZIONI) -->
+  <div id="detailModal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[60] flex items-center justify-center p-2 md:p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-xl w-full max-w-6xl max-h-[96vh] md:max-h-[92vh] flex flex-col overflow-hidden shadow-2xl">
+      <div class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-850">
+        <div class="flex items-center gap-2">
+          <span id="detailBadge" class="px-2 py-0.5 rounded text-xs font-bold text-white uppercase"></span>
+          <h2 class="text-lg font-bold">Dettaglio Commessa</h2>
+        </div>
+        <button onclick="playSound('close'); closeModal('detailModal');" class="text-slate-400 hover:text-slate-200 bg-slate-800 rounded-full p-1 cursor-pointer">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      
+      <div class="p-3 md:p-5 overflow-y-auto space-y-5 flex-1 text-sm">
+        <div class="space-y-3 bg-slate-950 p-3.5 rounded-lg border border-slate-800">
+          <div>
+            <div class="flex justify-between items-end gap-2 mb-1">
+              <label class="text-[10px] text-indigo-400 font-semibold uppercase tracking-wider block">Cliente / Titolo Progetto</label>
+              <!-- SELETTORE CLIENTI CRM -->
+              <div class="flex items-center gap-1.5 w-1/2 md:w-1/3">
+                <i data-lucide="users" class="w-3.5 h-3.5 text-slate-400"></i>
+                <select id="editClientSelector" onchange="autofillClientFromSelect(this.value, 'edit')" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-[11px] text-slate-300 focus:outline-none focus:border-indigo-500 cursor-pointer">
+                  <option value="">-- Seleziona dal CRM --</option>
+                </select>
               </div>
-              <div class="mt-1"><select id="editClientSelector" onchange="autofillClientFromSelect(this.value, 'edit')" class="w-full bg-slate-900 border border-slate-800 rounded px-2 py-0.5 text-[10px] text-slate-400"><option value="">Seleziona dal CRM...</option></select></div>
+            </div>
+            <div class="relative">
+              <input type="text" id="editTitle" autocomplete="off" oninput="handleClientInput(this.value, 'editClientSuggestions', 'editReferent', 'editEmail', 'editWhatsapp')" class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-1.5 text-slate-100 font-semibold text-base focus:outline-none focus:border-indigo-500">
+              <div id="editClientSuggestions" class="hidden absolute left-0 right-0 top-full mt-1 bg-slate-900 border border-slate-700 rounded-lg shadow-xl z-30 max-h-40 overflow-y-auto"></div>
+            </div>
+          </div>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div>
+              <label class="text-[10px] text-indigo-400 font-semibold uppercase tracking-wider block mb-1">Referente</label>
+              <input type="text" id="editReferent" placeholder="Nome referente..." class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-1.5 text-slate-200 text-sm focus:outline-none focus:border-indigo-500">
             </div>
             <div>
-              <label class="block text-[10px] uppercase font-bold text-slate-400 mb-1">Referente</label>
-              <input type="text" id="editReferent" class="w-full bg-slate-900 border border-slate-700 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">
+              <label class="text-[10px] text-indigo-400 font-semibold uppercase tracking-wider block mb-1">Data Consegna</label>
+              <input type="date" id="editDeliveryDate" class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-1.5 text-slate-200 text-sm focus:outline-none focus:border-indigo-500">
             </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
             <div>
-              <label class="block text-[10px] uppercase font-bold text-slate-400 mb-1">Tipo Lavorazione</label>
-              <select id="editJobType" onchange="checkEditCustomJobType(this.value)" class="w-full bg-slate-900 border border-slate-700 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">
+              <label class="text-[10px] text-indigo-400 font-semibold uppercase tracking-wider block mb-1">Tipo Lavorazione</label>
+              <select id="editJobType" onchange="checkEditCustomJobType(this.value)" class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-1.5 text-slate-200 text-sm focus:outline-none focus:border-indigo-500">
                 <option value="Stampa Digitale / Banner">Stampa Digitale / Banner</option>
                 <option value="Abbigliamento / Ricamo">Abbigliamento / Ricamo</option>
                 <option value="Insegne & Vetrofanie">Insegne & Vetrofanie</option>
                 <option value="Etichette & Adesivi">Etichette & Adesivi</option>
                 <option value="Grafica / Progettazione">Grafica / Progettazione</option>
-                <option value="custom">+ Altro</option>
+                <option value="Altro">Altro</option>
+                <option value="custom">Personalizza...</option>
               </select>
-              <input type="text" id="editCustomJobType" placeholder="Specifica..." class="w-full bg-slate-900 border border-slate-700 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none mt-1 hidden">
+              <input type="text" id="editCustomJobType" placeholder="Specifica nuovo tipo..." class="hidden mt-2 w-full bg-slate-900 border border-indigo-500 rounded px-3 py-1.5 text-slate-200 text-xs focus:outline-none">
             </div>
             <div>
-              <label class="block text-[10px] uppercase font-bold text-slate-400 mb-1">Email</label>
-              <input type="email" id="editEmail" class="w-full bg-slate-900 border border-slate-700 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">
+              <label class="text-[10px] text-cyan-400 font-semibold uppercase tracking-wider block mb-1">Macchinario Utilizzato</label>
+              <select id="editMachine" class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-1.5 text-slate-200 text-sm focus:outline-none focus:border-cyan-500">
+                <option value="">Nessuno / Manuale</option>
+              </select>
             </div>
             <div>
-              <label class="block text-[10px] uppercase font-bold text-slate-400 mb-1">WhatsApp</label>
-              <input type="text" id="editWhatsapp" class="w-full bg-slate-900 border border-slate-700 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">
+              <label class="text-[10px] text-indigo-400 font-semibold uppercase tracking-wider block mb-1">Email Referente</label>
+              <input type="email" id="editEmail" placeholder="email@azienda.it" class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-1.5 text-slate-200 text-sm focus:outline-none focus:border-indigo-500">
             </div>
             <div>
-              <label class="block text-[10px] uppercase font-bold text-slate-400 mb-1">Macchinario</label>
-              <select id="editMachine" class="w-full bg-slate-900 border border-slate-700 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"><option value="">Nessuno</option></select>
+              <label class="text-[10px] text-indigo-400 font-semibold uppercase tracking-wider block mb-1">WhatsApp Referente</label>
+              <input type="text" id="editWhatsapp" placeholder="+39..." class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-1.5 text-slate-200 text-sm focus:outline-none focus:border-indigo-500">
             </div>
+          </div>
+          
+          <div class="pt-2 border-t border-slate-900 flex items-center justify-between">
             <div>
-              <label class="block text-[10px] uppercase font-bold text-slate-400 mb-1">Data Consegna</label>
-              <input type="date" id="editDeliveryDate" class="w-full bg-slate-900 border border-slate-700 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">
+              <label class="text-[10px] text-indigo-400 font-semibold uppercase tracking-wider block">Colore Evidenziazione Scheda</label>
+              <p class="text-[10px] text-slate-400">Assegna un colore personalizzato a questa specifica commessa.</p>
             </div>
-            <div>
-              <label class="block text-[10px] uppercase font-bold text-slate-400 mb-1">Rif. Ordine</label>
-              <input type="text" id="editCustomerRef" placeholder="Es. PO-123" class="w-full bg-slate-950 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">
+            <div class="flex items-center gap-2">
+              <input type="color" id="editCardColor" class="w-9 h-9 rounded bg-transparent cursor-pointer border border-slate-700">
+              <button onclick="resetCardCustomColor()" class="text-xs bg-slate-900 hover:bg-slate-800 text-slate-300 px-2.5 py-1.5 rounded border border-slate-700 cursor-pointer">Predefinito</button>
             </div>
-            <div>
-              <label class="block text-[10px] uppercase font-bold text-slate-400 mb-1">Colore Evidenziazione</label>
-              <div class="flex items-center gap-2">
-                <input type="color" id="editCardColor" class="w-8 h-7 bg-slate-900 rounded border border-slate-700 cursor-pointer">
-                <button type="button" onclick="resetCardCustomColor()" class="text-[10px] text-slate-400 hover:text-white underline">Reset</button>
+          </div>
+
+          <button onclick="playSound('success'); saveCardEdits();" class="bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-300 border border-indigo-500/30 text-xs px-3 py-1.5 rounded font-semibold flex items-center gap-1.5 transition-colors mt-2 cursor-pointer">
+            <i data-lucide="save" class="w-3.5 h-3.5"></i> Aggiorna Anagrafica e Colore
+          </button>
+        </div>
+
+        <div class="space-y-3 bg-slate-950 p-3.5 rounded-lg border border-slate-800">
+          <div class="flex justify-between items-center">
+            <label class="text-xs text-indigo-400 font-bold uppercase tracking-wider block">Dettagli Articoli & Preventivo</label>
+            <button onclick="playSound('click'); addArticleRow();" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs px-2.5 py-1 rounded font-semibold flex items-center gap-1 active:scale-95 transition-transform shadow cursor-pointer">
+              <i data-lucide="plus" class="w-3.5 h-3.5"></i> Aggiungi Riga
+            </button>
+          </div>
+          
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs min-w-[700px]">
+              <thead>
+                <tr class="border-b border-slate-800 text-slate-400 uppercase text-[10px]">
+                  <th class="py-2 px-1 w-16 text-center">Sposta</th>
+                  <th class="py-2 px-2 w-24">Codice</th>
+                  <th class="py-2 px-2">Descrizione</th>
+                  <th class="py-2 px-2 w-16 text-center">Q.tà</th>
+                  <th class="py-2 px-2 w-20 text-right">Prezzo Un.</th>
+                  <th class="py-2 px-2 w-16 text-center">IVA %</th>
+                  <th class="py-2 px-2 w-20 text-right">Tot. Netto</th>
+                  <th class="py-2 px-2 w-20 text-right">Prezzo Ivato</th>
+                  <th class="py-2 px-2 w-24 text-right">Tot. Ivato</th>
+                  <th class="py-2 px-2 w-10"></th>
+                </tr>
+              </thead>
+              <tbody id="articlesTableBody" class="divide-y divide-slate-900"></tbody>
+            </table>
+          </div>
+
+          <div class="flex justify-between items-center pt-3 border-t border-slate-800 flex-wrap gap-3">
+            <button onclick="playSound('success'); saveArticlesEdits();" class="bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-300 border border-indigo-500/30 text-xs px-3 py-1.5 rounded font-semibold flex items-center gap-1.5 transition-colors cursor-pointer">
+              <i data-lucide="save" class="w-3.5 h-3.5"></i> Salva Articoli
+            </button>
+            <div class="flex gap-4 text-right">
+              <div>
+                <span class="text-[10px] text-slate-400 uppercase block font-bold">Imponibile:</span>
+                <span id="grandSubtotalDisplay" class="text-xs font-semibold text-slate-300">€ 0,00</span>
+              </div>
+              <div>
+                <span class="text-[10px] text-slate-400 uppercase block font-bold">Totale IVA:</span>
+                <span id="grandTaxDisplay" class="text-xs font-semibold text-slate-300">€ 0,00</span>
+              </div>
+              <div>
+                <span class="text-[10px] text-slate-400 uppercase block font-bold">Totale Ordine Ivato:</span>
+                <span id="grandTotalDisplay" class="text-base font-extrabold text-emerald-400">€ 0,00</span>
               </div>
             </div>
           </div>
-          <div class="flex justify-end pt-2"><button type="button" onclick="saveCardEdits()" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs px-3 py-1.5 rounded font-semibold cursor-pointer">Salva Modifiche Anagrafica</button></div>
         </div>
 
-        <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3">
-          <div class="flex justify-between items-center flex-wrap gap-2">
-            <h4 class="text-xs font-bold text-emerald-400 uppercase tracking-wider">Articoli, Preventivo & Prezzi</h4>
-            <div class="flex items-center gap-2">
-              <label class="bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs px-3 py-1.5 rounded font-semibold cursor-pointer flex items-center gap-1.5 border border-slate-700">
-                <i data-lucide="file-text" class="w-3.5 h-3.5 text-indigo-400"></i> Importa da PDF / Preventivo <input type="file" accept="application/pdf, image/*" onchange="handleDocumentUpload(event)" class="hidden">
-              </label>
-              <button onclick="addArticleRow()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs px-3 py-1.5 rounded font-semibold flex items-center gap-1 cursor-pointer"><i data-lucide="plus" class="w-3.5 h-3.5"></i> Aggiungi Riga</button>
-            </div>
-          </div>
-          <div class="overflow-x-auto">
-            <table class="w-full text-left border-collapse">
-              <thead>
-                <tr class="bg-slate-900 border-b border-slate-800 text-[10px] text-slate-400 uppercase">
-                  <th class="py-2 px-1 w-10 text-center">Ordine</th>
-                  <th class="py-2 px-1 w-28">Codice</th>
-                  <th class="py-2 px-1">Descrizione Articolo</th>
-                  <th class="py-2 px-1 w-16 text-center">Q.tà</th>
-                  <th class="py-2 px-1 w-24 text-right">Prezzo Un.</th>
-                  <th class="py-2 px-1 w-14 text-center">IVA %</th>
-                  <th class="py-2 px-1 w-24 text-right">Netto</th>
-                  <th class="py-2 px-1 w-24 text-right">Unit. Ivato</th>
-                  <th class="py-2 px-2 w-28 text-right">Tot. Ivato</th>
-                  <th class="py-2 px-1 w-10"></th>
-                </tr>
-              </thead>
-              <tbody id="articlesTableBody"></tbody>
-            </table>
-          </div>
-          <div class="flex justify-between items-center pt-3 border-t border-slate-900 flex-wrap gap-4">
-            <div class="flex items-center gap-2">
-              <button onclick="saveArticlesEdits()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs px-4 py-2 rounded font-semibold cursor-pointer shadow">Salva Articoli</button>
-            </div>
-            <div class="text-right space-y-0.5 font-mono text-xs text-slate-300">
-              <div>Imponibile Totale: <span id="grandSubtotalDisplay" class="font-bold text-white">€ 0.00</span></div>
-              <div>Totale IVA: <span id="grandTaxDisplay" class="font-bold text-white">€ 0.00</span></div>
-              <div class="text-sm pt-1 border-t border-slate-800">Totale Ordine Ivato: <span id="grandTotalDisplay" class="font-bold text-emerald-400 text-base">€ 0.00</span></div>
-            </div>
-          </div>
-        </div>
-
-        <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3">
-          <div class="flex justify-between items-center">
-            <h4 class="text-xs font-bold text-cyan-400 uppercase tracking-wider">Allegati, Disegni & Foto 4K</h4>
-            <label class="bg-cyan-600 hover:bg-cyan-500 text-white text-xs px-3 py-1.5 rounded font-semibold cursor-pointer flex items-center gap-1.5">
-              <i data-lucide="upload" class="w-3.5 h-3.5"></i> Aggiungi Immagini / PDF <input type="file" accept="image/*, application/pdf" multiple onchange="handleDocumentUpload(event)" class="hidden">
+        <div>
+          <div class="flex justify-between items-center mb-2">
+            <label class="text-xs text-slate-400 font-semibold uppercase tracking-wider block">Foto & Documenti PDF</label>
+            <label id="uploadLabelBtn" class="bg-slate-800 hover:bg-slate-700 text-xs px-3 py-1.5 rounded-lg cursor-pointer flex items-center gap-1.5 text-slate-200 transition-colors">
+              <span id="uploadLabelIcon"><i data-lucide="paperclip" class="w-3.5 h-3.5"></i></span>
+              <span id="uploadLabelText">Allega Foto / PDF</span>
+              <input type="file" id="photoInput" accept="image/*,.pdf" multiple class="hidden" onchange="handleDocumentUpload(event)">
             </label>
           </div>
-          <div id="attachmentsContainer" class="grid grid-cols-2 md:grid-cols-4 gap-3"></div>
+          <div id="attachmentsContainer" class="grid grid-cols-2 md:grid-cols-4 gap-2 bg-slate-950 p-2 rounded-lg border border-slate-800 max-h-36 overflow-y-auto"></div>
         </div>
 
-        <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3">
-          <div class="flex justify-between items-center"><h4 class="text-xs font-bold text-amber-400 uppercase tracking-wider">Storyboard & Cronologia Passaggi</h4><div id="restoreCardBtnContainer" class="hidden"><button onclick="restoreCardFromArchive()" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs px-3 py-1 rounded font-semibold cursor-pointer">Ripristina dall'Archivio</button></div></div>
-          <div id="storyboardTimeline" class="space-y-3 pl-4 border-l-2 border-slate-800 my-2"></div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- MODALE: STAMPA ETICHETTE COLLI (A6) -->
-  <div id="labelPrintModal" class="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 hidden">
-    <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-4xl w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
-      <div class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-950">
         <div>
-          <h3 class="font-bold text-sm text-white flex items-center gap-2"><i data-lucide="printer" class="w-4 h-4 text-blue-400"></i> Stampa Etichette Colli (A6)</h3>
-          <p class="text-[11px] text-slate-400">Dividi e assegna le quantità ai vari colli prima di stampare</p>
-        </div>
-        <button onclick="closeModal('labelPrintModal')" class="text-slate-400 hover:text-white p-1 cursor-pointer"><i data-lucide="x" class="w-4 h-4"></i></button>
-      </div>
-      <div class="p-5 overflow-y-auto space-y-4 flex-1">
-        <div class="bg-slate-950 p-3.5 rounded-xl border border-slate-800 flex justify-between items-center flex-wrap gap-2">
-          <div>
-            <div class="text-[10px] uppercase font-bold text-slate-400">Cliente / Azienda</div>
-            <div id="labelClientName" class="text-sm font-bold text-white">Nome Cliente</div>
-            <div class="text-xs text-indigo-300 mt-0.5">Rif. Commessa: <span id="labelTaskTitle" class="font-medium">Titolo</span></div>
-          </div>
-          <span class="text-xs font-mono bg-blue-950 text-blue-300 border border-blue-800 px-3 py-1.5 rounded-lg">Formato di Stampa: A6 (148x105mm)</span>
-        </div>
-
-        <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2">
-          <div class="overflow-x-auto">
-            <table class="w-full text-left border-collapse">
-              <thead class="bg-slate-800 border-b border-slate-700">
-                <tr>
-                  <th class="px-2 py-2 text-left w-1/5 text-[10px] font-bold text-slate-400 uppercase">CODICE</th>
-                  <th class="px-2 py-2 text-left w-2/5 text-[10px] font-bold text-slate-400 uppercase">DESCRIZIONE ARTICOLO</th>
-                  <th class="px-2 py-2 text-center w-20 text-[10px] font-bold text-slate-400 uppercase">Q.TÀ IN QUESTO COLLO</th>
-                  <th class="px-2 py-2 text-center w-20 text-[10px] font-bold text-slate-400 uppercase">ASSEGNA A COLLO N°</th>
-                  <th class="px-2 py-2 text-center w-16 text-[10px] font-bold text-slate-400 uppercase">AZIONI</th>
-                </tr>
-              </thead>
-              <tbody id="labelArticlesBody"></tbody>
-            </table>
-          </div>
-        </div>
-
-        <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-1.5">
-          <label class="block text-[10px] uppercase font-bold text-slate-400">Note Aggiuntive Etichetta</label>
-          <textarea id="labelNotesInput" rows="2" placeholder="Note da stampare sul collo (es. Attenzione fragile, consegnare a mano...)" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"></textarea>
+          <label class="text-xs text-slate-400 font-semibold uppercase tracking-wider block mb-3">Storyboard Lavorazione</label>
+          <div id="storyboardTimeline" class="relative pl-6 space-y-3 before:absolute before:left-2 before:top-1.5 before:bottom-1.5 before:w-0.5 before:bg-slate-800"></div>
         </div>
       </div>
-      <div class="p-4 border-t border-slate-800 bg-slate-950 flex justify-end gap-2">
-        <button onclick="closeModal('labelPrintModal')" class="bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs px-4 py-2 rounded-lg cursor-pointer">Annulla</button>
-        <button onclick="generateAndPrintLabels()" class="bg-blue-600 hover:bg-blue-500 text-white text-xs px-5 py-2 rounded-lg font-semibold cursor-pointer shadow flex items-center gap-1.5"><i data-lucide="printer" class="w-4 h-4"></i> Genera e Stampa Etichette</button>
+
+      <div class="p-4 border-t border-slate-800 bg-slate-950 flex justify-between gap-3">
+        <div class="flex gap-2">
+          <button onclick="deleteCurrentCard();" class="bg-red-950/40 hover:bg-red-900/60 text-red-400 border border-red-900/50 px-4 py-2 rounded-lg font-semibold flex items-center gap-2 active:scale-95 transition-all text-xs cursor-pointer">
+            <i data-lucide="trash-2" class="w-4 h-4"></i> Elimina
+          </button>
+          
+          <!-- PULSANTE RIPRISTINO (MOSTRATO SOLO SE LA CARD E' ARCHIVIATA) -->
+          <div id="restoreCardBtnContainer" class="hidden">
+            <button onclick="restoreCardFromArchive()" class="bg-emerald-600/30 hover:bg-emerald-600/50 text-emerald-400 border border-emerald-500/50 px-4 py-2 rounded-lg font-semibold flex items-center gap-2 active:scale-95 transition-all text-xs cursor-pointer">
+              <i data-lucide="refresh-cw" class="w-4 h-4"></i> Ripristina in Fatturato
+            </button>
+          </div>
+        </div>
+        
+        <div class="flex gap-2">
+          <button onclick="playSound('click'); printCard();" class="bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded-lg font-semibold flex items-center gap-2 active:scale-95 transition-all text-xs cursor-pointer">
+            <i data-lucide="printer" class="w-4 h-4"></i> Stampa Scheda
+          </button>
+          <button onclick="playSound('close'); closeModal('detailModal');" class="bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-2 rounded-lg font-semibold active:scale-95 transition-all text-xs shadow-lg shadow-indigo-900/20 cursor-pointer">
+            Chiudi Scheda
+          </button>
+        </div>
       </div>
     </div>
   </div>
 
-  <!-- SETTINGS MODAL -->
-  <div id="settingsModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 hidden">
-    <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-xl w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
-      <div class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-950 shrink-0">
-        <div class="flex items-center gap-2">
-          <button id="settingsBackBtn" onclick="backToMainSettings()" class="text-slate-400 hover:text-white p-1 rounded hover:bg-slate-800 cursor-pointer hidden"><i data-lucide="arrow-left" class="w-4 h-4"></i></button>
-          <h3 id="settingsModalTitle" class="font-bold text-sm text-white flex items-center gap-2"><i data-lucide="settings" class="w-4 h-4 text-indigo-400"></i> Impostazioni di Sistema & Archivio</h3>
-        </div>
-        <button onclick="closeModal('settingsModal')" class="text-slate-400 hover:text-white p-1 cursor-pointer"><i data-lucide="x" class="w-4 h-4"></i></button>
+  <!-- MODAL: NUOVA COMMESSA -->
+  <div id="addCardModal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-xl w-full max-w-lg p-5 shadow-2xl max-h-[92vh] overflow-y-auto">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="font-bold text-lg text-slate-100">Nuova Commessa SGA</h3>
+        <button onclick="playSound('close'); closeModal('addCardModal');" class="text-slate-400 hover:text-slate-200 bg-slate-800 rounded-full p-1 cursor-pointer">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
       </div>
-      <div id="settingsModalBody" class="p-5 overflow-y-auto space-y-3 flex-1"></div>
-    </div>
-  </div>
-
-  <!-- CLIENT NOTIFY MODAL -->
-  <div id="clientNotifyModal" class="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 hidden">
-    <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full shadow-2xl overflow-hidden">
-      <div class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-950">
-        <h3 class="font-bold text-sm text-emerald-400 flex items-center gap-2"><i data-lucide="send" class="w-4 h-4"></i> Invia Notifica Pronto Ritiro</h3>
-        <button onclick="closeModal('clientNotifyModal')" class="text-slate-400 hover:text-white p-1 cursor-pointer"><i data-lucide="x" class="w-4 h-4"></i></button>
-      </div>
-      <div class="p-5 space-y-4">
-        <div class="bg-slate-950 p-3.5 rounded-xl border border-slate-800 space-y-1">
-          <div class="text-[10px] uppercase font-bold text-slate-400">Cliente / Azienda</div>
-          <div id="notifyClientName" class="text-sm font-bold text-white">Nome Cliente</div>
-          <div class="text-xs text-indigo-300">Referente: <span id="notifyClientRef" class="font-medium">N/D</span></div>
-          <div class="text-[11px] text-slate-400 pt-1">WhatsApp: <span id="notifyClientWa" class="text-emerald-400 font-mono">--</span></div>
-          <div class="text-[11px] text-slate-400">Email: <span id="notifyClientEmail" class="text-blue-400 font-mono">--</span></div>
+      <form id="newCardForm" class="space-y-4 text-sm" onsubmit="createNewCard(event)">
+        
+        <div class="relative">
+          <div class="flex justify-between items-end gap-2 mb-1">
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400">Cliente / Titolo Progetto</label>
+            <!-- SELETTORE CLIENTI CRM -->
+            <div class="flex items-center gap-1.5 w-1/2 md:w-1/3">
+              <i data-lucide="users" class="w-3.5 h-3.5 text-slate-400"></i>
+              <select id="formClientSelector" onchange="autofillClientFromSelect(this.value, 'form')" class="w-full bg-slate-950 border border-slate-800 rounded px-2 py-1 text-[11px] text-slate-300 focus:outline-none focus:border-indigo-500 cursor-pointer">
+                <option value="">-- Seleziona dal CRM --</option>
+              </select>
+            </div>
+          </div>
+          <input type="text" id="formTitle" required autocomplete="off" placeholder="Es. Rossi S.r.l." oninput="handleClientInput(this.value, 'formClientSuggestions', 'formReferent', 'formEmail', 'formWhatsapp')" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-indigo-500">
+          <div id="formClientSuggestions" class="hidden absolute left-0 right-0 top-full mt-1 bg-slate-900 border border-slate-700 rounded-lg shadow-xl z-30 max-h-40 overflow-y-auto"></div>
         </div>
+        
         <div class="grid grid-cols-2 gap-3">
-          <button id="btnSendWa" onclick="sendWhatsAppNotification()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs py-3 px-4 rounded-xl font-semibold flex items-center justify-center gap-2 cursor-pointer shadow-lg active:scale-95 transition-transform"><i data-lucide="message-circle" class="w-4 h-4"></i> Invia WhatsApp</button>
-          <button id="btnSendEmail" onclick="sendEmailNotification()" class="bg-blue-600 hover:bg-blue-500 text-white text-xs py-3 px-4 rounded-xl font-semibold flex items-center justify-center gap-2 cursor-pointer shadow-lg active:scale-95 transition-transform"><i data-lucide="mail" class="w-4 h-4"></i> Invia Email</button>
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Referente</label>
+            <input type="text" id="formReferent" placeholder="Es. Marco Rossi" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-indigo-500">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Data Consegna (Opz.)</label>
+            <input type="date" id="formDeliveryDate" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-indigo-500">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Email Referente</label>
+            <input type="email" id="formEmail" placeholder="email@azienda.it" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-indigo-500">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">WhatsApp Referente</label>
+            <input type="text" id="formWhatsapp" placeholder="+39..." class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-indigo-500">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Tipo Lavorazione</label>
+            <select id="formJobType" onchange="checkNewCustomJobType(this.value)" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-indigo-500">
+              <option value="Stampa Digitale / Banner">Stampa Digitale / Banner</option>
+              <option value="Abbigliamento / Ricamo">Abbigliamento / Ricamo</option>
+              <option value="Insegne & Vetrofanie">Insegne & Vetrofanie</option>
+              <option value="Etichette & Adesivi">Etichette & Adesivi</option>
+              <option value="Grafica / Progettazione">Grafica / Progettazione</option>
+              <option value="Altro">Altro</option>
+              <option value="custom">Personalizza...</option>
+            </select>
+            <input type="text" id="formCustomJobType" placeholder="Specifica nuovo tipo..." class="hidden mt-2 w-full bg-slate-950 border border-indigo-500 rounded-lg px-3 py-2 text-slate-200 text-xs focus:outline-none">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-cyan-400 mb-1">Macchinario Utilizzato</label>
+            <select id="formMachine" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-cyan-500">
+              <option value="">Nessuno / Manuale</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Stato / Passaggio Iniziale</label>
+          <select id="formInitialStage" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-indigo-500">
+            <option value="prev-da-fare">Prev. da fare</option>
+            <option value="prev-inviato">Prev. inviato</option>
+            <option value="da-ordinare">Da ordinare</option>
+            <option value="ordinato">Ordinato</option>
+            <option value="magazzino">In magazzino</option>
+            <option value="da-lavorare">Da lavorare</option>
+            <option value="in-lavorazione">In lavorazione</option>
+            <option value="lavorato-da-bollettare">Lavorato da bollettare</option>
+            <option value="bollettato-da-consegnare">Bollettato da consegnare</option>
+            <option value="fatturato">Fatturato</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Note / Descrizione Iniziale</label>
+          <textarea id="formNotes" placeholder="Dettagli lavorazione, finiture..." rows="2" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-indigo-500 resize-none"></textarea>
+        </div>
+
+        <div class="bg-slate-950 p-3 rounded-lg border border-slate-800 space-y-2">
+          <label class="block text-xs font-bold uppercase tracking-wider text-indigo-400">Allega Preventivo PDF o Foto Iniziale</label>
+          <label class="w-full bg-slate-900 hover:bg-slate-800 border border-dashed border-slate-700 rounded-lg p-3 flex items-center justify-center gap-2 cursor-pointer text-xs text-slate-300 transition-colors">
+            <i data-lucide="paperclip" class="w-4 h-4 text-indigo-400"></i>
+            <span id="formFileLabel">Seleziona PDF o Foto (Opzionale)</span>
+            <input type="file" id="formFileInput" accept="image/*,.pdf" class="hidden" onchange="handleFormFileSelect(event)">
+          </label>
+          <div id="formFilePreview" class="hidden text-[11px] text-emerald-400 font-mono text-center truncate"></div>
+        </div>
+
+        <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2.5 px-4 rounded-lg active:scale-[0.98] transition-transform flex items-center justify-center gap-2 shadow-lg shadow-indigo-900/20 cursor-pointer">
+          <i data-lucide="plus" class="w-4 h-4"></i> Inserisci in Workflow
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: CONFIGURAZIONE CLOUD E IMGBB -->
+  <div id="cloudModal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-xl w-full max-w-md p-5 shadow-2xl">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="font-bold text-lg text-slate-100 flex items-center gap-2">
+          <i data-lucide="settings" class="w-5 h-5 text-indigo-400"></i> Impostazioni Cloud Dati
+        </h3>
+        <button onclick="playSound('close'); closeModal('cloudModal');" class="text-slate-400 hover:text-slate-200 bg-slate-800 rounded-full p-1 cursor-pointer">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+      
+      <div class="space-y-4 text-sm">
+        <div class="bg-slate-950 p-3 rounded-lg border border-slate-800">
+          <h4 class="text-xs font-bold text-emerald-400 mb-1 uppercase tracking-wider">1. ImgBB (Immagini 4K Gratuite)</h4>
+          <p class="text-[10px] text-slate-400 mb-2">Salva le immagini in cloud in alta risoluzione (opzionale).</p>
+          <input type="text" id="cfgImgbbKey" placeholder="ImgBB API Key (Opzionale)" class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-slate-200 focus:outline-none focus:border-emerald-500 font-mono text-xs">
+        </div>
+
+        <div class="bg-slate-950 p-3 rounded-lg border border-slate-800">
+          <h4 class="text-xs font-bold text-amber-400 mb-1 uppercase tracking-wider">2. Backup Locale (JSON)</h4>
+          <p class="text-[10px] text-slate-400 mb-2">Salva una copia completa delle commesse o ripristina un salvataggio precedente.</p>
+          <div class="flex gap-2">
+            <button onclick="playSound('success'); exportBackup();" class="flex-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 hover:border-amber-500/50 text-slate-200 font-semibold py-1.5 px-3 rounded text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer">
+              <i data-lucide="download-cloud" class="w-3.5 h-3.5"></i> Backup Dati
+            </button>
+            <label class="flex-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 hover:border-amber-500/50 text-slate-200 font-semibold py-1.5 px-3 rounded text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer">
+              <i data-lucide="upload-cloud" class="w-3.5 h-3.5"></i> Ripristina
+              <input type="file" accept=".json" class="hidden" onchange="importBackup(event)">
+            </label>
+          </div>
+        </div>
+
+        <div class="flex gap-2 pt-2">
+          <button onclick="playSound('success'); saveImgbbConfig();" class="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2 px-4 rounded-lg active:scale-[0.98] transition-transform flex items-center justify-center gap-2 shadow-lg shadow-indigo-900/20 cursor-pointer">
+            <i data-lucide="check" class="w-4 h-4"></i> Salva ImgBB Key
+          </button>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- GALLERY MODAL (CORRETTO IN PRIMO PIANO SOPRA LA SCHEDA COMMESSA) -->
-  <div id="galleryModal" class="fixed inset-0 z-[90] bg-black/95 backdrop-blur-md flex flex-col justify-between p-4 hidden">
-    <div class="flex justify-between items-center z-10">
-      <div id="galleryCounter" class="text-xs font-mono text-slate-300 bg-slate-900/80 px-3 py-1.5 rounded-lg border border-slate-800">1 / 1</div>
-      <div class="flex items-center gap-2">
-        <button onclick="rotateGalleryImage()" class="bg-slate-900/80 hover:bg-slate-800 text-white p-2 rounded-lg border border-slate-800 cursor-pointer" title="Ruota immagine"><i data-lucide="rotate-cw" class="w-4 h-4"></i></button>
-        <button onclick="closeGallery()" class="bg-slate-900/80 hover:bg-slate-800 text-white p-2 rounded-lg border border-slate-800 cursor-pointer"><i data-lucide="x" class="w-5 h-5"></i></button>
+  <!-- MODAL: VISUALIZZATORE IMMAGINI / PDF -->
+  <div id="galleryModal" class="hidden fixed inset-0 bg-black/95 z-[70] flex flex-col items-center justify-center select-none">
+    <div class="absolute top-0 w-full p-4 flex justify-between items-center z-10 bg-gradient-to-b from-black/80 to-transparent">
+      <div id="galleryCounter" class="text-white font-mono text-sm font-bold bg-black/50 px-3 py-1 rounded-full"></div>
+      <div class="flex gap-4 items-center">
+        <button id="btnRotate" onclick="playSound('click'); rotateGalleryImage();" class="text-white p-2 bg-slate-800 hover:bg-slate-700 rounded-full transition-colors cursor-pointer" title="Ruota immagine">
+          <i data-lucide="rotate-cw" class="w-5 h-5"></i>
+        </button>
+        <button onclick="playSound('close'); closeGallery();" class="text-white p-2 bg-slate-800 hover:bg-slate-700 rounded-full transition-colors cursor-pointer" title="Chiudi">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
       </div>
     </div>
-    <div class="flex-1 flex items-center justify-center relative overflow-hidden my-2">
-      <button id="btnPrevGallery" onclick="prevGalleryImage()" class="absolute left-4 bg-black/60 hover:bg-black text-white p-3 rounded-full cursor-pointer z-10 transition-colors"><i data-lucide="chevron-left" class="w-6 h-6"></i></button>
-      <img id="galleryImage" class="max-h-full max-w-full object-contain transition-transform duration-200 bg-white shadow-2xl rounded">
-      <button id="btnNextGallery" onclick="nextGalleryImage()" class="absolute right-4 bg-black/60 hover:bg-black text-white p-3 rounded-full cursor-pointer z-10 transition-colors"><i data-lucide="chevron-right" class="w-6 h-6"></i></button>
-    </div>
-    <div class="text-center text-[11px] text-slate-500">Usa le frecce per navigare tra i documenti e i file allegati in alta risoluzione</div>
-  </div>
-
-  <!-- DELETE CONFIRM MODAL -->
-  <div id="deleteConfirmModal" class="fixed inset-0 z-80 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 hidden">
-    <div class="bg-slate-900 border border-red-500/40 rounded-2xl max-w-sm w-full p-6 shadow-2xl space-y-4 text-center">
-      <div class="w-12 h-12 bg-red-950 text-red-400 rounded-2xl mx-auto flex items-center justify-center border border-red-900/50"><i data-lucide="alert-triangle" class="w-6 h-6"></i></div>
-      <h3 class="font-bold text-base text-white">Conferma Eliminazione</h3>
-      <p id="deleteConfirmText" class="text-xs text-slate-300">Sei sicuro di voler procedere?</p>
-      <div class="grid grid-cols-2 gap-2 pt-2">
-        <button onclick="closeModal('deleteConfirmModal')" class="bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs py-2 rounded-lg cursor-pointer">Annulla</button>
-        <button id="btnConfirmDelete" class="bg-red-600 hover:bg-red-500 text-white text-xs py-2 rounded-lg font-semibold cursor-pointer shadow">Elimina</button>
-      </div>
+    <div class="relative w-full h-full flex items-center justify-center p-4">
+      <img id="galleryImage" src="" class="max-w-full max-h-[90vh] object-contain transition-transform duration-300 bg-white shadow-2xl">
+      <button onclick="playSound('click'); prevGalleryImage();" class="absolute left-4 top-1/2 -translate-y-1/2 text-white p-3 bg-slate-800/80 hover:bg-slate-700 rounded-full transition-colors cursor-pointer" id="btnPrevGallery">
+        <i data-lucide="chevron-left" class="w-6 h-6"></i>
+      </button>
+      <button onclick="playSound('click'); nextGalleryImage();" class="absolute right-4 top-1/2 -translate-y-1/2 text-white p-3 bg-slate-800/80 hover:bg-slate-700 rounded-full transition-colors cursor-pointer" id="btnNextGallery">
+        <i data-lucide="chevron-right" class="w-6 h-6"></i>
+      </button>
     </div>
   </div>
 
-  <!-- ARCADE ALERT MODAL -->
-  <div id="arcadeAlertModal" class="fixed inset-0 z-90 bg-red-950/80 backdrop-blur-md flex items-center justify-center p-4 hidden">
-    <div class="bg-slate-950 border-4 border-red-600 rounded-2xl max-w-2xl w-full p-6 shadow-2xl space-y-5 text-center animate-bounce-short">
-      <div class="w-16 h-16 bg-red-600 text-white rounded-full mx-auto flex items-center justify-center shadow-lg animate-pulse"><i data-lucide="bell-ring" class="w-8 h-8"></i></div>
-      <div class="space-y-1">
-        <h2 class="text-2xl font-black text-red-500 uppercase tracking-wider">⚠️ ATTENZIONE: SCADENZE IN ARRIVO!</h2>
-        <p class="text-xs text-slate-300">Le seguenti commesse richiedono attenzione immediata:</p>
-      </div>
-      <div id="arcadeAlertList" class="space-y-2.5 max-h-60 overflow-y-auto text-left pr-1"></div>
-      <div class="w-full bg-slate-900 rounded-full h-2 overflow-hidden border border-slate-800"><div id="arcadeProgressBar" class="bg-red-600 h-full w-full"></div></div>
-      <button onclick="closeArcadeAlert()" class="bg-red-600 hover:bg-red-500 text-white font-bold text-sm px-6 py-3 rounded-xl cursor-pointer shadow-lg active:scale-95 transition-transform w-full">Ho capito, disattiva allarme</button>
-    </div>
-  </div>
-
+  <!-- SCRIPT DELL'APPLICAZIONE -->
   <script src="app.js"></script>
 </body>
 </html>
