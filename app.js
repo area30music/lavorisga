@@ -21,7 +21,7 @@ zoomStyles.innerHTML = `
   body.master-mode header:first-of-type { display: none !important; }
   
   /* Forza lo scrolling orizzontale del contenitore in ogni condizione */
-  #board { overflow-x: auto !important; overflow-y: hidden !important; display: flex !important; flex-wrap: nowrap !important; }
+  #board { overflow-x: auto !important; overflow-y: hidden !important; display: flex !important; flex-wrap: nowrap !important; scroll-behavior: auto !important; }
   
   /* Le colonne scalano in base alla dimensione del font! */
   body:not(.master-mode) .board-column { width: 320px; }
@@ -45,9 +45,13 @@ zoomStyles.innerHTML = `
   .card-dropzone > div .px-2 { padding-left: 0.5em !important; padding-right: 0.5em !important; }
   .card-dropzone > div .py-0\\.5 { padding-top: 0.2em !important; padding-bottom: 0.2em !important; }
 
-  /* Stile Orologio Classico Vecchia Versione */
-  .classic-clock-time { font-size: 1.2em; font-weight: bold; color: #ffffff; margin-right: 8px; }
-  .classic-clock-date { font-size: 0.9em; color: #cbd5e1; }
+  /* Stile Orologio Grande "Big Box" */
+  .big-clock { background: #0f172a; border: 2px solid #334155; border-radius: 8px; padding: 6px 14px; display: inline-flex; align-items: center; gap: 10px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3); margin-left: 15px; }
+  .big-clock-time { font-family: monospace; font-size: 22px; font-weight: bold; color: #10b981; letter-spacing: 1px; }
+  .big-clock-date { font-family: sans-serif; font-size: 13px; font-weight: 600; color: #cbd5e1; text-transform: uppercase; border-left: 1px solid #334155; padding-left: 10px; }
+
+  /* Z-Index Prioritario per Finestra di Conferma Eliminazione */
+  #deleteConfirmModal { z-index: 99999 !important; }
 `;
 document.head.appendChild(zoomStyles);
 
@@ -63,6 +67,7 @@ let lastScrollTime = 0;
 let isAutoScrollPaused = false;
 let masterScrollSpeed = 0.08;
 let boardExactScrollLeft = 0;
+
 window.editingClientId = null;
 window.editingMachineIndex = null;
 window.tempLabelArticles = [];
@@ -88,6 +93,7 @@ const DEFAULT_MSG_TEMPLATE = `Buongiorno {SALUTO},\n\nquesto è il sistema di au
 let COLUMNS_CONFIG = JSON.parse(JSON.stringify(DEFAULT_COLUMNS_CONFIG));
 let USER_ALARMS = []; 
 let CLIENTS_DB = [];
+let ARTICLES_DB = [];
 let MACHINES_DB = ["Roland TrueVIS SG2-540", "Epson SureColor T7200", "Epson F1000 DTF", "Xerox PrimeLink C9200", "Happy Japan HCH Embroidery"];
 let masterFontSizePx = 24; 
 let appFontSizePx = 15;
@@ -110,6 +116,17 @@ const COLOR_OPTIONS = [
   { label: "Blu", value: "bg-blue-600/20 border-blue-500/50 text-blue-400", border: "border-l-4 border-l-blue-500" },
   { label: "Grigio Neutro", value: "bg-slate-800/60 border-slate-700 text-slate-300", border: "border-l-4 border-l-slate-500" }
 ];
+
+let articleSuggestDropdown = document.createElement('div');
+articleSuggestDropdown.id = 'articleSuggestDropdown';
+articleSuggestDropdown.className = 'hidden absolute z-50 bg-slate-800 border border-indigo-500 rounded-lg shadow-2xl w-[400px] max-h-60 overflow-y-auto';
+document.body.appendChild(articleSuggestDropdown);
+
+document.addEventListener('click', (e) => {
+  if (!articleSuggestDropdown.contains(e.target) && !e.target.closest('input[data-field="code"]') && !e.target.closest('input[data-field="desc"]')) {
+    hideArticleSuggestions();
+  }
+});
 
 auth.onAuthStateChanged((user) => {
   const loginScreen = document.getElementById('loginScreen');
@@ -141,7 +158,31 @@ function checkAutoArchive() {
   if (localMigrated) saveLocal();
 }
 
+function initBigClocks() {
+  const masterBar = document.querySelector('.master-back-btn')?.parentElement;
+  if (masterBar && !document.getElementById('masterBigClock')) {
+    const masterClock = document.createElement('div');
+    masterClock.id = 'masterBigClock';
+    masterClock.className = 'big-clock hidden';
+    masterClock.innerHTML = `<span class="big-clock-time sync-clock-time"></span><span class="big-clock-date sync-clock-date"></span>`;
+    masterBar.insertBefore(masterClock, masterBar.children[1]);
+  }
+
+  const mainHeaderContainer = document.querySelector('header:first-of-type > div:last-child');
+  if (mainHeaderContainer && !document.getElementById('mainBigClock')) {
+    const oldClock = mainHeaderContainer.querySelector('.flex.items-center.gap-2.text-xs');
+    if (oldClock) oldClock.remove();
+
+    const mainClock = document.createElement('div');
+    mainClock.id = 'mainBigClock';
+    mainClock.className = 'big-clock ml-3';
+    mainClock.innerHTML = `<span class="big-clock-time sync-clock-time"></span><span class="big-clock-date sync-clock-date"></span>`;
+    mainHeaderContainer.appendChild(mainClock);
+  }
+}
+
 function init() {
+  initBigClocks();
   loadUserSettings(); loadState(); 
   let localMigrated = false;
   state.cards.forEach(c => { 
@@ -158,14 +199,11 @@ function init() {
 
 function updateLiveClock() {
   const now = new Date();
-  const timeStr = now.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
+  const timeStr = now.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
   const dateStr = now.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' });
   
-  const timeEls = document.querySelectorAll('.headerClockTime, #headerClockTime, .sync-clock-time');
-  const dateEls = document.querySelectorAll('.headerClockDate, #headerClockDate, .sync-clock-date');
-  
-  timeEls.forEach(el => { el.innerText = timeStr; el.className = "classic-clock-time sync-clock-time"; });
-  dateEls.forEach(el => { el.innerText = dateStr; el.className = "classic-clock-date sync-clock-date"; });
+  document.querySelectorAll('.sync-clock-time').forEach(el => el.innerText = timeStr);
+  document.querySelectorAll('.sync-clock-date').forEach(el => el.innerText = dateStr);
   
   checkScheduledAlarms(now);
 }
@@ -268,8 +306,10 @@ function loadUserSettings() {
   if (savedAlarms) { try { USER_ALARMS = JSON.parse(savedAlarms); USER_ALARMS = USER_ALARMS.map(a => { if (!Array.isArray(a.days)) a.days = a.day !== undefined ? [parseInt(a.day)] : [1,2,3,4,5]; return a; }); } catch(e){ USER_ALARMS = []; } }
 
   const savedClients = localStorage.getItem('workflow_sga_clients_db');
-  if (savedClients) { try { CLIENTS_DB = JSON.parse(savedClients); let migrated = false; CLIENTS_DB.forEach((c, idx) => { if(!c.id) { c.id = 'crm_' + Date.now().toString(36) + Math.random().toString(36).substring(2, 6) + idx; migrated = true; } }); if(migrated) localStorage.setItem('workflow_sga_clients_db', JSON.stringify(CLIENTS_DB)); } catch(e) { CLIENTS_DB = []; } } 
-  else { const oldClients = localStorage.getItem('workflow_sga_clients'); if (oldClients) { try { const arr = JSON.parse(oldClients); CLIENTS_DB = arr.map((c,idx) => ({ id: 'crm_old'+idx, name: c, referent: '', email: '', whatsapp: '' })); } catch(e){ CLIENTS_DB = []; } } }
+  if (savedClients) { try { CLIENTS_DB = JSON.parse(savedClients); } catch(e) { CLIENTS_DB = []; } }
+  
+  const savedArticles = localStorage.getItem('workflow_sga_articles_db');
+  if (savedArticles) { try { ARTICLES_DB = JSON.parse(savedArticles); } catch(e) { ARTICLES_DB = []; } }
 
   const savedMachines = localStorage.getItem('workflow_sga_machines_db'); if (savedMachines) { try { MACHINES_DB = JSON.parse(savedMachines); } catch(e){} }
   
@@ -297,6 +337,88 @@ function registerClientAdvanced(name, referent, email, whatsapp) {
   if (existing) { if (email && !existing.email) existing.email = email.trim(); if (whatsapp && !existing.whatsapp) existing.whatsapp = whatsapp.trim(); } 
   else { const newId = 'crm_' + Date.now().toString(36) + Math.random().toString(36).substring(2, 6); CLIENTS_DB.push({ id: newId, name: cleanName, referent: cleanRef, email: email ? email.trim() : '', whatsapp: whatsapp ? whatsapp.trim() : '' }); }
   CLIENTS_DB.sort((a,b) => a.name.localeCompare(b.name)); localStorage.setItem('workflow_sga_clients_db', JSON.stringify(CLIENTS_DB)); populateClientSelectors(); syncClientsToCloud();
+}
+
+function saveArticlesToDB(articlesList) {
+  if (!articlesList || !Array.isArray(articlesList)) return;
+  let dbChanged = false;
+  articlesList.forEach(art => {
+    if (!art.desc || !art.desc.trim()) return;
+    const descClean = art.desc.trim().toLowerCase();
+    const codeClean = (art.code || '').trim().toLowerCase();
+    
+    const existing = ARTICLES_DB.find(a => a.desc.toLowerCase() === descClean && a.code.toLowerCase() === codeClean);
+    
+    if (!existing) {
+      ARTICLES_DB.push({
+        id: 'art_' + Date.now() + Math.random().toString(36).substring(2, 6),
+        code: art.code || '',
+        desc: art.desc.trim(),
+        price: parseFloat(art.price) || 0
+      });
+      dbChanged = true;
+    }
+  });
+
+  if (dbChanged) {
+    localStorage.setItem('workflow_sga_articles_db', JSON.stringify(ARTICLES_DB));
+    if (db) db.collection('workflow_sga_settings').doc('articles').set({ db: ARTICLES_DB }).catch(err => console.error(err));
+  }
+}
+
+function showArticleSuggestions(inputEl, rowIdx, field) {
+  const query = inputEl.value.toLowerCase().trim();
+  if (query.length < 2) { hideArticleSuggestions(); return; }
+  
+  const matches = ARTICLES_DB.filter(a => a.code.toLowerCase().includes(query) || a.desc.toLowerCase().includes(query));
+  if (matches.length === 0) { hideArticleSuggestions(); return; }
+
+  articleSuggestDropdown.innerHTML = matches.map(m => `
+    <div onclick="applyArticleSuggestion('${m.id}', ${rowIdx})" class="p-2 border-b border-slate-700 hover:bg-indigo-600 cursor-pointer flex justify-between items-center text-xs text-white transition-colors">
+      <div><strong class="text-indigo-300 mr-1">${m.code}</strong> ${m.desc}</div>
+      <div class="font-mono font-bold whitespace-nowrap ml-2 text-emerald-400">€ ${m.price.toFixed(2)}</div>
+    </div>
+  `).join('');
+
+  const rect = inputEl.getBoundingClientRect();
+  articleSuggestDropdown.style.top = (rect.bottom + window.scrollY + 2) + 'px';
+  articleSuggestDropdown.style.left = (rect.left + window.scrollX) + 'px';
+  articleSuggestDropdown.classList.remove('hidden');
+}
+
+function hideArticleSuggestions() {
+  articleSuggestDropdown.classList.add('hidden');
+  articleSuggestDropdown.innerHTML = '';
+}
+
+function applyArticleSuggestion(dbId, rowIdx) {
+  const art = ARTICLES_DB.find(a => a.id === dbId);
+  if (!art) return;
+  
+  const card = state.cards.find(c => c.id === activeCardId);
+  if (!card || !card.articles || !card.articles[rowIdx]) return;
+
+  card.articles[rowIdx].code = art.code;
+  card.articles[rowIdx].desc = art.desc;
+  card.articles[rowIdx].price = art.price;
+
+  const tbody = document.getElementById('articlesTableBody');
+  if (tbody && tbody.children[rowIdx]) {
+    const tr = tbody.children[rowIdx];
+    const codeIn = tr.querySelector('[data-field="code"]');
+    const descIn = tr.querySelector('[data-field="desc"]');
+    const priceIn = tr.querySelector('[data-field="price"]');
+    
+    if (codeIn) codeIn.value = art.code;
+    if (descIn) descIn.value = art.desc;
+    if (priceIn) priceIn.value = art.price;
+    
+    const qtyIn = tr.querySelector('[data-field="qty"]');
+    if (qtyIn) updateArticleField(qtyIn);
+  }
+
+  playSound('click');
+  hideArticleSuggestions();
 }
 
 function populateClientSelectors() {
@@ -540,19 +662,7 @@ function toggleMasterMode() {
   const board = document.getElementById('board'); 
   const backBtns = document.querySelectorAll('.master-back-btn');
   const mainHeader = document.querySelector('header');
-  
-  // Iniezione Orologio Classico nella barra Master Mode
-  let masterClock = document.getElementById('masterModeClock');
-  if (!masterClock) {
-    const masterBar = document.querySelector('.master-back-btn')?.parentElement;
-    if (masterBar) {
-      masterClock = document.createElement('div');
-      masterClock.id = 'masterModeClock';
-      masterClock.className = 'flex items-center gap-1 ml-4 hidden';
-      masterClock.innerHTML = `<span class="sync-clock-time classic-clock-time"></span> <span class="sync-clock-date classic-clock-date"></span>`;
-      masterBar.insertBefore(masterClock, masterBar.children[1]);
-    }
-  }
+  const masterClock = document.getElementById('masterBigClock');
 
   if (isMasterMode) { 
     body.classList.add('master-mode'); 
@@ -583,7 +693,6 @@ function startAutoScroll() {
     
     if (board) {
       const activeCols = board.querySelectorAll('.board-column');
-      // Scroll Verticale delle Colonne
       activeCols.forEach(col => { 
         const dropzone = col.querySelector('.card-dropzone'); 
         if (dropzone && dropzone.scrollHeight > dropzone.clientHeight) { 
@@ -611,20 +720,25 @@ function startAutoScroll() {
         } 
       });
       
-      // Scroll Orizzontale Continuo della Board (risolto con le esatte variabili float)
-      if (board.scrollWidth > board.clientWidth) { 
+      const maxScrollLeft = board.scrollWidth - board.clientWidth;
+      if (maxScrollLeft > 0) { 
         if (autoScrollPause > 0) { 
           autoScrollPause -= elapsed; 
         } else { 
           const pxToScroll = elapsed * masterScrollSpeed * 0.8; 
           boardExactScrollLeft += (pxToScroll * autoScrollDir); 
-          board.scrollLeft = boardExactScrollLeft; 
           
-          if (autoScrollDir === 1 && board.scrollLeft >= (board.scrollWidth - board.clientWidth - 1)) { 
-            autoScrollDir = -1; autoScrollPause = 3000; boardExactScrollLeft = board.scrollLeft;
-          } else if (autoScrollDir === -1 && board.scrollLeft <= 0) { 
-            autoScrollDir = 1; autoScrollPause = 3000; boardExactScrollLeft = 0;
+          if (autoScrollDir === 1 && boardExactScrollLeft >= maxScrollLeft) { 
+            boardExactScrollLeft = maxScrollLeft;
+            autoScrollDir = -1; 
+            autoScrollPause = 3000; 
+          } else if (autoScrollDir === -1 && boardExactScrollLeft <= 0) { 
+            boardExactScrollLeft = 0;
+            autoScrollDir = 1; 
+            autoScrollPause = 3000; 
           } 
+          
+          board.scrollLeft = boardExactScrollLeft; 
         } 
       }
     }
@@ -644,7 +758,19 @@ function updateCloudStatus(isOnline) {
 function listenToCloudUpdates() {
   if (!db) return;
   db.collection('workflow_sga_settings').doc('config').onSnapshot((doc) => { if (doc.exists) { const data = doc.data(); if (data.companyLogo !== undefined && data.companyLogo !== sharedCompanyLogo) { sharedCompanyLogo = data.companyLogo; localStorage.setItem('workflow_sga_company_logo', sharedCompanyLogo); loadCompanyLogo(); } if (data.msgTemplate !== undefined && data.msgTemplate !== sharedMsgTemplate) { sharedMsgTemplate = data.msgTemplate; localStorage.setItem('workflow_sga_msg_template', sharedMsgTemplate); const msgArea = document.getElementById('msgTemplateText'); if (msgArea) msgArea.value = sharedMsgTemplate; } } });
+  
   db.collection('workflow_sga_settings').doc('clients').onSnapshot((doc) => { if (doc.exists) { const data = doc.data(); if (data.db && Array.isArray(data.db)) { CLIENTS_DB = data.db; localStorage.setItem('workflow_sga_clients_db', JSON.stringify(CLIENTS_DB)); populateClientSelectors(); if (currentSettingsView === 'crm') { renderSettingsContent(); } } } else { syncClientsToCloud(); } });
+  
+  db.collection('workflow_sga_settings').doc('articles').onSnapshot((doc) => {
+    if (doc.exists) {
+      const data = doc.data();
+      if (data.db && Array.isArray(data.db)) {
+        ARTICLES_DB = data.db;
+        localStorage.setItem('workflow_sga_articles_db', JSON.stringify(ARTICLES_DB));
+      }
+    }
+  });
+
   db.collection('workflow_sga_cards').onSnapshot((snapshot) => {
     if (snapshot.empty && state.cards.length > 0) { state.cards.forEach(card => syncCardToCloud(card)); return; }
     let needsMigration = false;
@@ -851,6 +977,8 @@ async function createNewCard(event) {
     articles: extractedArticles, stage: initialStage, order: Date.now(), createdAt: new Date().toISOString(), photos: initialPhotos, history: [{ stage: initialStage, label: `Inserito in "${initialStageLabel}"`, timestamp: new Date().toISOString() }]
   };
 
+  saveArticlesToDB(extractedArticles);
+
   state.cards.unshift(newCard); saveLocal(); syncCardToCloud(newCard); populateGlobalFilterDropdown();
   document.getElementById('newCardForm').reset(); document.getElementById('formClientSelector').value = ''; document.getElementById('formCustomJobType').classList.add('hidden'); document.getElementById('formFilePreview').classList.add('hidden'); tempFormFile = null; closeModal('addCardModal');
 }
@@ -864,7 +992,7 @@ function saveCardEdits() {
   const colorInput = document.getElementById('editCardColor'); const selectedColor = colorInput.value.toLowerCase(); const defaultColor = colorInput.dataset.defaultColor ? colorInput.dataset.defaultColor.toLowerCase() : "";
   if (selectedColor === defaultColor) { card.customColor = ""; } else { card.customColor = colorInput.value; }
   let newJobType = document.getElementById('editJobType').value; if (newJobType === 'custom') newJobType = document.getElementById('editCustomJobType').value.trim() || card.jobType; card.jobType = newJobType;
-  saveLocal(); syncCardToCloud(card); populateGlobalFilterDropdown(); playSound('success'); alert("Aggiornato con successo!");
+  saveLocal(); syncCardToCloud(card); populateGlobalFilterDropdown(); playSound('success'); alert("Anagrafica commessa salvata con successo!");
 }
 
 function renderArticlesTable(card) {
@@ -872,8 +1000,8 @@ function renderArticlesTable(card) {
   if (!card.articles || card.articles.length === 0) card.articles = [{ code: '', desc: '', qty: '', price: '', tax: 22 }];
   card.articles.forEach((art, idx) => {
     const qty = parseFloat(art.qty) || 0, price = parseFloat(art.price) || 0, taxRate = parseFloat(art.tax) !== undefined && !isNaN(parseFloat(art.tax)) ? parseFloat(art.tax) : 22; const rowTotalNet = qty * price, unitTaxPrice = price * (1 + taxRate / 100), rowTotalTaxed = rowTotalNet * (1 + taxRate / 100);
-    const tr = document.createElement('tr'); tr.className = "hover:bg-slate-900/50 transition-colors";
-    tr.innerHTML = `<td class="py-1.5 px-1 text-center align-middle"><div class="flex items-center justify-center gap-0.5 bg-slate-900 rounded p-0.5 border border-slate-800"><button onclick="moveArticleRowVertical(${idx}, -1)" class="hover:bg-slate-800 text-slate-300 text-xs px-1 rounded cursor-pointer">▲</button><button onclick="moveArticleRowVertical(${idx}, 1)" class="hover:bg-slate-800 text-slate-300 text-xs px-1 rounded cursor-pointer">▼</button></div></td><td class="py-1.5 px-1"><input type="text" value="${art.code || ''}" data-field="code" data-index="${idx}" oninput="updateArticleField(this)" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-xs focus:outline-none"></td><td class="py-1.5 px-1"><input type="text" value="${art.desc || ''}" data-field="desc" data-index="${idx}" oninput="updateArticleField(this)" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-xs focus:outline-none"></td><td class="py-1.5 px-1"><input type="number" step="any" value="${art.qty !== undefined ? art.qty : ''}" data-field="qty" data-index="${idx}" oninput="updateArticleField(this)" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-xs text-center focus:outline-none"></td><td class="py-1.5 px-1"><input type="number" step="any" value="${art.price !== undefined ? art.price : ''}" data-field="price" data-index="${idx}" oninput="updateArticleField(this)" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-xs text-right focus:outline-none"></td><td class="py-1.5 px-1"><input type="number" step="any" value="${taxRate}" data-field="tax" data-index="${idx}" oninput="updateArticleField(this)" class="w-full bg-slate-900 border border-slate-700 rounded px-1 py-1 text-slate-200 text-xs text-center focus:outline-none"></td><td class="py-1.5 px-1 text-right font-mono text-slate-300 align-middle"><span id="row-net-${idx}">€ ${rowTotalNet.toFixed(2)}</span></td><td class="py-1.5 px-1 text-right font-mono text-slate-300 align-middle"><span id="row-unit-taxed-${idx}">€ ${unitTaxPrice.toFixed(2)}</span></td><td class="py-1.5 px-2 text-right font-mono font-bold text-slate-300 align-middle"><span id="row-total-${idx}">€ ${rowTotalTaxed.toFixed(2)}</span></td><td class="py-1.5 px-1 text-center align-middle"><button onclick="removeArticleRow(${idx})" class="text-red-400 hover:text-red-300 p-1 cursor-pointer"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button></td>`;
+    const tr = document.createElement('tr'); tr.className = "hover:bg-slate-900/50 transition-colors relative";
+    tr.innerHTML = `<td class="py-1.5 px-1 text-center align-middle"><div class="flex items-center justify-center gap-0.5 bg-slate-900 rounded p-0.5 border border-slate-800"><button onclick="moveArticleRowVertical(${idx}, -1)" class="hover:bg-slate-800 text-slate-300 text-xs px-1 rounded cursor-pointer">▲</button><button onclick="moveArticleRowVertical(${idx}, 1)" class="hover:bg-slate-800 text-slate-300 text-xs px-1 rounded cursor-pointer">▼</button></div></td><td class="py-1.5 px-1"><input type="text" value="${art.code || ''}" data-field="code" data-index="${idx}" oninput="updateArticleField(this); showArticleSuggestions(this, ${idx}, 'code');" onfocus="showArticleSuggestions(this, ${idx}, 'code')" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-xs focus:outline-none focus:border-indigo-500"></td><td class="py-1.5 px-1"><input type="text" value="${art.desc || ''}" data-field="desc" data-index="${idx}" oninput="updateArticleField(this); showArticleSuggestions(this, ${idx}, 'desc');" onfocus="showArticleSuggestions(this, ${idx}, 'desc')" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-xs focus:outline-none focus:border-indigo-500"></td><td class="py-1.5 px-1"><input type="number" step="any" value="${art.qty !== undefined ? art.qty : ''}" data-field="qty" data-index="${idx}" oninput="updateArticleField(this)" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-xs text-center focus:outline-none"></td><td class="py-1.5 px-1"><input type="number" step="any" value="${art.price !== undefined ? art.price : ''}" data-field="price" data-index="${idx}" oninput="updateArticleField(this)" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-xs text-right focus:outline-none"></td><td class="py-1.5 px-1"><input type="number" step="any" value="${taxRate}" data-field="tax" data-index="${idx}" oninput="updateArticleField(this)" class="w-full bg-slate-900 border border-slate-700 rounded px-1 py-1 text-slate-200 text-xs text-center focus:outline-none"></td><td class="py-1.5 px-1 text-right font-mono text-slate-300 align-middle"><span id="row-net-${idx}">€ ${rowTotalNet.toFixed(2)}</span></td><td class="py-1.5 px-1 text-right font-mono text-slate-300 align-middle"><span id="row-unit-taxed-${idx}">€ ${unitTaxPrice.toFixed(2)}</span></td><td class="py-1.5 px-2 text-right font-mono font-bold text-slate-300 align-middle"><span id="row-total-${idx}">€ ${rowTotalTaxed.toFixed(2)}</span></td><td class="py-1.5 px-1 text-center align-middle"><button onclick="removeArticleRow(${idx})" class="text-red-400 hover:text-red-300 p-1 cursor-pointer"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button></td>`;
     tbody.appendChild(tr);
   });
   calculateGrandTotals(); lucide.createIcons();
@@ -922,6 +1050,7 @@ function saveArticlesEdits() {
     });
     if (updatedArticles.length > 0) {
       card.articles = updatedArticles;
+      saveArticlesToDB(card.articles);
     }
   }
 
@@ -930,7 +1059,7 @@ function saveArticlesEdits() {
   saveLocal(); 
   syncCardToCloud(card); 
   playSound('success'); 
-  alert("Articoli salvati e sincronizzati con successo per la stampa etichette e colli!"); 
+  alert("Articoli salvati e sincronizzati con successo!"); 
 }
 
 function openDetail(id) {
