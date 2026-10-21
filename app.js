@@ -12,42 +12,18 @@ const IMGBB_API_KEY = "4452dd184d4f0efb701cba820e8c8f81";
 
 const zoomStyles = document.createElement('style');
 zoomStyles.innerHTML = `
-  /* Ottimizzazioni Master View TV: Proporzioni Dinamiche e Spazi */
   body:not(.master-mode) .card-dropzone { font-size: var(--app-font-size, 15px); }
   body.master-mode .card-dropzone { font-size: var(--master-font-size, 24px); }
-  body.master-mode .hide-in-master { display: none !important; }
-  
-  /* Nasconde Top Bar principale */
-  body.master-mode header:first-of-type { display: none !important; }
-  
-  /* Forza lo scrolling orizzontale del contenitore in ogni condizione */
-  #board { overflow-x: auto !important; overflow-y: hidden !important; display: flex !important; flex-wrap: nowrap !important; }
-  
-  /* Le colonne scalano in base alla dimensione del font! */
-  body:not(.master-mode) .board-column { width: 320px; }
-  body.master-mode .board-column { 
-    width: calc(var(--master-font-size) * 16) !important; 
-    min-width: calc(var(--master-font-size) * 16) !important; 
-    flex-shrink: 0; 
-  }
-  
-  /* Marquee Referente */
-  body.master-mode .standard-client-text { display: none !important; }
-  body:not(.master-mode) .master-marquee-text { display: none !important; }
-  
-  /* Grandezze Card in Master View relative (em) */
   .card-dropzone > div { font-size: 1em !important; padding: 0.8em !important; }
   .card-dropzone > div .text-sm { font-size: 1.15em !important; line-height: 1.3 !important; }
   .card-dropzone > div .text-xs { font-size: 0.9em !important; line-height: 1.3 !important; }
   .card-dropzone > div .text-\\[11px\\] { font-size: 0.8em !important; line-height: 1.2 !important; }
   .card-dropzone > div .text-\\[10px\\] { font-size: 0.75em !important; line-height: 1.2 !important; }
   .card-dropzone > div svg { width: 1.1em !important; height: 1.1em !important; }
+  .card-dropzone > div .h-14 { height: 3.5em !important; }
+  .card-dropzone > div .w-14 { width: 3.5em !important; }
   .card-dropzone > div .px-2 { padding-left: 0.5em !important; padding-right: 0.5em !important; }
   .card-dropzone > div .py-0\\.5 { padding-top: 0.2em !important; padding-bottom: 0.2em !important; }
-
-  /* Stile Orologio Classico Vecchia Versione */
-  .classic-clock-time { font-size: 1.2em; font-weight: bold; color: #ffffff; margin-right: 8px; }
-  .classic-clock-date { font-size: 0.9em; color: #cbd5e1; }
 `;
 document.head.appendChild(zoomStyles);
 
@@ -157,16 +133,10 @@ function init() {
 
 function updateLiveClock() {
   const now = new Date();
-  const timeStr = now.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
+  const timeStr = now.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
   const dateStr = now.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' });
-  
-  const timeEls = document.querySelectorAll('.headerClockTime, #headerClockTime, .sync-clock-time');
-  const dateEls = document.querySelectorAll('.headerClockDate, #headerClockDate, .sync-clock-date');
-  
-  timeEls.forEach(el => { el.innerText = timeStr; el.className = "classic-clock-time sync-clock-time"; });
-  dateEls.forEach(el => { el.innerText = dateStr; el.className = "classic-clock-date sync-clock-date"; });
-  
-  checkScheduledAlarms(now);
+  const timeEl = document.getElementById('headerClockTime'); const dateEl = document.getElementById('headerClockDate');
+  if (timeEl) timeEl.innerText = timeStr; if (dateEl) dateEl.innerText = dateStr; checkScheduledAlarms(now);
 }
 setInterval(updateLiveClock, 1000);
 
@@ -275,7 +245,7 @@ function loadUserSettings() {
   const savedMasterFont = localStorage.getItem('workflow_sga_master_fontsize_px'); if (savedMasterFont) masterFontSizePx = parseInt(savedMasterFont); applyMasterFontSize(masterFontSizePx);
   const savedAppFont = localStorage.getItem('workflow_sga_app_fontsize_px'); if (savedAppFont) appFontSizePx = parseInt(savedAppFont); applyAppFontSize(appFontSizePx);
 
-  loadCompanyLogo(); populateMachinesDropdowns(); populateGlobalFilterDropdown(); populateClientSelectors(); updateLiveClock();
+  loadCompanyLogo(); populateMachinesDropdowns(); populateGlobalFilterDropdown(); populateClientSelectors();
 }
 
 function applyMasterFontSize(pxVal) { masterFontSizePx = pxVal; document.documentElement.style.setProperty('--master-font-size', pxVal + 'px'); const rangeEl = document.getElementById('masterFontRange'); const valEl = document.getElementById('masterFontSizeVal'); if (rangeEl) rangeEl.value = pxVal; if (valEl) valEl.innerText = pxVal + 'px'; }
@@ -534,46 +504,11 @@ function resetDefaultSettings() { if (confirm("Vuoi ripristinare tutti i valori 
 function togglePlayPauseMaster() { isAutoScrollPaused = !isAutoScrollPaused; const icon = document.getElementById('masterPlayPauseIcon'); const text = document.getElementById('masterPlayPauseText'); if (isAutoScrollPaused) { if(icon) { icon.setAttribute('data-lucide', 'play'); icon.classList.replace('text-amber-400', 'text-emerald-400'); } if(text) text.innerText = 'Play'; } else { if(icon) { icon.setAttribute('data-lucide', 'pause'); icon.classList.replace('text-emerald-400', 'text-amber-400'); } if(text) text.innerText = 'Pausa'; } lucide.createIcons(); }
 
 function toggleMasterMode() {
-  isMasterMode = !isMasterMode; 
-  const body = document.body; 
-  const board = document.getElementById('board'); 
-  const backBtns = document.querySelectorAll('.master-back-btn');
-  const mainHeader = document.querySelector('header');
-  
-  let masterClock = document.getElementById('masterModeClock');
-  if (!masterClock) {
-    const masterBar = document.querySelector('.master-back-btn')?.parentElement;
-    if (masterBar) {
-      masterClock = document.createElement('div');
-      masterClock.id = 'masterModeClock';
-      masterClock.className = 'flex items-center gap-1 ml-4 hidden';
-      masterClock.innerHTML = `<span class="sync-clock-time classic-clock-time"></span> <span class="sync-clock-date classic-clock-date"></span>`;
-      masterBar.insertBefore(masterClock, masterBar.children[1]);
-    }
-  }
-
-  if (isMasterMode) { 
-    body.classList.add('master-mode'); 
-    backBtns.forEach(el => { el.classList.remove('hidden'); el.style.display = 'flex'; }); 
-    if(mainHeader) mainHeader.classList.add('hidden');
-    if(masterClock) masterClock.classList.remove('hidden');
-    isAutoScrollPaused = false; 
-    renderBoard(); 
-    startAutoScroll(); 
-  } else { 
-    body.classList.remove('master-mode'); 
-    backBtns.forEach(el => { el.classList.add('hidden'); el.style.display = 'none'; }); 
-    if(mainHeader) mainHeader.classList.remove('hidden'); 
-    if(masterClock) masterClock.classList.add('hidden');
-    stopAutoScroll(); 
-    if(board) board.scrollLeft = 0; 
-    renderBoard(); 
-  }
+  isMasterMode = !isMasterMode; const body = document.body; const board = document.getElementById('board'); const backBtns = document.querySelectorAll('.master-back-btn');
+  if (isMasterMode) { body.classList.add('master-mode'); backBtns.forEach(el => { el.classList.remove('hidden'); el.style.display = 'flex'; }); isAutoScrollPaused = false; renderBoard(); startAutoScroll(); } 
+  else { body.classList.remove('master-mode'); backBtns.forEach(el => { el.classList.add('hidden'); el.style.display = 'none'; }); stopAutoScroll(); if(board) board.scrollLeft = 0; renderBoard(); }
 }
 
-// ==========================================
-// FUNZIONE STARTAUTOSCROLL (AGGIORNATA DAL SCREENSHOT)
-// ==========================================
 function startAutoScroll() {
   stopAutoScroll(); autoScrollDir = 1; autoScrollPause = 0; const board = document.getElementById('board');
   function step(timestamp) {
@@ -581,27 +516,8 @@ function startAutoScroll() {
     if (isAutoScrollPaused) { lastScrollTime = timestamp; autoScrollId = requestAnimationFrame(step); return; }
     if (board) {
       const activeCols = board.querySelectorAll('.board-column');
-      activeCols.forEach(col => {
-        const dropzone = col.querySelector('.card-dropzone');
-        if (dropzone && dropzone.scrollHeight > dropzone.clientHeight) {
-          if (!dropzone.dataset.vDir) dropzone.dataset.vDir = 1; if (!dropzone.dataset.vPause) dropzone.dataset.vPause = 0;
-          let vPause = parseFloat(dropzone.dataset.vPause);
-          if (vPause > 0) { dropzone.dataset.vPause = vPause - elapsed; }
-          else {
-            let vDir = parseInt(dropzone.dataset.vDir); const pxToScrollV = (elapsed * masterScrollSpeed * 0.6); dropzone.scrollTop += (pxToScrollV * vDir);
-            if (vDir === 1 && dropzone.scrollTop >= (dropzone.scrollHeight - dropzone.clientHeight - 2)) { dropzone.dataset.vDir = -1; dropzone.dataset.vPause = 2000; }
-            else if (vDir === -1 && dropzone.scrollTop <= 0) { dropzone.dataset.vDir = 1; dropzone.dataset.vPause = 2000; }
-          }
-        }
-      });
-      if (board.scrollWidth > board.clientWidth) {
-        if (autoScrollPause > 0) { autoScrollPause -= elapsed; }
-        else {
-          const pxToScroll = elapsed * masterScrollSpeed; board.scrollLeft += (pxToScroll * autoScrollDir);
-          if (autoScrollDir === 1 && board.scrollLeft >= (board.scrollWidth - board.clientWidth - 2)) { autoScrollDir = -1; autoScrollPause = 2500; }
-          else if (autoScrollDir === -1 && board.scrollLeft <= 0) { autoScrollDir = 1; autoScrollPause = 2500; }
-        }
-      }
+      activeCols.forEach(col => { const dropzone = col.querySelector('.card-dropzone'); if (dropzone && dropzone.scrollHeight > dropzone.clientHeight) { if (!dropzone.dataset.vDir) dropzone.dataset.vDir = 1; if (!dropzone.dataset.vPause) dropzone.dataset.vPause = 0; let vPause = parseFloat(dropzone.dataset.vPause); if (vPause > 0) { dropzone.dataset.vPause = vPause - elapsed; } else { let vDir = parseInt(dropzone.dataset.vDir); const pxToScrollV = (elapsed * masterScrollSpeed * 0.6); dropzone.scrollTop += (pxToScrollV * vDir); if (vDir === 1 && dropzone.scrollTop >= (dropzone.scrollHeight - dropzone.clientHeight - 2)) { dropzone.dataset.vDir = -1; dropzone.dataset.vPause = 2000; } else if (vDir === -1 && dropzone.scrollTop <= 0) { dropzone.dataset.vDir = 1; dropzone.dataset.vPause = 2000; } } } });
+      if (board.scrollWidth > board.clientWidth) { if (autoScrollPause > 0) { autoScrollPause -= elapsed; } else { const pxToScroll = elapsed * masterScrollSpeed; board.scrollLeft += (pxToScroll * autoScrollDir); if (autoScrollDir === 1 && board.scrollLeft >= (board.scrollWidth - board.clientWidth - 2)) { autoScrollDir = -1; autoScrollPause = 2500; } else if (autoScrollDir === -1 && board.scrollLeft <= 0) { autoScrollDir = 1; autoScrollPause = 2500; } } }
     }
     lastScrollTime = timestamp; autoScrollId = requestAnimationFrame(step);
   }
@@ -636,6 +552,9 @@ function listenToCloudUpdates() {
     saveLocal(); if (needsMigration) { state.cards.forEach(c => syncCardToCloud(c)); } populateGlobalFilterDropdown(); if (isMasterMode && board) board.scrollLeft = currentScroll;
   });
 }
+
+function syncCardToCloud(card) { if (!db || !card) return; db.collection('workflow_sga_cards').doc(card.id).set(card).catch(err => console.error(err)); }
+function syncDeleteToCloud(cardId) { if (!db || !cardId) return; db.collection('workflow_sga_cards').doc(cardId).delete().catch(e => console.error(e)); }
 
 function compressImage(file, maxWidth, maxHeight, quality) { return new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = (e) => { const img = new Image(); img.onload = () => { let width = img.width; let height = img.height; if (width > maxWidth || height > maxHeight) { if (width / height > maxWidth / maxHeight) { height = Math.round((height * maxWidth) / width); width = maxWidth; } else { width = Math.round((width * maxHeight) / height); height = maxHeight; } } const canvas = document.createElement('canvas'); canvas.width = width; canvas.height = height; const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, width, height); resolve(canvas.toDataURL('image/jpeg', quality)); }; img.onerror = reject; img.src = e.target.result; }; reader.onerror = reject; reader.readAsDataURL(file); }); }
 function convertPdfToImage(file, scaleFactor, quality) { return new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = async function(e) { try { const typedarray = new Uint8Array(e.target.result); const pdf = await pdfjsLib.getDocument({ data: typedarray }).promise; const page = await pdf.getPage(1); const viewport = page.getViewport({ scale: scaleFactor }); const canvas = document.createElement('canvas'); const context = canvas.getContext('2d'); canvas.height = viewport.height; canvas.width = viewport.width; context.fillStyle = '#ffffff'; context.fillRect(0, 0, canvas.width, canvas.height); await page.render({ canvasContext: context, viewport: viewport }).promise; resolve(canvas.toDataURL('image/jpeg', quality)); } catch (err) { reject(err); } }; reader.readAsArrayBuffer(file); }); }
@@ -702,7 +621,7 @@ function renderBoard() {
     if (globalFilterJobType) { colCards = colCards.filter(c => c.jobType === globalFilterJobType); }
     colCards.sort((a,b) => (a.order || 0) - (b.order || 0));
     const colEl = document.createElement('div'); 
-    colEl.className = `board-column flex flex-col h-full bg-slate-900/60 rounded-xl border border-slate-800 shrink-0 overflow-hidden`;
+    colEl.className = `board-column flex flex-col h-full bg-slate-900/60 rounded-xl border border-slate-800 w-80 shrink-0 overflow-hidden`;
     colEl.innerHTML = `<div class="p-3 border-b border-slate-800 ${col.color} ${col.border} flex justify-between items-center bg-opacity-30"><h3 class="font-bold uppercase tracking-wide truncate max-w-[80%]">${col.label}</h3><span class="font-semibold bg-slate-950/60 px-2 py-0.5 rounded-full shadow-inner">${colCards.length}</span></div><div class="flex-1 overflow-y-auto p-2 space-y-2 card-dropzone" data-col="${col.id}" ondragover="allowDrop(event)" ondrop="handleDrop(event)">${colCards.map(card => createCardHTML(card)).join('')}</div>`;
     board.appendChild(colEl);
   });
@@ -720,20 +639,16 @@ function createCardHTML(card) {
   if (card.deliveryDate && card.stage !== 'bollettato-da-consegnare' && card.stage !== 'fatturato' && card.stage !== 'archiviato') { const delivery = new Date(card.deliveryDate); delivery.setHours(0,0,0,0); const today = new Date(); today.setHours(0,0,0,0); if (Math.ceil((delivery - today) / (1000 * 60 * 60 * 24)) <= 7) isUrgent = true; }
   let customCardStyle = '', customTextStyle = '', customSubTextStyle = 'text-slate-400', baseCardClass = 'bg-slate-900 border border-slate-800';
   if (card.customColor && card.customColor !== '') { const contrastColor = getContrastTextColor(card.customColor); customCardStyle = `background-color: ${card.customColor}; border-color: ${card.customColor};`; customTextStyle = `color: ${contrastColor};`; baseCardClass = 'border shadow-md'; customSubTextStyle = contrastColor === '#0f172a' ? 'text-slate-800 font-semibold' : 'text-slate-200'; }
-  
   const deliveryHTML = card.deliveryDate ? `<div class="flex items-center gap-1.5 mt-1 mb-1 font-bold ${isUrgent && !card.customColor ? 'text-red-400 bg-red-950/40 border border-red-900/60 animate-pulse' : ''} px-2 py-1 rounded w-fit text-xs" style="${card.customColor ? `background: rgba(0,0,0,0.15); ${customTextStyle}` : ''}"><i data-lucide="calendar" class="w-3.5 h-3.5"></i> Consegna: ${new Date(card.deliveryDate).toLocaleDateString('it-IT')}</div>` : '';
   const machineBadgeHTML = card.machine ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono bg-cyan-950 text-cyan-300 border border-cyan-800 mt-1"><i data-lucide="cpu" class="w-3 h-3"></i> ${card.machine}</span>` : '';
-  const thumbnailHTML = card.photos && card.photos.length > 0 ? `<div class="hide-in-master mt-2 flex gap-1 overflow-hidden h-14">${card.photos.map(p => `<div class="w-14 h-14 shrink-0 overflow-hidden rounded border border-slate-700 bg-slate-900 flex items-center justify-center"><img src="${p.image}" style="transform: rotate(${p.rotation || 0}deg);" class="min-w-full min-h-full object-cover bg-white"></div>`).join('')}</div>` : '';
+  const thumbnailHTML = card.photos && card.photos.length > 0 ? `<div class="mt-2 flex gap-1 overflow-hidden h-14">${card.photos.map(p => `<div class="w-14 h-14 shrink-0 overflow-hidden rounded border border-slate-700 bg-slate-900 flex items-center justify-center"><img src="${p.image}" style="transform: rotate(${p.rotation || 0}deg);" class="min-w-full min-h-full object-cover bg-white"></div>`).join('')}</div>` : '';
   const cardIdShort = card.id ? card.id.slice(-4).toUpperCase() : '0000';
   const notifyIconHTML = (card.stage === 'bollettato-da-consegnare' && (card.email || card.whatsapp)) ? `<button onclick="event.stopPropagation(); triggerNotifyById('${card.id}')" class="ml-2 p-1 bg-emerald-500/20 hover:bg-emerald-500/50 text-emerald-400 rounded cursor-pointer transition-colors" title="Invia Notifica Pronto Ritiro"><i data-lucide="mail" class="w-3.5 h-3.5"></i></button>` : '';
   
   const printStages = ['in-lavorazione', 'lavorato-da-bollettare', 'bollettato-da-consegnare', 'fatturato'];
   const printLabelIconHTML = printStages.includes(card.stage) ? `<button onclick="event.stopPropagation(); openLabelPrintModal('${card.id}')" class="ml-2 p-1 bg-blue-500/20 hover:bg-blue-500/50 text-blue-400 rounded cursor-pointer transition-colors" title="Stampa Etichette Colli"><i data-lucide="printer" class="w-3.5 h-3.5"></i></button>` : '';
 
-  const clientTextContent = `${card.client}${card.referent ? ` <span class="text-indigo-300 font-semibold">(${card.referent})</span>` : ''}`;
-  const clientHTML = card.client ? `<div class="w-full text-xs flex items-center gap-1.5 ${customSubTextStyle} overflow-hidden"><i data-lucide="building-2" class="w-3.5 h-3.5 shrink-0"></i><span class="standard-client-text truncate w-full">${clientTextContent}</span><marquee class="master-marquee-text w-full font-semibold" behavior="scroll" direction="left" scrollamount="4">${clientTextContent}</marquee></div>` : '';
-
-  return `<div draggable="true" ondragstart="handleDragStart(event)" id="card-${card.id}" data-id="${card.id}" onclick="${isMasterMode ? '' : `playSound('click'); openDetail('${card.id}')`}" style="${customCardStyle}" class="${baseCardClass} hover:border-indigo-500/50 p-3.5 rounded-lg shadow-md cursor-pointer transition-all active:scale-95 space-y-2 group relative ${isUrgent ? 'card-urgent' : ''}"><div class="flex justify-between items-start gap-1"><span class="px-2 py-0.5 rounded font-medium text-[11px] ${badgeStyle}">${card.jobType || 'Generico'}</span><span class="text-xs" style="${card.customColor ? customTextStyle : 'color: #64748b;'}">${card.createdAt ? new Date(card.createdAt).toLocaleDateString('it-IT', {day: 'numeric', month: 'short'}) : ''}</span></div><h4 class="font-bold text-sm leading-snug truncate transition-colors" style="${card.customColor ? customTextStyle : 'color: #f8fafc;'}">${card.title || 'Senza Titolo'}</h4>${clientHTML}${machineBadgeHTML}${deliveryHTML}${thumbnailHTML}<div class="pt-2 border-t flex justify-between items-center text-xs" style="${card.customColor ? 'border-color: rgba(0,0,0,0.15);' : 'border-color: #1e293b;'}" onclick="event.stopPropagation()"><div class="flex items-center gap-1"><span class="font-mono text-[11px]" style="${card.customColor ? customTextStyle : 'color: #475569;'}">#${cardIdShort}</span><span class="hide-in-master inline-flex items-center gap-1">${notifyIconHTML}${printLabelIconHTML}</span><div class="hide-in-master flex items-center bg-black/20 rounded ml-2"><button onclick="moveCardVertical('${card.id}', -1)" class="p-0.5 hover:bg-black/30 rounded px-1.5 cursor-pointer" title="Sposta su" style="${card.customColor ? customTextStyle : 'color: #cbd5e1;'}">▲</button><button onclick="moveCardVertical('${card.id}', 1)" class="p-0.5 hover:bg-black/30 rounded px-1.5 cursor-pointer" title="Sposta giù" style="${card.customColor ? customTextStyle : 'color: #cbd5e1;'}">▼</button></div></div><div class="flex gap-1.5 hide-in-master"><button onclick="moveCardStep('${card.id}', -1)" class="p-1 rounded bg-slate-900 hover:bg-slate-700 text-slate-400 hover:text-slate-200 transition-colors cursor-pointer" title="Indietro"><i data-lucide="chevron-left" class="w-4 h-4"></i></button><button onclick="moveCardStep('${card.id}', 1)" class="p-1 rounded bg-slate-900 hover:bg-slate-700 text-slate-400 hover:text-slate-200 transition-colors cursor-pointer" title="Avanti"><i data-lucide="chevron-right" class="w-4 h-4"></i></button></div></div></div>`;
+  return `<div draggable="true" ondragstart="handleDragStart(event)" id="card-${card.id}" data-id="${card.id}" onclick="${isMasterMode ? '' : `playSound('click'); openDetail('${card.id}')`}" style="${customCardStyle}" class="${baseCardClass} hover:border-indigo-500/50 p-3.5 rounded-lg shadow-md cursor-pointer transition-all active:scale-95 space-y-2 group relative ${isUrgent ? 'card-urgent' : ''}"><div class="flex justify-between items-start gap-1"><span class="px-2 py-0.5 rounded font-medium text-[11px] ${badgeStyle}">${card.jobType || 'Generico'}</span><span class="text-xs" style="${card.customColor ? customTextStyle : 'color: #64748b;'}">${card.createdAt ? new Date(card.createdAt).toLocaleDateString('it-IT', {day: 'numeric', month: 'short'}) : ''}</span></div><h4 class="font-bold text-sm leading-snug truncate transition-colors" style="${card.customColor ? customTextStyle : 'color: #f8fafc;'}">${card.title || 'Senza Titolo'}</h4>${card.client ? `<p class="truncate text-xs flex items-center gap-1.5 ${customSubTextStyle}"><i data-lucide="building-2" class="w-3.5 h-3.5 shrink-0"></i> ${card.client}${card.referent ? ` <span class="text-indigo-300 font-semibold">(${card.referent})</span>` : ''}</p>` : ''}${machineBadgeHTML}${deliveryHTML}${thumbnailHTML}<div class="pt-2 border-t flex justify-between items-center text-xs" style="${card.customColor ? 'border-color: rgba(0,0,0,0.15);' : 'border-color: #1e293b;'}" onclick="event.stopPropagation()"><div class="flex items-center gap-1"><span class="font-mono text-[11px]" style="${card.customColor ? customTextStyle : 'color: #475569;'}">#${cardIdShort}</span>${notifyIconHTML}${printLabelIconHTML}<div class="hide-in-master flex items-center bg-black/20 rounded ml-2"><button onclick="moveCardVertical('${card.id}', -1)" class="p-0.5 hover:bg-black/30 rounded px-1.5 cursor-pointer" title="Sposta su" style="${card.customColor ? customTextStyle : 'color: #cbd5e1;'}">▲</button><button onclick="moveCardVertical('${card.id}', 1)" class="p-0.5 hover:bg-black/30 rounded px-1.5 cursor-pointer" title="Sposta giù" style="${card.customColor ? customTextStyle : 'color: #cbd5e1;'}">▼</button></div></div><div class="flex gap-1.5 hide-in-master"><button onclick="moveCardStep('${card.id}', -1)" class="p-1 rounded bg-slate-900 hover:bg-slate-700 text-slate-400 hover:text-slate-200 transition-colors cursor-pointer" title="Indietro"><i data-lucide="chevron-left" class="w-4 h-4"></i></button><button onclick="moveCardStep('${card.id}', 1)" class="p-1 rounded bg-slate-900 hover:bg-slate-700 text-slate-400 hover:text-slate-200 transition-colors cursor-pointer" title="Avanti"><i data-lucide="chevron-right" class="w-4 h-4"></i></button></div></div></div>`;
 }
 
 function moveCardVertical(cardId, direction) {
@@ -830,9 +745,6 @@ async function createNewCard(event) {
   document.getElementById('newCardForm').reset(); document.getElementById('formClientSelector').value = ''; document.getElementById('formCustomJobType').classList.add('hidden'); document.getElementById('formFilePreview').classList.add('hidden'); tempFormFile = null; closeModal('addCardModal');
 }
 
-// ==========================================
-// SALVA MODIFICHE ANAGRAFICHE CON POPUP DI CONFERMA
-// ==========================================
 function saveCardEdits() {
   const card = state.cards.find(c => c.id === activeCardId); if (!card) return;
   card.title = document.getElementById('editTitle').value.trim(); card.client = card.title; card.referent = document.getElementById('editReferent').value.trim(); card.email = document.getElementById('editEmail').value.trim(); card.whatsapp = document.getElementById('editWhatsapp').value.trim(); card.machine = document.getElementById('editMachine').value;
@@ -842,8 +754,7 @@ function saveCardEdits() {
   const colorInput = document.getElementById('editCardColor'); const selectedColor = colorInput.value.toLowerCase(); const defaultColor = colorInput.dataset.defaultColor ? colorInput.dataset.defaultColor.toLowerCase() : "";
   if (selectedColor === defaultColor) { card.customColor = ""; } else { card.customColor = colorInput.value; }
   let newJobType = document.getElementById('editJobType').value; if (newJobType === 'custom') newJobType = document.getElementById('editCustomJobType').value.trim() || card.jobType; card.jobType = newJobType;
-  saveLocal(); syncCardToCloud(card); populateGlobalFilterDropdown(); playSound('success'); 
-  alert("✅ Dati anagrafici e generali della commessa aggiornati con successo!");
+  saveLocal(); syncCardToCloud(card); populateGlobalFilterDropdown(); playSound('success'); alert("Aggiornato con successo!");
 }
 
 function renderArticlesTable(card) {
@@ -852,7 +763,7 @@ function renderArticlesTable(card) {
   card.articles.forEach((art, idx) => {
     const qty = parseFloat(art.qty) || 0, price = parseFloat(art.price) || 0, taxRate = parseFloat(art.tax) !== undefined && !isNaN(parseFloat(art.tax)) ? parseFloat(art.tax) : 22; const rowTotalNet = qty * price, unitTaxPrice = price * (1 + taxRate / 100), rowTotalTaxed = rowTotalNet * (1 + taxRate / 100);
     const tr = document.createElement('tr'); tr.className = "hover:bg-slate-900/50 transition-colors";
-    tr.innerHTML = `<td class="py-1.5 px-1 text-center align-middle"><div class="flex items-center justify-center gap-0.5 bg-slate-900 rounded p-0.5 border border-slate-800"><button onclick="moveArticleRowVertical(${idx}, -1)" class="hover:bg-slate-800 text-slate-300 text-xs px-1 rounded cursor-pointer">▲</button><button onclick="moveArticleRowVertical(${idx}, 1)" class="hover:bg-slate-800 text-slate-300 text-xs px-1 rounded cursor-pointer">▼</button></div></td><td class="py-1.5 px-1"><input type="text" value="${art.code || ''}" data-field="code" data-index="${idx}" oninput="updateArticleField(this)" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-xs focus:outline-none"></td><td class="py-1.5 px-1"><input type="text" value="${art.desc || ''}" data-field="desc" data-index="${idx}" oninput="updateArticleField(this)" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-xs focus:outline-none"></td><td class="py-1.5 px-1"><input type="number" step="any" value="${art.qty !== undefined ? art.qty : ''}" data-field="qty" data-index="${idx}" oninput="updateArticleField(this)" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-xs text-center focus:outline-none"></td><td class="py-1.5 px-1"><input type="number" step="any" value="${art.price !== undefined ? art.price : ''}" data-field="price" data-index="${idx}" oninput="updateArticleField(this)" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-xs text-right focus:outline-none"></td><td class="py-1.5 px-1"><input type="number" step="any" value="${taxRate}" data-field="tax" data-index="${idx}" oninput="updateArticleField(this)" class="w-full bg-slate-900 border border-slate-700 rounded px-1 py-1 text-slate-200 text-xs text-center focus:outline-none"></td><td class="py-1.5 px-1 text-right font-mono text-slate-300 align-middle"><span id="row-net-${idx}">€ ${rowTotalNet.toFixed(2)}</span></td><td class="py-1.5 px-1 text-right font-mono text-slate-300 align-middle"><span id="row-unit-taxed-${idx}">€ ${unitTaxPrice.toFixed(2)}</span></td><td class="py-1.5 px-2 text-right font-mono font-bold text-slate-300 align-middle"><span id="row-total-${idx}">€ ${rowTotalTaxed.toFixed(2)}</span></td><td class="py-1.5 px-1 text-center align-middle"><button onclick="removeArticleRow(${idx})" class="text-red-400 hover:text-red-300 p-1 cursor-pointer"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button></td>`;
+    tr.innerHTML = `<td class="py-1.5 px-1 text-center align-middle"><div class="flex items-center justify-center gap-0.5 bg-slate-900 rounded p-0.5 border border-slate-800"><button onclick="moveArticleRowVertical(${idx}, -1)" class="hover:bg-slate-800 text-slate-300 text-xs px-1 rounded cursor-pointer">▲</button><button onclick="moveArticleRowVertical(${idx}, 1)" class="hover:bg-slate-800 text-slate-300 text-xs px-1 rounded cursor-pointer">▼</button></div></td><td class="py-1.5 px-1"><input type="text" value="${art.code || ''}" data-field="code" data-index="${idx}" oninput="updateArticleField(this)" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-xs font-mono focus:outline-none"></td><td class="py-1.5 px-1"><input type="text" value="${art.desc || ''}" data-field="desc" data-index="${idx}" oninput="updateArticleField(this)" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-xs focus:outline-none"></td><td class="py-1.5 px-1"><input type="number" step="any" value="${art.qty !== undefined ? art.qty : ''}" data-field="qty" data-index="${idx}" oninput="updateArticleField(this)" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-xs text-center focus:outline-none"></td><td class="py-1.5 px-1"><input type="number" step="any" value="${art.price !== undefined ? art.price : ''}" data-field="price" data-index="${idx}" oninput="updateArticleField(this)" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-xs text-right focus:outline-none"></td><td class="py-1.5 px-1"><input type="number" step="any" value="${taxRate}" data-field="tax" data-index="${idx}" oninput="updateArticleField(this)" class="w-full bg-slate-900 border border-slate-700 rounded px-1 py-1 text-slate-200 text-xs text-center focus:outline-none"></td><td class="py-1.5 px-1 text-right font-mono text-slate-300 align-middle"><span id="row-net-${idx}">€ ${rowTotalNet.toFixed(2)}</span></td><td class="py-1.5 px-1 text-right font-mono text-slate-300 align-middle"><span id="row-unit-taxed-${idx}">€ ${unitTaxPrice.toFixed(2)}</span></td><td class="py-1.5 px-2 text-right font-mono font-bold text-slate-300 align-middle"><span id="row-total-${idx}">€ ${rowTotalTaxed.toFixed(2)}</span></td><td class="py-1.5 px-1 text-center align-middle"><button onclick="removeArticleRow(${idx})" class="text-red-400 hover:text-red-300 p-1 cursor-pointer"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button></td>`;
     tbody.appendChild(tr);
   });
   calculateGrandTotals(); lucide.createIcons();
@@ -873,47 +784,7 @@ function calculateGrandTotals() {
 
 function addArticleRow() { const card = state.cards.find(c => c.id === activeCardId); if (!card) return; if (!Array.isArray(card.articles)) card.articles = []; card.articles.push({ code: '', desc: '', qty: 1, price: 0, tax: 22 }); renderArticlesTable(card); }
 function removeArticleRow(idx) { const card = state.cards.find(c => c.id === activeCardId); if (!card || !card.articles || !card.articles[idx]) return; const artName = card.articles[idx].desc || "Riga Vuota"; confirmDeletion(`Articolo: ${artName}`, () => { card.articles.splice(idx, 1); renderArticlesTable(card); saveLocal(); syncCardToCloud(card); }); }
-
-// ==========================================
-// SALVA ARTICOLI CON POPUP DI CONFERMA
-// ==========================================
-function saveArticlesEdits() { 
-  const card = state.cards.find(c => c.id === activeCardId); 
-  if (!card) return; 
-  
-  const tbody = document.getElementById('articlesTableBody');
-  if (tbody) {
-    const rows = tbody.querySelectorAll('tr');
-    let updatedArticles = [];
-    rows.forEach(row => {
-      const codeInput = row.querySelector('[data-field="code"]');
-      const descInput = row.querySelector('[data-field="desc"]');
-      const qtyInput = row.querySelector('[data-field="qty"]');
-      const priceInput = row.querySelector('[data-field="price"]');
-      const taxInput = row.querySelector('[data-field="tax"]');
-      
-      if (codeInput || descInput || qtyInput || priceInput) {
-        updatedArticles.push({
-          code: codeInput ? codeInput.value : '',
-          desc: descInput ? descInput.value : '',
-          qty: qtyInput ? qtyInput.value : 1,
-          price: priceInput ? priceInput.value : 0,
-          tax: taxInput ? taxInput.value : 22
-        });
-      }
-    });
-    if (updatedArticles.length > 0) {
-      card.articles = updatedArticles;
-    }
-  }
-
-  delete card.labelArticles;
-
-  saveLocal(); 
-  syncCardToCloud(card); 
-  playSound('success'); 
-  alert("✅ Articoli salvati e sincronizzati con successo per la stampa etichette e colli!"); 
-}
+function saveArticlesEdits() { const card = state.cards.find(c => c.id === activeCardId); if (!card) return; saveLocal(); syncCardToCloud(card); playSound('success'); alert("Articoli salvati."); }
 
 function openDetail(id) {
   if (isMasterMode) return; const card = state.cards.find(c => c.id === id); if (!card) return; activeCardId = id;
@@ -974,7 +845,7 @@ function renderLabelArticlesTable() {
     window.tempLabelArticles.forEach((art, idx) => {
       const tr = document.createElement('tr'); tr.className = "hover:bg-slate-900/50 transition-colors";
       tr.innerHTML = `
-        <td class="py-2 px-2 w-1/5"><input type="text" value="${art.code || ''}" onchange="updateLabelRow(${idx}, 'code', this.value)" class="w-full bg-transparent border-b border-slate-700 text-slate-200 text-xs focus:outline-none focus:border-blue-500" placeholder="Codice"></td>
+        <td class="py-2 px-2 w-1/5"><input type="text" value="${art.code || ''}" onchange="updateLabelRow(${idx}, 'code', this.value)" class="w-full bg-transparent border-b border-slate-700 text-slate-200 text-xs font-mono focus:outline-none focus:border-blue-500" placeholder="Codice"></td>
         <td class="py-2 px-2 w-2/5"><input type="text" value="${art.desc || ''}" onchange="updateLabelRow(${idx}, 'desc', this.value)" class="w-full bg-transparent border-b border-slate-700 text-slate-200 text-xs focus:outline-none focus:border-blue-500" placeholder="Descrizione"></td>
         <td class="py-2 px-2 text-center w-20"><input type="number" min="1" value="${art.qty}" onchange="updateLabelRow(${idx}, 'qty', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded px-1 py-1 text-slate-200 text-sm text-center focus:outline-none focus:border-blue-500"></td>
         <td class="py-2 px-2 text-center w-20"><input type="number" min="1" value="${art.packageNum}" onchange="updateLabelRow(${idx}, 'packageNum', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded px-1 py-1 text-slate-200 text-sm text-center focus:outline-none focus:border-blue-500"></td>
@@ -1009,13 +880,13 @@ async function generateAndPrintLabels() {
 
   packageNumbers.forEach((pkgNum, idx) => {
     const currentPkgIndex = idx + 1; const articlesInPkg = packages[pkgNum];
-    const articlesListHtml = articlesInPkg.map(a => `<tr><td style="width: 45px; font-weight: bold; text-align: center; vertical-align: middle;">${a.qty}x</td><td style="padding: 2.5px 4px; vertical-align: middle;">${a.desc}</td><td style="width: 80px; font-size: 11px; padding: 2.5px 4px; vertical-align: middle;">${a.code}</td></tr>`).join('');
+    const articlesListHtml = articlesInPkg.map(a => `<tr><td style="width: 45px; font-weight: bold; text-align: center; vertical-align: top;">${a.qty}x</td><td style="padding-bottom: 4px; vertical-align: top;">${a.desc}</td><td style="width: 80px; font-family: monospace; font-size: 11px; padding-bottom: 4px; vertical-align: top;">${a.code}</td></tr>`).join('');
     
-    labelsHtml += `<div class="label-page"><div class="top-row"><div class="logo-box">${logoHtml}</div><div class="sender-info">${senderText}</div><div class="qr-code"><img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://www.studiograficoassociato.com" alt="QR Code" style="width: 100%; height: 100%; object-fit: contain;"></div></div><div class="middle-row"><div class="box dest-box"><div class="box-header">DESTINATARIO:</div><div class="box-body" style="font-size: 15px; font-weight: bold; padding-top: 5px;">${card.client || 'Cliente N/D'}<br><span style="font-weight: normal; font-size: 11px;">${card.referent ? 'Rif: ' + card.referent : ''}</span></div></div><div class="collo-box">Collo ${currentPkgIndex} di ${totalPackages}</div></div><div class="box content-box" style="flex: 1; display: flex; flex-direction: column;"><div class="box-header">CONTENUTO DEL COLLO:</div><div class="box-body" style="padding: 0; flex: 1;"><table class="content-table"><thead><tr><th style="width: 45px; text-align: center;">Q.TÀ</th><th>DESCRIZIONE MATERIALE</th><th style="width: 80px;">CODICE</th></tr></thead><tbody>${articlesListHtml}</tbody></table></div></div>${labelNotes ? `<div class="box notes-box" style="margin-top: 2mm; height: 15mm; flex-shrink: 0;"><div class="box-header" style="background: #555; padding: 2px 6px; font-size: 10px;">NOTE / RIFERIMENTI:</div><div class="box-body" style="font-size: 11px; padding: 4px 6px;">${labelNotes.replace(/\n/g, '<br>')}</div></div>` : ''}</div>`;
+    labelsHtml += `<div class="label-page"><div class="top-row"><div class="logo-box">${logoHtml}</div><div class="sender-info">${senderText}</div><div class="qr-code"><img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://www.studiograficoassociato.com" alt="QR Code" style="width: 100%; height: 100%; object-fit: contain;"></div></div><div class="middle-row"><div class="box dest-box"><div class="box-header">DESTINATARIO:</div><div class="box-body" style="font-size: 16px; font-weight: bold; padding-top: 6px;">${card.client || 'Cliente N/D'}<br><span style="font-weight: normal; font-size: 12px;">${card.referent ? 'Rif: ' + card.referent : ''}</span></div></div><div class="collo-box">Collo ${currentPkgIndex} di ${totalPackages}</div></div><div class="box content-box" style="flex: 1; display: flex; flex-direction: column;"><div class="box-header">CONTENUTO DEL COLLO:</div><div class="box-body" style="padding: 0; flex: 1;"><table class="content-table"><thead><tr><th style="width: 45px; text-align: center;">Q.TÀ</th><th>DESCRIZIONE MATERIALE</th><th style="width: 80px;">CODICE</th></tr></thead><tbody>${articlesListHtml}</tbody></table></div></div>${labelNotes ? `<div class="box notes-box" style="margin-top: 3mm; height: 18mm; flex-shrink: 0;"><div class="box-header" style="background: #555;">NOTE / RIFERIMENTI:</div><div class="box-body" style="font-size: 12px;">${labelNotes.replace(/\n/g, '<br>')}</div></div>` : ''}</div>`;
   });
 
   const fullHtml = `<!DOCTYPE html><html><head><title>Etichette_${card.title}</title><style>
-    @page { size: 148mm 105mm; margin: 0; } body, html { margin: 0; padding: 0; width: 148mm; background: #fff; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; -webkit-print-color-adjust: exact; print-color-adjust: exact; } .label-page { width: 148mm; height: 105mm; padding: 4mm; box-sizing: border-box; display: flex; flex-direction: column; page-break-after: always; break-after: page; background: #fff; overflow: hidden; position: relative; } .top-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2.5mm; padding-bottom: 2mm; border-bottom: 2px solid #333; } .logo-box { width: 35mm; display: flex; flex-direction: column; justify-content: center; } .print-logo { max-height: 14mm; max-width: 100%; object-fit: contain; filter: brightness(0); object-position: left center; } .logo-area { font-weight: 900; font-size: 30px; line-height: 0.9; letter-spacing: -2px; color: #000; display: flex; align-items: center; } .logo-sub { font-size: 8.5px; font-weight: bold; letter-spacing: 0.5px; text-transform: uppercase; margin-top: 1px;} .sender-info { flex: 1; text-align: center; font-size: 9px; line-height: 1.3; color: #000; padding: 0 3mm; } .qr-code { width: 16mm; height: 16mm; border: 1.5px solid #333; padding: 1px; border-radius: 4px; flex-shrink: 0;} .box { border: 2px solid #333; border-radius: 5px; overflow: hidden; display: flex; flex-direction: column;} .box-header { background: #555; color: #fff; font-weight: bold; font-size: 10.5px; padding: 2.5px 6px; text-transform: uppercase; letter-spacing: 0.5px;} .box-body { background: #EBE8D8; padding: 5px 6px; font-size: 11px; line-height: 1.2; color: #000; flex: 1; } .middle-row { display: flex; gap: 2.5mm; height: 17mm; margin-bottom: 2.5mm;} .dest-box { flex: 1; } .dest-box .box-header { background: #444; } .collo-box { width: 38mm; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: bold; background: #EBE8D8; border: 2px solid #333; border-radius: 5px; color: #000;} .content-box { flex: 1; } .content-box .box-header { background: #fff; color: #000; border-bottom: 2px solid #333;} .content-table { width: 100%; border-collapse: collapse; font-size: 11.5px; } .content-table th { background: #D9D9D9; border-bottom: 2px solid #888; text-align: left; padding: 3px 5px; font-size: 10px; font-weight: bold;} .content-table td { padding: 3px 5px; border-bottom: 1px solid #ddd; background: #EBE8D8;} .content-table tr:nth-child(even) td { background: #E1DECD; }
+    @page { size: 148mm 105mm; margin: 0; } body, html { margin: 0; padding: 0; width: 148mm; background: #fff; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; -webkit-print-color-adjust: exact; print-color-adjust: exact; } .label-page { width: 148mm; height: 105mm; padding: 5mm; box-sizing: border-box; display: flex; flex-direction: column; page-break-after: always; break-after: page; background: #fff; overflow: hidden; position: relative; } .top-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 3.5mm; padding-bottom: 2.5mm; border-bottom: 2px solid #333; } .logo-box { width: 38mm; display: flex; flex-direction: column; justify-content: center; } .print-logo { max-height: 15mm; max-width: 100%; object-fit: contain; filter: brightness(0); object-position: left center; } .logo-area { font-weight: 900; font-size: 32px; line-height: 0.9; letter-spacing: -2px; color: #000; display: flex; align-items: center; } .logo-sub { font-size: 9px; font-weight: bold; letter-spacing: 0.5px; text-transform: uppercase; margin-top: 1px;} .sender-info { flex: 1; text-align: center; font-size: 9.5px; line-height: 1.35; color: #000; padding: 0 3mm; } .qr-code { width: 18mm; height: 18mm; border: 1.5px solid #333; padding: 1px; border-radius: 4px; flex-shrink: 0;} .box { border: 2px solid #333; border-radius: 6px; overflow: hidden; display: flex; flex-direction: column;} .box-header { background: #555; color: #fff; font-weight: bold; font-size: 11px; padding: 3px 8px; text-transform: uppercase; letter-spacing: 0.5px;} .box-body { background: #EBE8D8; padding: 6px 8px; font-size: 12px; line-height: 1.25; color: #000; flex: 1; } .middle-row { display: flex; gap: 3mm; height: 19mm; margin-bottom: 3mm;} .dest-box { flex: 1; } .dest-box .box-header { background: #444; } .collo-box { width: 42mm; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: bold; background: #EBE8D8; border: 2px solid #333; border-radius: 6px; color: #000;} .content-box { flex: 1; } .content-box .box-header { background: #fff; color: #000; border-bottom: 2px solid #333;} .content-table { width: 100%; border-collapse: collapse; font-size: 13px; } .content-table th { background: #D9D9D9; border-bottom: 2px solid #888; text-align: left; padding: 4px 6px; font-size: 11px; font-weight: bold;} .content-table td { padding: 5px 6px; border-bottom: 1px solid #ddd; background: #EBE8D8;} .content-table tr:nth-child(even) td { background: #E1DECD; }
   </style></head><body>${labelsHtml}</body></html>`;
 
   const blob = new Blob([fullHtml], { type: 'text/html' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `Etichetta_${card.title.replace(/[^a-zA-Z0-9]/g, '_')}_${Date.now()}.html`; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url); 
@@ -1038,7 +909,7 @@ function printCard() {
   const historyHtml = (card.history || []).map((h, i) => { return `<div style="margin-bottom: 8px; padding-left: 12px; border-left: 2px solid #cbd5e1; position: relative;"><div style="position: absolute; left: -5px; top: 2px; width: 8px; height: 8px; border-radius: 50%; background: #475569;"></div><div style="font-weight: bold; font-size: 11px; color: #1e293b;">Passaggio #${i+1}: ${h.label}</div><div style="font-size: 9px; color: #64748b;">Data: ${new Date(h.timestamp).toLocaleString('it-IT')}</div></div>`; }).join('');
 
   let articlesRowsHtml = ''; let grandSubtotal = 0; let grandTax = 0; let grandTotalTaxed = 0;
-  if (card.articles && card.articles.length > 0) { card.articles.forEach(art => { const qty = parseFloat(art.qty) || 0; const price = parseFloat(art.price) || 0; const taxRate = parseFloat(art.tax) !== undefined && !isNaN(parseFloat(art.tax)) ? parseFloat(art.tax) : 22; const sub = qty * price; const taxAmt = sub * (taxRate / 100); const rowTotalTaxed = sub + taxAmt; const unitTaxed = price * (1 + taxRate / 100); grandSubtotal += sub; grandTax += taxAmt; grandTotalTaxed += rowTotalTaxed; articlesRowsHtml += `<tr style="border-bottom: 1px solid #e2e8f0;"><td style="padding: 8px; font-size: 11px; color: #334155;">${art.code || '-'}</td><td style="padding: 8px; font-size: 11px; color: #0f172a;">${art.desc || '-'}</td><td style="padding: 8px; text-align: center; font-size: 11px; color: #334155;">${art.qty !== undefined && art.qty !== '' ? art.qty : '-'}</td><td style="padding: 8px; text-align: right; font-size: 11px; color: #334155;">${art.price !== undefined && art.price !== '' ? '€ ' + parseFloat(art.price).toFixed(2) : '-'}</td><td style="padding: 8px; text-align: center; font-size: 11px; color: #334155;">${taxRate}%</td><td style="padding: 8px; text-align: right; font-size: 11px; color: #334155;">${(art.qty !== undefined && art.price !== undefined && art.qty !== '' && art.price !== '') ? '€ ' + unitTaxed.toFixed(2) : '-'}</td><td style="padding: 8px; text-align: right; font-size: 11px; font-weight: bold; color: #0f172a;">${(art.qty !== undefined && art.price !== undefined && art.qty !== '' && art.price !== '') ? '€ ' + rowTotalTaxed.toFixed(2) : '-'}</td></tr>`; }); } 
+  if (card.articles && card.articles.length > 0) { card.articles.forEach(art => { const qty = parseFloat(art.qty) || 0; const price = parseFloat(art.price) || 0; const taxRate = parseFloat(art.tax) !== undefined && !isNaN(parseFloat(art.tax)) ? parseFloat(art.tax) : 22; const sub = qty * price; const taxAmt = sub * (taxRate / 100); const rowTotalTaxed = sub + taxAmt; const unitTaxed = price * (1 + taxRate / 100); grandSubtotal += sub; grandTax += taxAmt; grandTotalTaxed += rowTotalTaxed; articlesRowsHtml += `<tr style="border-bottom: 1px solid #e2e8f0;"><td style="padding: 8px; font-family: monospace; font-size: 11px; color: #334155;">${art.code || '-'}</td><td style="padding: 8px; font-size: 11px; color: #0f172a;">${art.desc || '-'}</td><td style="padding: 8px; text-align: center; font-size: 11px; color: #334155;">${art.qty !== undefined && art.qty !== '' ? art.qty : '-'}</td><td style="padding: 8px; text-align: right; font-size: 11px; color: #334155;">${art.price !== undefined && art.price !== '' ? '€ ' + parseFloat(art.price).toFixed(2) : '-'}</td><td style="padding: 8px; text-align: center; font-size: 11px; color: #334155;">${taxRate}%</td><td style="padding: 8px; text-align: right; font-size: 11px; color: #334155;">${(art.qty !== undefined && art.price !== undefined && art.qty !== '' && art.price !== '') ? '€ ' + unitTaxed.toFixed(2) : '-'}</td><td style="padding: 8px; text-align: right; font-size: 11px; font-weight: bold; color: #0f172a;">${(art.qty !== undefined && art.price !== undefined && art.qty !== '' && art.price !== '') ? '€ ' + rowTotalTaxed.toFixed(2) : '-'}</td></tr>`; }); } 
   else { articlesRowsHtml = `<tr><td colspan="7" style="padding: 10px; text-align: center; color: #64748b; font-size: 11px;">Nessun articolo inserito</td></tr>`; }
 
   let attachmentsPrintHtml = ''; if (card.photos && card.photos.length > 0) { attachmentsPrintHtml = card.photos.map((p, idx) => { return `<div class="print-page"><img src="${p.image}" style="transform: rotate(${p.rotation || 0}deg);"></div>`; }).join(''); }
