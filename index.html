@@ -29,10 +29,6 @@
       position: relative;
       z-index: 50;
     }
-    /* Fix per prevenire il taglio della tendina nel container con scroll */
-    .table-scroll-container {
-       padding-bottom: 8rem; /* Spazio extra per permettere alla tendina di aprirsi completamente */
-    }
   </style>
 </head>
 <body class="bg-slate-950 text-slate-100 font-sans h-screen flex flex-col overflow-hidden">
@@ -445,8 +441,7 @@
             
             <div class="mt-2">
               <label class="text-[10px] text-indigo-400 font-semibold uppercase tracking-wider block mb-1">Rif. Ordine</label>
-              <!-- AGGIUNTO onchange="saveCardEdits()" PER AUTOSALVATAGGIO -->
-              <input type="text" id="editOrderRef" onchange="saveCardEdits()" placeholder="Codice ordine o preventivo..." class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-1.5 text-slate-200 text-sm focus:outline-none focus:border-indigo-500">
+              <input type="text" id="editOrderRef" placeholder="Codice ordine o preventivo..." class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-1.5 text-slate-200 text-sm focus:outline-none focus:border-indigo-500">
             </div>
           </div>
           
@@ -515,8 +510,8 @@
             </button>
           </div>
           
-          <!-- AGGIUNTE LE CLASSI PER LA GESTIONE DELLO Z-INDEX E DEL PADDING INFERIORE -->
-          <div class="overflow-x-auto table-scroll-container relative z-30">
+          <!-- CONTENITORE TABELLA: overflow-visible permette alla tendina di uscire e coprire i totali -->
+          <div class="w-full overflow-visible relative z-30">
             <table class="w-full text-left text-xs min-w-[700px]">
               <thead>
                 <tr class="border-b border-slate-800 text-slate-400 uppercase text-[10px]">
