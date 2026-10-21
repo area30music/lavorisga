@@ -433,7 +433,7 @@
     </div>
   </div>
 
-  <!-- GALLERY MODAL (CORRETTO IN PRIMO PIANO SOPRA LA SCHEDA COMMESSA) -->
+  <!-- GALLERY MODAL -->
   <div id="galleryModal" class="fixed inset-0 z-[90] bg-black/95 backdrop-blur-md flex flex-col justify-between p-4 hidden">
     <div class="flex justify-between items-center z-10">
       <div id="galleryCounter" class="text-xs font-mono text-slate-300 bg-slate-900/80 px-3 py-1.5 rounded-lg border border-slate-800">1 / 1</div>
@@ -450,8 +450,8 @@
     <div class="text-center text-[11px] text-slate-500">Usa le frecce per navigare tra i documenti e i file allegati in alta risoluzione</div>
   </div>
 
-  <!-- DELETE CONFIRM MODAL -->
-  <div id="deleteConfirmModal" class="fixed inset-0 z-80 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+  <!-- DELETE CONFIRM MODAL (Z-INDEX AGGIORNATO A z-[100] PER APPARIRE SOPRA) -->
+  <div id="deleteConfirmModal" class="fixed inset-0 z-[100] bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 hidden">
     <div class="bg-slate-900 border border-red-500/40 rounded-2xl max-w-sm w-full p-6 shadow-2xl space-y-4 text-center">
       <div class="w-12 h-12 bg-red-950 text-red-400 rounded-2xl mx-auto flex items-center justify-center border border-red-900/50"><i data-lucide="alert-triangle" class="w-6 h-6"></i></div>
       <h3 class="font-bold text-base text-white">Conferma Eliminazione</h3>

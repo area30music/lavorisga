@@ -62,7 +62,6 @@ let autoScrollPause = 0;
 let lastScrollTime = 0;
 let isAutoScrollPaused = false;
 let masterScrollSpeed = 0.08;
-let boardExactScrollLeft = 0;
 window.editingClientId = null;
 window.editingMachineIndex = null;
 window.tempLabelArticles = [];
@@ -541,7 +540,6 @@ function toggleMasterMode() {
   const backBtns = document.querySelectorAll('.master-back-btn');
   const mainHeader = document.querySelector('header');
   
-  // Iniezione Orologio Classico nella barra Master Mode
   let masterClock = document.getElementById('masterModeClock');
   if (!masterClock) {
     const masterBar = document.querySelector('.master-back-btn')?.parentElement;
@@ -573,59 +571,36 @@ function toggleMasterMode() {
   }
 }
 
+// ==========================================
+// FUNZIONE STARTAUTOSCROLL (AGGIORNATA DAL SCREENSHOT)
+// ==========================================
 function startAutoScroll() {
   stopAutoScroll(); autoScrollDir = 1; autoScrollPause = 0; const board = document.getElementById('board');
-  boardExactScrollLeft = board ? board.scrollLeft : 0;
-  
   function step(timestamp) {
     if (!isMasterMode) return; if (!lastScrollTime) lastScrollTime = timestamp; const elapsed = timestamp - lastScrollTime;
     if (isAutoScrollPaused) { lastScrollTime = timestamp; autoScrollId = requestAnimationFrame(step); return; }
-    
     if (board) {
       const activeCols = board.querySelectorAll('.board-column');
-      // Scroll Verticale delle Colonne
-      activeCols.forEach(col => { 
-        const dropzone = col.querySelector('.card-dropzone'); 
-        if (dropzone && dropzone.scrollHeight > dropzone.clientHeight) { 
-          if (!dropzone.dataset.vDir) dropzone.dataset.vDir = 1; 
-          if (!dropzone.dataset.vPause) dropzone.dataset.vPause = 0; 
-          if (!dropzone.dataset.exactScroll) dropzone.dataset.exactScroll = dropzone.scrollTop;
-          
-          let vPause = parseFloat(dropzone.dataset.vPause); 
-          if (vPause > 0) { 
-            dropzone.dataset.vPause = vPause - elapsed; 
-          } else { 
-            let vDir = parseInt(dropzone.dataset.vDir); 
-            const pxToScrollV = (elapsed * masterScrollSpeed * 0.6); 
-            
-            let exactScroll = parseFloat(dropzone.dataset.exactScroll) + (pxToScrollV * vDir);
-            dropzone.dataset.exactScroll = exactScroll;
-            dropzone.scrollTop = exactScroll;
-            
-            if (vDir === 1 && dropzone.scrollTop >= (dropzone.scrollHeight - dropzone.clientHeight - 2)) { 
-              dropzone.dataset.vDir = -1; dropzone.dataset.vPause = 2000; 
-            } else if (vDir === -1 && dropzone.scrollTop <= 0) { 
-              dropzone.dataset.vDir = 1; dropzone.dataset.vPause = 2000; 
-            } 
-          } 
-        } 
+      activeCols.forEach(col => {
+        const dropzone = col.querySelector('.card-dropzone');
+        if (dropzone && dropzone.scrollHeight > dropzone.clientHeight) {
+          if (!dropzone.dataset.vDir) dropzone.dataset.vDir = 1; if (!dropzone.dataset.vPause) dropzone.dataset.vPause = 0;
+          let vPause = parseFloat(dropzone.dataset.vPause);
+          if (vPause > 0) { dropzone.dataset.vPause = vPause - elapsed; }
+          else {
+            let vDir = parseInt(dropzone.dataset.vDir); const pxToScrollV = (elapsed * masterScrollSpeed * 0.6); dropzone.scrollTop += (pxToScrollV * vDir);
+            if (vDir === 1 && dropzone.scrollTop >= (dropzone.scrollHeight - dropzone.clientHeight - 2)) { dropzone.dataset.vDir = -1; dropzone.dataset.vPause = 2000; }
+            else if (vDir === -1 && dropzone.scrollTop <= 0) { dropzone.dataset.vDir = 1; dropzone.dataset.vPause = 2000; }
+          }
+        }
       });
-      
-      // Scroll Orizzontale Continuo della Board (risolto con le esatte variabili float)
-      if (board.scrollWidth > board.clientWidth) { 
-        if (autoScrollPause > 0) { 
-          autoScrollPause -= elapsed; 
-        } else { 
-          const pxToScroll = elapsed * masterScrollSpeed * 0.8; 
-          boardExactScrollLeft += (pxToScroll * autoScrollDir); 
-          board.scrollLeft = boardExactScrollLeft; 
-          
-          if (autoScrollDir === 1 && board.scrollLeft >= (board.scrollWidth - board.clientWidth - 1)) { 
-            autoScrollDir = -1; autoScrollPause = 3000; boardExactScrollLeft = board.scrollLeft;
-          } else if (autoScrollDir === -1 && board.scrollLeft <= 0) { 
-            autoScrollDir = 1; autoScrollPause = 3000; boardExactScrollLeft = 0;
-          } 
-        } 
+      if (board.scrollWidth > board.clientWidth) {
+        if (autoScrollPause > 0) { autoScrollPause -= elapsed; }
+        else {
+          const pxToScroll = elapsed * masterScrollSpeed; board.scrollLeft += (pxToScroll * autoScrollDir);
+          if (autoScrollDir === 1 && board.scrollLeft >= (board.scrollWidth - board.clientWidth - 2)) { autoScrollDir = -1; autoScrollPause = 2500; }
+          else if (autoScrollDir === -1 && board.scrollLeft <= 0) { autoScrollDir = 1; autoScrollPause = 2500; }
+        }
       }
     }
     lastScrollTime = timestamp; autoScrollId = requestAnimationFrame(step);
@@ -855,6 +830,9 @@ async function createNewCard(event) {
   document.getElementById('newCardForm').reset(); document.getElementById('formClientSelector').value = ''; document.getElementById('formCustomJobType').classList.add('hidden'); document.getElementById('formFilePreview').classList.add('hidden'); tempFormFile = null; closeModal('addCardModal');
 }
 
+// ==========================================
+// SALVA MODIFICHE ANAGRAFICHE CON POPUP DI CONFERMA
+// ==========================================
 function saveCardEdits() {
   const card = state.cards.find(c => c.id === activeCardId); if (!card) return;
   card.title = document.getElementById('editTitle').value.trim(); card.client = card.title; card.referent = document.getElementById('editReferent').value.trim(); card.email = document.getElementById('editEmail').value.trim(); card.whatsapp = document.getElementById('editWhatsapp').value.trim(); card.machine = document.getElementById('editMachine').value;
@@ -864,7 +842,8 @@ function saveCardEdits() {
   const colorInput = document.getElementById('editCardColor'); const selectedColor = colorInput.value.toLowerCase(); const defaultColor = colorInput.dataset.defaultColor ? colorInput.dataset.defaultColor.toLowerCase() : "";
   if (selectedColor === defaultColor) { card.customColor = ""; } else { card.customColor = colorInput.value; }
   let newJobType = document.getElementById('editJobType').value; if (newJobType === 'custom') newJobType = document.getElementById('editCustomJobType').value.trim() || card.jobType; card.jobType = newJobType;
-  saveLocal(); syncCardToCloud(card); populateGlobalFilterDropdown(); playSound('success'); alert("Aggiornato con successo!");
+  saveLocal(); syncCardToCloud(card); populateGlobalFilterDropdown(); playSound('success'); 
+  alert("✅ Dati anagrafici e generali della commessa aggiornati con successo!");
 }
 
 function renderArticlesTable(card) {
@@ -895,6 +874,9 @@ function calculateGrandTotals() {
 function addArticleRow() { const card = state.cards.find(c => c.id === activeCardId); if (!card) return; if (!Array.isArray(card.articles)) card.articles = []; card.articles.push({ code: '', desc: '', qty: 1, price: 0, tax: 22 }); renderArticlesTable(card); }
 function removeArticleRow(idx) { const card = state.cards.find(c => c.id === activeCardId); if (!card || !card.articles || !card.articles[idx]) return; const artName = card.articles[idx].desc || "Riga Vuota"; confirmDeletion(`Articolo: ${artName}`, () => { card.articles.splice(idx, 1); renderArticlesTable(card); saveLocal(); syncCardToCloud(card); }); }
 
+// ==========================================
+// SALVA ARTICOLI CON POPUP DI CONFERMA
+// ==========================================
 function saveArticlesEdits() { 
   const card = state.cards.find(c => c.id === activeCardId); 
   if (!card) return; 
@@ -930,7 +912,7 @@ function saveArticlesEdits() {
   saveLocal(); 
   syncCardToCloud(card); 
   playSound('success'); 
-  alert("Articoli salvati e sincronizzati con successo per la stampa etichette e colli!"); 
+  alert("✅ Articoli salvati e sincronizzati con successo per la stampa etichette e colli!"); 
 }
 
 function openDetail(id) {
