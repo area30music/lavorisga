@@ -470,6 +470,11 @@ function autofillClientFromSelect(clientId, prefix) {
   const titleEl = document.getElementById(prefix + 'Title'); const refEl = document.getElementById(prefix + 'Referent'); const emailEl = document.getElementById(prefix + 'Email'); const waEl = document.getElementById(prefix + 'Whatsapp');
   if (titleEl) titleEl.value = c.name || ''; if (refEl) refEl.value = c.referent || ''; if (emailEl) emailEl.value = c.email || ''; if (waEl) waEl.value = c.whatsapp || '';
   const sugContainer = document.getElementById(prefix + 'ClientSuggestions'); if (sugContainer) sugContainer.classList.add('hidden');
+  
+  // Autosave se ci troviamo nella finestra di Dettaglio Commessa
+  if (prefix === 'edit') {
+    saveCardEdits(true);
+  }
 }
 
 function handleClientInput(query, containerId, refInputId, emailInputId, waInputId) {
@@ -489,6 +494,11 @@ function selectClientSuggestion(name, referent, email, whatsapp, containerId, re
   if (emailInputId && document.getElementById(emailInputId)) document.getElementById(emailInputId).value = email || '';
   if (waInputId && document.getElementById(waInputId)) document.getElementById(waInputId).value = whatsapp || '';
   document.getElementById(containerId).classList.add('hidden');
+  
+  // Autosave in Dettaglio Commessa
+  if (containerId === 'editClientSuggestions') {
+    saveCardEdits(true);
+  }
 }
 
 function populateMachinesDropdowns() {
@@ -1083,7 +1093,7 @@ async function createNewCard(event) {
   document.getElementById('newCardForm').reset(); document.getElementById('formClientSelector').value = ''; document.getElementById('formCustomJobType').classList.add('hidden'); document.getElementById('formFilePreview').classList.add('hidden'); tempFormFile = null; closeModal('addCardModal');
 }
 
-// MODIFICATO: accetta il parametro "silent" per non far apparire l'alert
+// Funzione globale per aggiornare tutta l'anagrafica
 function saveCardEdits(silent = false) {
   const card = state.cards.find(c => c.id === activeCardId); if (!card) return;
   card.title = document.getElementById('editTitle').value.trim(); card.client = card.title; card.referent = document.getElementById('editReferent').value.trim(); card.email = document.getElementById('editEmail').value.trim(); card.whatsapp = document.getElementById('editWhatsapp').value.trim(); card.machine = document.getElementById('editMachine').value;
@@ -1104,6 +1114,19 @@ function saveCardEdits(silent = false) {
   }
 }
 
+// Funzione globale per gli articoli che supporta la modalità silenziosa
+function saveArticlesEdits(silent = false) { 
+  const card = state.cards.find(c => c.id === activeCardId); 
+  if (!card) return; 
+  saveLocal(); 
+  syncCardToCloud(card); 
+  
+  if (!silent) {
+    playSound('success'); 
+    alert("Articoli salvati."); 
+  }
+}
+
 function renderArticlesTable(card) {
   const tbody = document.getElementById('articlesTableBody'); tbody.innerHTML = '';
   if (!card.articles || card.articles.length === 0) card.articles = [{ code: '', desc: '', qty: '', price: '', tax: 22 }];
@@ -1112,19 +1135,20 @@ function renderArticlesTable(card) {
     const rowTotalNet = qty * price, unitTaxPrice = price * (1 + taxRate / 100), rowTotalTaxed = rowTotalNet * (1 + taxRate / 100);
     const tr = document.createElement('tr'); tr.className = "hover:bg-slate-900/50 transition-colors";
     
+    // Inserito l'evento onchange="saveArticlesEdits(true)" per autosalvare la tabella ad ogni interazione completata
     tr.innerHTML = `
       <td class="py-1.5 px-1 text-center align-middle"><div class="flex items-center justify-center gap-0.5 bg-slate-900 rounded p-0.5 border border-slate-800"><button onclick="moveArticleRowVertical(${idx}, -1)" class="hover:bg-slate-800 text-slate-300 text-xs px-1 rounded cursor-pointer">▲</button><button onclick="moveArticleRowVertical(${idx}, 1)" class="hover:bg-slate-800 text-slate-300 text-xs px-1 rounded cursor-pointer">▼</button></div></td>
       <td class="py-1.5 px-1 relative">
-        <input type="text" value="${art.code || ''}" data-field="code" data-index="${idx}" autocomplete="off" oninput="updateArticleField(this); handleArticleCodeAutocomplete(this.value, ${idx})" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-xs font-mono focus:outline-none focus:border-indigo-500">
+        <input type="text" value="${art.code || ''}" data-field="code" data-index="${idx}" autocomplete="off" oninput="updateArticleField(this); handleArticleCodeAutocomplete(this.value, ${idx})" onchange="saveArticlesEdits(true)" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-xs font-mono focus:outline-none focus:border-indigo-500">
         <div id="articleCodeSuggestions-${idx}" class="hidden absolute left-0 right-0 top-full mt-1 bg-slate-800 border border-slate-600 rounded shadow-xl z-50 max-h-32 overflow-y-auto min-w-[200px]"></div>
       </td>
       <td class="py-1.5 px-1 relative">
-        <input type="text" value="${art.desc || ''}" data-field="desc" data-index="${idx}" autocomplete="off" oninput="updateArticleField(this); handleArticleAutocomplete(this.value, ${idx})" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-xs focus:outline-none focus:border-indigo-500">
+        <input type="text" value="${art.desc || ''}" data-field="desc" data-index="${idx}" autocomplete="off" oninput="updateArticleField(this); handleArticleAutocomplete(this.value, ${idx})" onchange="saveArticlesEdits(true)" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-xs focus:outline-none focus:border-indigo-500">
         <div id="articleSuggestions-${idx}" class="hidden absolute left-0 right-0 top-full mt-1 bg-slate-800 border border-slate-600 rounded shadow-xl z-50 max-h-32 overflow-y-auto min-w-[250px]"></div>
       </td>
-      <td class="py-1.5 px-1"><input type="number" step="any" value="${art.qty !== undefined ? art.qty : ''}" data-field="qty" data-index="${idx}" oninput="updateArticleField(this)" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-xs text-center focus:outline-none"></td>
-      <td class="py-1.5 px-1"><input type="number" step="any" value="${art.price !== undefined ? art.price : ''}" data-field="price" data-index="${idx}" oninput="updateArticleField(this)" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-xs text-right focus:outline-none"></td>
-      <td class="py-1.5 px-1"><input type="number" step="any" value="${art.tax !== undefined ? art.tax : 22}" data-field="tax" data-index="${idx}" oninput="updateArticleField(this)" class="w-full bg-slate-900 border border-slate-700 rounded px-1 py-1 text-slate-200 text-xs text-center focus:outline-none"></td>
+      <td class="py-1.5 px-1"><input type="number" step="any" value="${art.qty !== undefined ? art.qty : ''}" data-field="qty" data-index="${idx}" oninput="updateArticleField(this)" onchange="saveArticlesEdits(true)" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-xs text-center focus:outline-none"></td>
+      <td class="py-1.5 px-1"><input type="number" step="any" value="${art.price !== undefined ? art.price : ''}" data-field="price" data-index="${idx}" oninput="updateArticleField(this)" onchange="saveArticlesEdits(true)" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-xs text-right focus:outline-none"></td>
+      <td class="py-1.5 px-1"><input type="number" step="any" value="${art.tax !== undefined ? art.tax : 22}" data-field="tax" data-index="${idx}" oninput="updateArticleField(this)" onchange="saveArticlesEdits(true)" class="w-full bg-slate-900 border border-slate-700 rounded px-1 py-1 text-slate-200 text-xs text-center focus:outline-none"></td>
       <td class="py-1.5 px-1 text-right font-mono text-slate-300 align-middle"><span id="row-net-${idx}">€ ${rowTotalNet.toFixed(2)}</span></td>
       <td class="py-1.5 px-1 text-right font-mono text-slate-300 align-middle"><span id="row-unit-taxed-${idx}">€ ${unitTaxPrice.toFixed(2)}</span></td>
       <td class="py-1.5 px-2 text-right font-mono font-bold text-slate-300 align-middle"><span id="row-total-${idx}">€ ${rowTotalTaxed.toFixed(2)}</span></td>
@@ -1200,12 +1224,11 @@ function calculateGrandTotals() {
   document.getElementById('grandSubtotalDisplay').innerText = `€ ${grandSubtotal.toFixed(2)}`; document.getElementById('grandTaxDisplay').innerText = `€ ${grandTax.toFixed(2)}`; document.getElementById('grandTotalDisplay').innerText = `€ ${grandTotalTaxed.toFixed(2)}`;
 }
 
-function addArticleRow() { const card = state.cards.find(c => c.id === activeCardId); if (!card) return; if (!Array.isArray(card.articles)) card.articles = []; card.articles.push({ code: '', desc: '', qty: 1, price: 0, tax: 22 }); renderArticlesTable(card); }
+function addArticleRow() { const card = state.cards.find(c => c.id === activeCardId); if (!card) return; if (!Array.isArray(card.articles)) card.articles = []; card.articles.push({ code: '', desc: '', qty: 1, price: 0, tax: 22 }); renderArticlesTable(card); saveArticlesEdits(true); }
 function removeArticleRow(idx) {
   const card = state.cards.find(c => c.id === activeCardId); if (!card || !card.articles || !card.articles[idx]) return; const artName = card.articles[idx].desc || "Riga Vuota";
   confirmDeletion(`Articolo: ${artName}`, () => { card.articles.splice(idx, 1); renderArticlesTable(card); saveLocal(); syncCardToCloud(card); });
 }
-function saveArticlesEdits() { const card = state.cards.find(c => c.id === activeCardId); if (!card) return; saveLocal(); syncCardToCloud(card); playSound('success'); alert("Articoli salvati."); }
 
 function openDetail(id) {
   if (isMasterMode) return; const card = state.cards.find(c => c.id === id); if (!card) return; activeCardId = id;
@@ -1215,18 +1238,46 @@ function openDetail(id) {
   badge.textContent = currentStageObj ? currentStageObj.label : (card.stage === 'archiviato' ? 'Archiviata' : 'N/A'); 
   badge.className = `px-2 py-0.5 rounded text-[11px] font-bold text-white uppercase ${currentStageObj ? currentStageObj.color.split(' ')[0] : 'bg-slate-600'}`;
   
-  document.getElementById('editClientSelector').value = ''; document.getElementById('editTitle').value = card.title || ''; document.getElementById('editReferent').value = card.referent || ''; document.getElementById('editEmail').value = card.email || ''; document.getElementById('editWhatsapp').value = card.whatsapp || ''; document.getElementById('editDeliveryDate').value = card.deliveryDate || ''; populateMachinesDropdowns(); document.getElementById('editMachine').value = card.machine || '';
+  // Compilazione rapida dei campi
+  document.getElementById('editClientSelector').value = ''; 
+  document.getElementById('editTitle').value = card.title || ''; 
+  document.getElementById('editReferent').value = card.referent || ''; 
+  document.getElementById('editEmail').value = card.email || ''; 
+  document.getElementById('editWhatsapp').value = card.whatsapp || ''; 
+  document.getElementById('editDeliveryDate').value = card.deliveryDate || ''; 
+  populateMachinesDropdowns(); 
+  document.getElementById('editMachine').value = card.machine || '';
   
-  // MODIFICATO: Sostituito l'evento inline con una gestione che invoca il salvataggio silenzioso
   const editOrderRefEl = document.getElementById('editOrderRef');
-  if (editOrderRefEl) {
-    editOrderRefEl.value = card.orderRef || '';
-    editOrderRefEl.onchange = function() {
-      saveCardEdits(true); // Parametro "true" attiva il salvataggio in DB senza mostrare alert
-    };
-  }
+  if (editOrderRefEl) editOrderRefEl.value = card.orderRef || '';
   
-  const colDef = COLUMNS_CONFIG.find(col => col.id === card.stage); const defaultColor = colDef ? colDef.hexDefault : '#4f46e5'; const colorInput = document.getElementById('editCardColor'); colorInput.value = card.customColor || defaultColor; colorInput.dataset.defaultColor = defaultColor; 
+  const colDef = COLUMNS_CONFIG.find(col => col.id === card.stage); 
+  const defaultColor = colDef ? colDef.hexDefault : '#4f46e5'; 
+  const colorInput = document.getElementById('editCardColor'); 
+  colorInput.value = card.customColor || defaultColor; 
+  colorInput.dataset.defaultColor = defaultColor; 
+  
+  // INIZIALIZZAZIONE EVENTI AUTOSAVE PER ANAGRAFICA (Prevenendo ascoltatori duplicati)
+  const editFields = [
+    'editTitle', 'editReferent', 'editEmail', 'editWhatsapp', 
+    'editDeliveryDate', 'editMachine', 'editOrderRef', 
+    'editCustomJobType', 'editJobType', 'editClientSelector', 'editCardColor'
+  ];
+  
+  editFields.forEach(fieldId => {
+    const el = document.getElementById(fieldId);
+    if (el && !el.dataset.autosave) {
+      el.addEventListener('change', () => {
+        // Se si seleziona da CRM, gestisce l'inserimento prima di salvare
+        if (fieldId === 'editClientSelector') autofillClientFromSelect(el.value, 'edit');
+        if (fieldId === 'editJobType') checkEditCustomJobType(el.value);
+        
+        saveCardEdits(true);
+      });
+      el.dataset.autosave = "true";
+    }
+  });
+
   renderArticlesTable(card); renderAttachments(card);
   
   const timeline = document.getElementById('storyboardTimeline'); timeline.innerHTML = '';
@@ -1359,7 +1410,6 @@ function splitLabelRow(index) {
 }
 function removeLabelRow(index) { playSound('click'); window.tempLabelArticles.splice(index, 1); renderLabelArticlesTable(); }
 
-// MODIFICATO: Stampa etichette con le correzioni per il font e per le righe
 async function generateAndPrintLabels() {
   const card = state.cards.find(c => c.id === activeLabelCardId); 
   if (!card) return;
@@ -1397,7 +1447,6 @@ async function generateAndPrintLabels() {
   const senderText = "<strong style='font-size: 11px;'>Studio Grafico Associato di Gastaldi Antonio Francesco</strong><br>Via Mario Groppo 4 - 12048 Sommariva del Bosco (CN)<br>Tel: 0172 560087 - info@studiograficoassociato.com<br>www.studiograficoassociato.com";
   let logoHtml = sharedCompanyLogo ? `<img src="${sharedCompanyLogo}" class="print-logo">` : `<div class="logo-area">SGA</div><div class="logo-sub">STUDIO GRAFICO ASSOCIATO</div>`;
 
-  // Creazione Box Riferimento Ordine se presente
   let orderRefHtml = "";
   if (card.orderRef && card.orderRef.trim() !== "") {
     orderRefHtml = `
@@ -1411,7 +1460,6 @@ async function generateAndPrintLabels() {
     const currentPkgIndex = idx + 1;
     const articlesInPkg = packages[pkgNum];
     
-    // Rimosso il font monospace per allineare Codice e Descrizione. Le righe ora usano il font di base del body
     const articlesListHtml = articlesInPkg.map(a => `<tr><td style="width: 45px; font-weight: bold; text-align: center; vertical-align: top;">${a.qty}x</td><td style="width: 75px; vertical-align: top; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">${a.code}</td><td style="padding-bottom: 2px;">${a.desc}</td></tr>`).join('');
     
     const notesBoxHtml = labelNotes ? `
@@ -1454,7 +1502,6 @@ async function generateAndPrintLabels() {
     `;
   });
 
-  // Aggiunto "page-break-inside: avoid" a .content-table tr per non far tagliare la riga a metà
   const fullHtml = `<!DOCTYPE html><html><head><title>Etichette_${card.title}</title><style>
     @page { size: 148mm 105mm; margin: 0; }
     body, html { margin: 0; padding: 0; width: 148mm; background: #fff; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
