@@ -1104,7 +1104,7 @@ function renderArticlesTable(card) {
     const tr = document.createElement('tr'); tr.className = "hover:bg-slate-900/50 transition-colors";
     tr.innerHTML = `
       <td class="py-1.5 px-1 text-center align-middle"><div class="flex items-center justify-center gap-0.5 bg-slate-900 rounded p-0.5 border border-slate-800"><button onclick="moveArticleRowVertical(${idx}, -1)" class="hover:bg-slate-800 text-slate-300 text-xs px-1 rounded cursor-pointer">▲</button><button onclick="moveArticleRowVertical(${idx}, 1)" class="hover:bg-slate-800 text-slate-300 text-xs px-1 rounded cursor-pointer">▼</button></div></td>
-      <td class="py-1.5 px-1"><input type="text" value="${art.code || ''}" data-field="code" data-index="${idx}" oninput="updateArticleField(this)" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-xs font-mono focus:outline-none"></td>
+      <td class="py-1.5 px-1"><input type="text" value="${art.code || ''}" data-field="code" data-index="${idx}" onchange="updateArticleField(this)" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-xs font-mono focus:outline-none focus:border-indigo-500"></td>
       <td class="py-1.5 px-1 relative">
         <input type="text" value="${art.desc || ''}" data-field="desc" data-index="${idx}" autocomplete="off" oninput="updateArticleField(this); handleArticleAutocomplete(this.value, ${idx})" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-xs focus:outline-none focus:border-indigo-500">
         <div id="articleSuggestions-${idx}" class="hidden absolute left-0 right-0 top-full mt-1 bg-slate-800 border border-slate-600 rounded shadow-xl z-50 max-h-32 overflow-y-auto"></div>
@@ -1149,7 +1149,23 @@ function moveArticleRowVertical(idx, direction) {
 }
 
 function updateArticleField(input) {
-  const idx = parseInt(input.dataset.index), field = input.dataset.field; const card = state.cards.find(c => c.id === activeCardId); if (!card || !card.articles[idx]) return; card.articles[idx][field] = input.value;
+  const idx = parseInt(input.dataset.index), field = input.dataset.field; const card = state.cards.find(c => c.id === activeCardId); if (!card || !card.articles[idx]) return; 
+  card.articles[idx][field] = input.value;
+
+  // MODIFICA: Autocompilazione da Codice Articolo
+  if (field === 'code' && input.value.trim() !== '') {
+    const match = ARTICLES_DB.find(a => a.code && a.code.toLowerCase() === input.value.trim().toLowerCase());
+    if (match) {
+      card.articles[idx].desc = match.desc;
+      card.articles[idx].price = match.price;
+      if (!card.articles[idx].qty) card.articles[idx].qty = 1;
+      renderArticlesTable(card); // Aggiorna graficamente la riga
+      saveLocal(); syncCardToCloud(card);
+      playSound('success');
+      return; // Esci per non ricalcolare inutilmente qui (lo fa già renderArticlesTable)
+    }
+  }
+
   if (['qty', 'price', 'tax'].includes(field)) {
     const qty = parseFloat(card.articles[idx].qty) || 0, price = parseFloat(card.articles[idx].price) || 0, taxRate = parseFloat(card.articles[idx].tax) || 22; const rowTotalNet = qty * price, unitTaxPrice = price * (1 + taxRate / 100), rowTotalTaxed = rowTotalNet * (1 + taxRate / 100);
     document.getElementById(`row-net-${idx}`).innerText = `€ ${rowTotalNet.toFixed(2)}`; document.getElementById(`row-unit-taxed-${idx}`).innerText = `€ ${unitTaxPrice.toFixed(2)}`; document.getElementById(`row-total-${idx}`).innerText = `€ ${rowTotalTaxed.toFixed(2)}`; calculateGrandTotals();
@@ -1260,13 +1276,23 @@ function openLabelPrintModal(cardId) {
   document.getElementById('labelClientName').innerText = card.client || 'N/D'; document.getElementById('labelTaskTitle').innerText = card.title || 'Senza Titolo';
   
   const notesInput = document.getElementById('labelNotesInput');
-  if (notesInput) notesInput.value = card.labelNotes || '';
+  if (notesInput) {
+    // MODIFICA: Se non ci sono note sull'etichetta ma c'è un riferimento ordine, autocompila
+    if (card.labelNotes !== undefined && card.labelNotes !== '') {
+      notesInput.value = card.labelNotes;
+    } else if (card.orderRef) {
+      notesInput.value = 'Rif. Ordine: ' + card.orderRef;
+    } else {
+      notesInput.value = '';
+    }
+  }
   
   window.tempLabelArticles = [];
   if (card.articles && card.articles.length > 0) {
     card.articles.forEach(art => {
       if(!art.desc || art.desc.trim() === '') return;
-      window.tempLabelArticles.push({ desc: art.desc, qty: art.qty || 1, packageNum: 1 });
+      // MODIFICA: Passa il codice articolo
+      window.tempLabelArticles.push({ code: art.code || '', desc: art.desc, qty: art.qty || 1, packageNum: 1 });
     });
   }
   
@@ -1278,12 +1304,14 @@ function renderLabelArticlesTable() {
   const tbody = document.getElementById('labelArticlesBody');
   tbody.innerHTML = '';
   if (window.tempLabelArticles.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="4" class="py-4 text-center text-slate-500 italic">Nessun articolo associato.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="5" class="py-4 text-center text-slate-500 italic">Nessun articolo associato.</td></tr>`;
   } else {
     window.tempLabelArticles.forEach((art, idx) => {
       const tr = document.createElement('tr');
       tr.className = "hover:bg-slate-900/50 transition-colors";
+      // MODIFICA: Aggiunto campo per visualizzare/modificare il Codice
       tr.innerHTML = `
+        <td class="py-2 px-2 w-24"><input type="text" value="${art.code || ''}" onchange="updateLabelRow(${idx}, 'code', this.value)" class="w-full bg-transparent border-b border-slate-700 text-slate-200 text-xs font-mono focus:outline-none focus:border-blue-500"></td>
         <td class="py-2 px-2"><input type="text" value="${art.desc}" onchange="updateLabelRow(${idx}, 'desc', this.value)" class="w-full bg-transparent border-b border-slate-700 text-slate-200 text-xs focus:outline-none focus:border-blue-500"></td>
         <td class="py-2 px-2 text-center"><input type="number" min="1" value="${art.qty}" onchange="updateLabelRow(${idx}, 'qty', this.value)" class="w-16 bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-sm text-center focus:outline-none focus:border-blue-500"></td>
         <td class="py-2 px-2 text-center"><input type="number" min="1" value="${art.packageNum}" onchange="updateLabelRow(${idx}, 'packageNum', this.value)" class="w-16 bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-sm text-center focus:outline-none focus:border-blue-500"></td>
@@ -1301,7 +1329,7 @@ function updateLabelRow(index, field, value) {
 }
 function splitLabelRow(index) {
   playSound('click'); const item = window.tempLabelArticles[index];
-  const newItem = { desc: item.desc, qty: item.qty, packageNum: item.packageNum + 1 };
+  const newItem = { code: item.code, desc: item.desc, qty: item.qty, packageNum: item.packageNum + 1 };
   window.tempLabelArticles.splice(index + 1, 0, newItem); renderLabelArticlesTable();
 }
 function removeLabelRow(index) { playSound('click'); window.tempLabelArticles.splice(index, 1); renderLabelArticlesTable(); }
@@ -1318,12 +1346,13 @@ async function generateAndPrintLabels() {
       if(!art.desc || art.desc.trim() === '') return;
       const pkgNum = art.packageNum || 1;
       if (!packages[pkgNum]) packages[pkgNum] = [];
-      packages[pkgNum].push({ desc: art.desc, qty: art.qty });
+      // MODIFICA: Includiamo il codice nella stampa
+      packages[pkgNum].push({ code: art.code || '', desc: art.desc, qty: art.qty });
       hasValidArticles = true;
     });
   }
   
-  if (!hasValidArticles) { packages[1] = [{desc: 'Materiale Commessa (Varie)', qty: 1}]; }
+  if (!hasValidArticles) { packages[1] = [{code: '', desc: 'Materiale Commessa (Varie)', qty: 1}]; }
   
   const packageNumbers = Object.keys(packages).map(Number).sort((a, b) => a - b);
   const totalPackages = packageNumbers.length;
@@ -1346,8 +1375,10 @@ async function generateAndPrintLabels() {
   packageNumbers.forEach((pkgNum, idx) => {
     const currentPkgIndex = idx + 1;
     const articlesInPkg = packages[pkgNum];
-    const articlesListHtml = articlesInPkg.map(a => `<tr><td style="width: 45px; font-weight: bold; text-align: center; vertical-align: top;">${a.qty}x</td><td style="padding-bottom: 4px;">${a.desc}</td></tr>`).join('');
+    // MODIFICA: Inclusione della colonna codice nella tabella del collo stampato
+    const articlesListHtml = articlesInPkg.map(a => `<tr><td style="width: 45px; font-weight: bold; text-align: center; vertical-align: top;">${a.qty}x</td><td style="width: 65px; font-family: monospace; font-size: 10px; vertical-align: top;">${a.code}</td><td style="padding-bottom: 4px;">${a.desc}</td></tr>`).join('');
     
+    // Il box note includerà in automatico ciò che è scritto in #labelNotesInput (quindi anche il Rif. Ordine autocompilato)
     const notesBoxHtml = labelNotes ? `
         <div class="box notes-box" style="margin-top: 3mm; height: 18mm; flex-shrink: 0;">
           <div class="box-header" style="background: #555;">NOTE / RIFERIMENTI:</div>
@@ -1377,7 +1408,7 @@ async function generateAndPrintLabels() {
           <div class="box-header">CONTENUTO DEL COLLO:</div>
           <div class="box-body" style="padding: 0; flex: 1;">
             <table class="content-table">
-              <thead><tr><th style="width: 45px; text-align: center;">Q.TÀ</th><th>DESCRIZIONE MATERIALE</th></tr></thead>
+              <thead><tr><th style="width: 45px; text-align: center;">Q.TÀ</th><th style="width: 65px;">CODICE</th><th>DESCRIZIONE MATERIALE</th></tr></thead>
               <tbody>${articlesListHtml}</tbody>
             </table>
           </div>
