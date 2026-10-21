@@ -12,23 +12,30 @@ const IMGBB_API_KEY = "4452dd184d4f0efb701cba820e8c8f81";
 
 const zoomStyles = document.createElement('style');
 zoomStyles.innerHTML = `
-  /* Ottimizzazioni specifiche per la Master View TV */
+  /* Ottimizzazioni Master View TV: Proporzioni Dinamiche e Spazi */
   body:not(.master-mode) .card-dropzone { font-size: var(--app-font-size, 15px); }
   body.master-mode .card-dropzone { font-size: var(--master-font-size, 24px); }
   body.master-mode .hide-in-master { display: none !important; }
   
-  /* Nasconde la Top Bar principale in Master Mode */
+  /* Nasconde Top Bar principale */
   body.master-mode header:first-of-type { display: none !important; }
   
-  /* Dimensioni Colonne uguali e più larghe in Master Mode */
-  body:not(.master-mode) .board-column { width: 320px; }
-  body.master-mode .board-column { width: 450px !important; min-width: 450px !important; flex-shrink: 0; }
+  /* Forza lo scrolling orizzontale del contenitore in ogni condizione */
+  #board { overflow-x: auto !important; overflow-y: hidden !important; display: flex !important; flex-wrap: nowrap !important; }
   
-  /* Gestione Testo Scorrevole (Marquee) per il Referente in Master Mode */
+  /* Le colonne scalano in base alla dimensione del font! */
+  body:not(.master-mode) .board-column { width: 320px; }
+  body.master-mode .board-column { 
+    width: calc(var(--master-font-size) * 16) !important; 
+    min-width: calc(var(--master-font-size) * 16) !important; 
+    flex-shrink: 0; 
+  }
+  
+  /* Marquee Referente */
   body.master-mode .standard-client-text { display: none !important; }
   body:not(.master-mode) .master-marquee-text { display: none !important; }
   
-  /* Adattamento grandezze card in Master View */
+  /* Grandezze Card in Master View relative (em) */
   .card-dropzone > div { font-size: 1em !important; padding: 0.8em !important; }
   .card-dropzone > div .text-sm { font-size: 1.15em !important; line-height: 1.3 !important; }
   .card-dropzone > div .text-xs { font-size: 0.9em !important; line-height: 1.3 !important; }
@@ -37,6 +44,10 @@ zoomStyles.innerHTML = `
   .card-dropzone > div svg { width: 1.1em !important; height: 1.1em !important; }
   .card-dropzone > div .px-2 { padding-left: 0.5em !important; padding-right: 0.5em !important; }
   .card-dropzone > div .py-0\\.5 { padding-top: 0.2em !important; padding-bottom: 0.2em !important; }
+
+  /* Stile Orologio Classico Vecchia Versione */
+  .classic-clock-time { font-size: 1.2em; font-weight: bold; color: #ffffff; margin-right: 8px; }
+  .classic-clock-date { font-size: 0.9em; color: #cbd5e1; }
 `;
 document.head.appendChild(zoomStyles);
 
@@ -51,7 +62,7 @@ let autoScrollPause = 0;
 let lastScrollTime = 0;
 let isAutoScrollPaused = false;
 let masterScrollSpeed = 0.08;
-let boardExactScrollLeft = 0; // Risolve il bug del blocco scorrimento orizzontale
+let boardExactScrollLeft = 0;
 window.editingClientId = null;
 window.editingMachineIndex = null;
 window.tempLabelArticles = [];
@@ -147,10 +158,16 @@ function init() {
 
 function updateLiveClock() {
   const now = new Date();
-  const timeStr = now.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  const timeStr = now.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
   const dateStr = now.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' });
-  const timeEl = document.getElementById('headerClockTime'); const dateEl = document.getElementById('headerClockDate');
-  if (timeEl) timeEl.innerText = timeStr; if (dateEl) dateEl.innerText = dateStr; checkScheduledAlarms(now);
+  
+  const timeEls = document.querySelectorAll('.headerClockTime, #headerClockTime, .sync-clock-time');
+  const dateEls = document.querySelectorAll('.headerClockDate, #headerClockDate, .sync-clock-date');
+  
+  timeEls.forEach(el => { el.innerText = timeStr; el.className = "classic-clock-time sync-clock-time"; });
+  dateEls.forEach(el => { el.innerText = dateStr; el.className = "classic-clock-date sync-clock-date"; });
+  
+  checkScheduledAlarms(now);
 }
 setInterval(updateLiveClock, 1000);
 
@@ -259,7 +276,7 @@ function loadUserSettings() {
   const savedMasterFont = localStorage.getItem('workflow_sga_master_fontsize_px'); if (savedMasterFont) masterFontSizePx = parseInt(savedMasterFont); applyMasterFontSize(masterFontSizePx);
   const savedAppFont = localStorage.getItem('workflow_sga_app_fontsize_px'); if (savedAppFont) appFontSizePx = parseInt(savedAppFont); applyAppFontSize(appFontSizePx);
 
-  loadCompanyLogo(); populateMachinesDropdowns(); populateGlobalFilterDropdown(); populateClientSelectors();
+  loadCompanyLogo(); populateMachinesDropdowns(); populateGlobalFilterDropdown(); populateClientSelectors(); updateLiveClock();
 }
 
 function applyMasterFontSize(pxVal) { masterFontSizePx = pxVal; document.documentElement.style.setProperty('--master-font-size', pxVal + 'px'); const rangeEl = document.getElementById('masterFontRange'); const valEl = document.getElementById('masterFontSizeVal'); if (rangeEl) rangeEl.value = pxVal; if (valEl) valEl.innerText = pxVal + 'px'; }
@@ -518,20 +535,38 @@ function resetDefaultSettings() { if (confirm("Vuoi ripristinare tutti i valori 
 function togglePlayPauseMaster() { isAutoScrollPaused = !isAutoScrollPaused; const icon = document.getElementById('masterPlayPauseIcon'); const text = document.getElementById('masterPlayPauseText'); if (isAutoScrollPaused) { if(icon) { icon.setAttribute('data-lucide', 'play'); icon.classList.replace('text-amber-400', 'text-emerald-400'); } if(text) text.innerText = 'Play'; } else { if(icon) { icon.setAttribute('data-lucide', 'pause'); icon.classList.replace('text-emerald-400', 'text-amber-400'); } if(text) text.innerText = 'Pausa'; } lucide.createIcons(); }
 
 function toggleMasterMode() {
-  isMasterMode = !isMasterMode; const body = document.body; const board = document.getElementById('board'); const backBtns = document.querySelectorAll('.master-back-btn');
+  isMasterMode = !isMasterMode; 
+  const body = document.body; 
+  const board = document.getElementById('board'); 
+  const backBtns = document.querySelectorAll('.master-back-btn');
   const mainHeader = document.querySelector('header');
   
+  // Iniezione Orologio Classico nella barra Master Mode
+  let masterClock = document.getElementById('masterModeClock');
+  if (!masterClock) {
+    const masterBar = document.querySelector('.master-back-btn')?.parentElement;
+    if (masterBar) {
+      masterClock = document.createElement('div');
+      masterClock.id = 'masterModeClock';
+      masterClock.className = 'flex items-center gap-1 ml-4 hidden';
+      masterClock.innerHTML = `<span class="sync-clock-time classic-clock-time"></span> <span class="sync-clock-date classic-clock-date"></span>`;
+      masterBar.insertBefore(masterClock, masterBar.children[1]);
+    }
+  }
+
   if (isMasterMode) { 
     body.classList.add('master-mode'); 
     backBtns.forEach(el => { el.classList.remove('hidden'); el.style.display = 'flex'; }); 
-    if(mainHeader) mainHeader.classList.add('hidden'); // Nascondi Top Bar principale
+    if(mainHeader) mainHeader.classList.add('hidden');
+    if(masterClock) masterClock.classList.remove('hidden');
     isAutoScrollPaused = false; 
     renderBoard(); 
     startAutoScroll(); 
   } else { 
     body.classList.remove('master-mode'); 
     backBtns.forEach(el => { el.classList.add('hidden'); el.style.display = 'none'; }); 
-    if(mainHeader) mainHeader.classList.remove('hidden'); // Rimostra Top Bar
+    if(mainHeader) mainHeader.classList.remove('hidden'); 
+    if(masterClock) masterClock.classList.add('hidden');
     stopAutoScroll(); 
     if(board) board.scrollLeft = 0; 
     renderBoard(); 
@@ -540,13 +575,15 @@ function toggleMasterMode() {
 
 function startAutoScroll() {
   stopAutoScroll(); autoScrollDir = 1; autoScrollPause = 0; const board = document.getElementById('board');
-  boardExactScrollLeft = board ? board.scrollLeft : 0; // Inizializza posizione orizzontale precisa
+  boardExactScrollLeft = board ? board.scrollLeft : 0;
+  
   function step(timestamp) {
     if (!isMasterMode) return; if (!lastScrollTime) lastScrollTime = timestamp; const elapsed = timestamp - lastScrollTime;
     if (isAutoScrollPaused) { lastScrollTime = timestamp; autoScrollId = requestAnimationFrame(step); return; }
+    
     if (board) {
       const activeCols = board.querySelectorAll('.board-column');
-      // SCROLL VERTICALE DELLE SINGOLE COLONNE
+      // Scroll Verticale delle Colonne
       activeCols.forEach(col => { 
         const dropzone = col.querySelector('.card-dropzone'); 
         if (dropzone && dropzone.scrollHeight > dropzone.clientHeight) { 
@@ -573,7 +610,8 @@ function startAutoScroll() {
           } 
         } 
       });
-      // SCROLL ORIZZONTALE DI TUTTA LA BOARD - Modificato con l'uso di boardExactScrollLeft per i decimali!
+      
+      // Scroll Orizzontale Continuo della Board (risolto con le esatte variabili float)
       if (board.scrollWidth > board.clientWidth) { 
         if (autoScrollPause > 0) { 
           autoScrollPause -= elapsed; 
@@ -582,7 +620,7 @@ function startAutoScroll() {
           boardExactScrollLeft += (pxToScroll * autoScrollDir); 
           board.scrollLeft = boardExactScrollLeft; 
           
-          if (autoScrollDir === 1 && board.scrollLeft >= (board.scrollWidth - board.clientWidth - 2)) { 
+          if (autoScrollDir === 1 && board.scrollLeft >= (board.scrollWidth - board.clientWidth - 1)) { 
             autoScrollDir = -1; autoScrollPause = 3000; boardExactScrollLeft = board.scrollLeft;
           } else if (autoScrollDir === -1 && board.scrollLeft <= 0) { 
             autoScrollDir = 1; autoScrollPause = 3000; boardExactScrollLeft = 0;
@@ -718,7 +756,7 @@ function createCardHTML(card) {
   const printLabelIconHTML = printStages.includes(card.stage) ? `<button onclick="event.stopPropagation(); openLabelPrintModal('${card.id}')" class="ml-2 p-1 bg-blue-500/20 hover:bg-blue-500/50 text-blue-400 rounded cursor-pointer transition-colors" title="Stampa Etichette Colli"><i data-lucide="printer" class="w-3.5 h-3.5"></i></button>` : '';
 
   const clientTextContent = `${card.client}${card.referent ? ` <span class="text-indigo-300 font-semibold">(${card.referent})</span>` : ''}`;
-  const clientHTML = card.client ? `<div class="w-full text-xs flex items-center gap-1.5 ${customSubTextStyle}"><i data-lucide="building-2" class="w-3.5 h-3.5 shrink-0"></i><span class="standard-client-text truncate w-full">${clientTextContent}</span><marquee class="master-marquee-text w-full" behavior="alternate" scrollamount="3" scrolldelay="0">${clientTextContent}</marquee></div>` : '';
+  const clientHTML = card.client ? `<div class="w-full text-xs flex items-center gap-1.5 ${customSubTextStyle} overflow-hidden"><i data-lucide="building-2" class="w-3.5 h-3.5 shrink-0"></i><span class="standard-client-text truncate w-full">${clientTextContent}</span><marquee class="master-marquee-text w-full font-semibold" behavior="scroll" direction="left" scrollamount="4">${clientTextContent}</marquee></div>` : '';
 
   return `<div draggable="true" ondragstart="handleDragStart(event)" id="card-${card.id}" data-id="${card.id}" onclick="${isMasterMode ? '' : `playSound('click'); openDetail('${card.id}')`}" style="${customCardStyle}" class="${baseCardClass} hover:border-indigo-500/50 p-3.5 rounded-lg shadow-md cursor-pointer transition-all active:scale-95 space-y-2 group relative ${isUrgent ? 'card-urgent' : ''}"><div class="flex justify-between items-start gap-1"><span class="px-2 py-0.5 rounded font-medium text-[11px] ${badgeStyle}">${card.jobType || 'Generico'}</span><span class="text-xs" style="${card.customColor ? customTextStyle : 'color: #64748b;'}">${card.createdAt ? new Date(card.createdAt).toLocaleDateString('it-IT', {day: 'numeric', month: 'short'}) : ''}</span></div><h4 class="font-bold text-sm leading-snug truncate transition-colors" style="${card.customColor ? customTextStyle : 'color: #f8fafc;'}">${card.title || 'Senza Titolo'}</h4>${clientHTML}${machineBadgeHTML}${deliveryHTML}${thumbnailHTML}<div class="pt-2 border-t flex justify-between items-center text-xs" style="${card.customColor ? 'border-color: rgba(0,0,0,0.15);' : 'border-color: #1e293b;'}" onclick="event.stopPropagation()"><div class="flex items-center gap-1"><span class="font-mono text-[11px]" style="${card.customColor ? customTextStyle : 'color: #475569;'}">#${cardIdShort}</span><span class="hide-in-master inline-flex items-center gap-1">${notifyIconHTML}${printLabelIconHTML}</span><div class="hide-in-master flex items-center bg-black/20 rounded ml-2"><button onclick="moveCardVertical('${card.id}', -1)" class="p-0.5 hover:bg-black/30 rounded px-1.5 cursor-pointer" title="Sposta su" style="${card.customColor ? customTextStyle : 'color: #cbd5e1;'}">▲</button><button onclick="moveCardVertical('${card.id}', 1)" class="p-0.5 hover:bg-black/30 rounded px-1.5 cursor-pointer" title="Sposta giù" style="${card.customColor ? customTextStyle : 'color: #cbd5e1;'}">▼</button></div></div><div class="flex gap-1.5 hide-in-master"><button onclick="moveCardStep('${card.id}', -1)" class="p-1 rounded bg-slate-900 hover:bg-slate-700 text-slate-400 hover:text-slate-200 transition-colors cursor-pointer" title="Indietro"><i data-lucide="chevron-left" class="w-4 h-4"></i></button><button onclick="moveCardStep('${card.id}', 1)" class="p-1 rounded bg-slate-900 hover:bg-slate-700 text-slate-400 hover:text-slate-200 transition-colors cursor-pointer" title="Avanti"><i data-lucide="chevron-right" class="w-4 h-4"></i></button></div></div></div>`;
 }
