@@ -117,7 +117,6 @@
           </table>
         </div>
 
-        <!-- NUOVO BOX NOTE -->
         <div class="bg-slate-950 p-3.5 rounded-xl border border-slate-800">
           <label class="block text-xs font-bold text-slate-400 mb-2 uppercase tracking-wider">Note Aggiuntive Etichetta</label>
           <textarea id="labelNotesInput" rows="2" placeholder="Note da stampare sul collo (es. Attenzione fragile, consegnare a mano...)" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-slate-200 text-xs focus:outline-none focus:border-blue-500 resize-none"></textarea>
@@ -519,7 +518,9 @@
                   <th class="py-2 px-2 w-10"></th>
                 </tr>
               </thead>
-              <tbody id="articlesTableBody" class="divide-y divide-slate-900"></tbody>
+              <tbody id="articlesTableBody" class="divide-y divide-slate-900">
+                <!-- Verrà popolato dinamicamente, i dropdown per codice e descrizione vengono generati da JS -->
+              </tbody>
             </table>
           </div>
 
