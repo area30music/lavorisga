@@ -168,23 +168,29 @@ function checkAutoArchive() {
 }
 
 function patchSettingsMenu() {
-  // Trova e aggiorna dinamicamente l'interfaccia della vecchia impostazione colori in "Stampa Etichetta Libera"
-  const btns = document.querySelectorAll('button');
+  const btns = document.querySelectorAll('button, div[onclick]');
   btns.forEach(btn => {
     const onclickAttr = btn.getAttribute('onclick');
     if (onclickAttr && (onclickAttr.includes("openSubSettings('colors')") || onclickAttr.includes('openSubSettings("colors")'))) {
-      const h4 = btn.querySelector('h4');
-      if (h4) h4.innerText = "Stampa Etichetta Colli Libera";
       
-      const p = btn.querySelector('p');
-      if (p) p.innerText = "Genera etichette libere slegate dalle commesse.";
+      const headings = btn.querySelectorAll('h4, .font-bold');
+      headings.forEach(h => {
+        h.innerText = "Stampa Etichetta Colli Libera";
+      });
+      
+      const paragraphs = btn.querySelectorAll('p, span');
+      paragraphs.forEach(p => {
+        if (p.innerText.toLowerCase().includes('cromat') || p.innerText.toLowerCase().includes('fasi') || p.innerText.toLowerCase().includes('colore') || p.innerText.toLowerCase().includes('colonne')) {
+          p.innerText = "Genera etichette colli per spedizioni o imballi slegati.";
+        }
+      });
       
       const i = btn.querySelector('i');
       if (i) {
          i.setAttribute('data-lucide', 'printer');
          const iconWrapper = i.parentElement;
          if (iconWrapper) {
-           iconWrapper.classList.remove('text-indigo-400', 'bg-indigo-900/50');
+           iconWrapper.classList.remove('text-indigo-400', 'bg-indigo-900/50', 'text-purple-400', 'bg-purple-900/50');
            iconWrapper.classList.add('text-blue-400', 'bg-blue-900/50');
          }
       }
@@ -219,7 +225,7 @@ function init() {
   checkAutoArchive();
   setInterval(checkAutoArchive, 60 * 60 * 1000);
   
-  patchSettingsMenu(); // Patch visiva per l'HTML del main menu
+  patchSettingsMenu();
   
   renderBoard();
   updateCloudStatus(true);
@@ -812,7 +818,7 @@ function clearGlobalSearch() {
 }
 
 function openSettingsModal() {
-  patchSettingsMenu(); // Forza l'aggiornamento grafico del bottone se l'HTML è stato ricaricato
+  patchSettingsMenu();
   openModal('settingsModal');
 }
 
@@ -902,12 +908,11 @@ function openSubSettings(type) {
   const contentEl = document.getElementById('subSettingsContent');
   contentEl.innerHTML = '';
   
-  // LOGICA NASCONDI PULSANTE SALVATAGGIO PER ETICHETTA LIBERA
   const saveBtn = document.querySelector('button[onclick="saveSubSettings()"]') || document.getElementById('btnSaveSubSettings');
   if (saveBtn) {
     if (type === 'colors') {
       saveBtn.classList.add('hidden');
-      saveBtn.style.display = 'none'; // Fallback per sicurezza
+      saveBtn.style.display = 'none';
     } else {
       saveBtn.classList.remove('hidden');
       saveBtn.style.display = '';
@@ -3029,7 +3034,6 @@ async function generateAndPrintLabels() {
     const currentPkgIndex = idx + 1;
     const articlesInPkg = packages[pkgNum];
     
-    // MODIFICA ALIGNEMENT TABELLA: vertical-align e padding forzati
     const articlesListHtml = articlesInPkg.map(a => `
       <tr>
         <td style="width: 45px; font-weight: bold; text-align: center; vertical-align: top; padding-top: 5px;">${a.qty}x</td>
@@ -3179,7 +3183,6 @@ function printFreeLabels() {
     const currentPkgIndex = idx + 1;
     const articlesInPkg = packages[pkgNum];
 
-    // MODIFICA ALIGNEMENT TABELLA
     const articlesListHtml = articlesInPkg.map(a => `
       <tr>
         <td style="width: 45px; font-weight: bold; text-align: center; vertical-align: top; padding-top: 5px;">${a.qty}x</td>
@@ -3736,7 +3739,7 @@ function editArticleFromDB(idx) {
 }
 
 function addArticleFromSettings() {
-  const code = document.getElementById('artModalCode').value.trim();
+  const code = document.getElementById('artModalCode').value.trim5 ? '' : document.getElementById('artModalCode').value.trim();
   const desc = document.getElementById('artModalDesc').value.trim();
   const price = parseFloat(document.getElementById('artModalPrice').value) || 0;
   
