@@ -167,6 +167,32 @@ function checkAutoArchive() {
   }
 }
 
+function patchSettingsMenu() {
+  // Trova e aggiorna dinamicamente l'interfaccia della vecchia impostazione colori in "Stampa Etichetta Libera"
+  const btns = document.querySelectorAll('button');
+  btns.forEach(btn => {
+    const onclickAttr = btn.getAttribute('onclick');
+    if (onclickAttr && (onclickAttr.includes("openSubSettings('colors')") || onclickAttr.includes('openSubSettings("colors")'))) {
+      const h4 = btn.querySelector('h4');
+      if (h4) h4.innerText = "Stampa Etichetta Colli Libera";
+      
+      const p = btn.querySelector('p');
+      if (p) p.innerText = "Genera etichette libere slegate dalle commesse.";
+      
+      const i = btn.querySelector('i');
+      if (i) {
+         i.setAttribute('data-lucide', 'printer');
+         const iconWrapper = i.parentElement;
+         if (iconWrapper) {
+           iconWrapper.classList.remove('text-indigo-400', 'bg-indigo-900/50');
+           iconWrapper.classList.add('text-blue-400', 'bg-blue-900/50');
+         }
+      }
+    }
+  });
+  if (window.lucide) lucide.createIcons();
+}
+
 function init() {
   loadUserSettings();
   loadState();
@@ -192,6 +218,8 @@ function init() {
   
   checkAutoArchive();
   setInterval(checkAutoArchive, 60 * 60 * 1000);
+  
+  patchSettingsMenu(); // Patch visiva per l'HTML del main menu
   
   renderBoard();
   updateCloudStatus(true);
@@ -238,7 +266,7 @@ function showToast(message) {
   toast.innerHTML = `<i data-lucide="check-circle-2" class="w-8 h-8"></i> <span>${message}</span>`;
   lucide.createIcons();
   
-  void toast.offsetWidth; // Forza reflow
+  void toast.offsetWidth;
   
   toast.classList.remove('opacity-0', 'scale-90');
   toast.classList.add('opacity-100', 'scale-100');
@@ -264,7 +292,7 @@ function updateLiveClock() {
   
   checkScheduledAlarms(now);
   
-  if (timeStr === "07:00:00") {
+  if (timeStr === "08:00:00") {
     window.location.reload(true);
   }
 }
@@ -784,6 +812,7 @@ function clearGlobalSearch() {
 }
 
 function openSettingsModal() {
+  patchSettingsMenu(); // Forza l'aggiornamento grafico del bottone se l'HTML è stato ricaricato
   openModal('settingsModal');
 }
 
@@ -872,6 +901,18 @@ function openSubSettings(type) {
   const titleEl = document.getElementById('subSettingsTitle');
   const contentEl = document.getElementById('subSettingsContent');
   contentEl.innerHTML = '';
+  
+  // LOGICA NASCONDI PULSANTE SALVATAGGIO PER ETICHETTA LIBERA
+  const saveBtn = document.querySelector('button[onclick="saveSubSettings()"]') || document.getElementById('btnSaveSubSettings');
+  if (saveBtn) {
+    if (type === 'colors') {
+      saveBtn.classList.add('hidden');
+      saveBtn.style.display = 'none'; // Fallback per sicurezza
+    } else {
+      saveBtn.classList.remove('hidden');
+      saveBtn.style.display = '';
+    }
+  }
   
   if (type === 'crm') {
     window.editingClientId = null;
@@ -1001,7 +1042,7 @@ function openSubSettings(type) {
       </div>`;
     setTimeout(renderAlarmsList, 50);
   } else if (type === 'colors') {
-    titleEl.innerHTML = `<i data-lucide="tag" class="w-5 h-5 text-indigo-400"></i> Stampa Etichetta Colli Libera`;
+    titleEl.innerHTML = `<i data-lucide="printer" class="w-5 h-5 text-blue-400"></i> Stampa Etichetta Colli Libera`;
     window.tempFreeLabelArticles = [{code: '', desc: '', qty: 1, packageNum: 1}];
     contentEl.innerHTML = `
       <div class="space-y-4">
@@ -1033,7 +1074,7 @@ function openSubSettings(type) {
                 <button onclick="addFreeLabelRow()" class="mt-2 text-[11px] text-indigo-400 hover:text-indigo-300 font-semibold px-2 py-1 rounded bg-indigo-900/30 cursor-pointer">+ Aggiungi Riga Articolo</button>
             </div>
         </div>
-        <button onclick="printFreeLabels()" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2 rounded shadow-lg transition-colors cursor-pointer flex items-center justify-center gap-2">
+        <button onclick="printFreeLabels()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 rounded shadow-lg transition-colors cursor-pointer flex items-center justify-center gap-2">
           <i data-lucide="printer" class="w-4 h-4"></i> Genera e Scarica Etichetta
         </button>
       </div>
@@ -1899,7 +1940,6 @@ function createCardHTML(card) {
         </div>`).join('')}
     </div>` : '';
   
-  // MODIFICHE DI IMPAGINAZIONE COMMESSA  
   const referentHTML = card.referent ? `
     <div class="truncate text-xs flex items-center gap-1.5 ${customSubTextStyle}">
       <i data-lucide="user" class="w-3.5 h-3.5 shrink-0"></i> 
@@ -2989,11 +3029,12 @@ async function generateAndPrintLabels() {
     const currentPkgIndex = idx + 1;
     const articlesInPkg = packages[pkgNum];
     
+    // MODIFICA ALIGNEMENT TABELLA: vertical-align e padding forzati
     const articlesListHtml = articlesInPkg.map(a => `
       <tr>
-        <td style="width: 45px; font-weight: bold; text-align: center; vertical-align: top;">${a.qty}x</td>
-        <td style="width: 75px; vertical-align: top; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">${a.code}</td>
-        <td style="padding-bottom: 2px;">${a.desc}</td>
+        <td style="width: 45px; font-weight: bold; text-align: center; vertical-align: top; padding-top: 5px;">${a.qty}x</td>
+        <td style="width: 75px; vertical-align: top; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; padding-top: 5px;">${a.code}</td>
+        <td style="vertical-align: top; padding-bottom: 5px; padding-top: 5px;">${a.desc}</td>
       </tr>`).join('');
       
     const notesBoxHtml = labelNotes ? `
@@ -3138,11 +3179,12 @@ function printFreeLabels() {
     const currentPkgIndex = idx + 1;
     const articlesInPkg = packages[pkgNum];
 
+    // MODIFICA ALIGNEMENT TABELLA
     const articlesListHtml = articlesInPkg.map(a => `
       <tr>
-        <td style="width: 45px; font-weight: bold; text-align: center; vertical-align: top;">${a.qty}x</td>
-        <td style="width: 75px; vertical-align: top; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">${a.code}</td>
-        <td style="padding-bottom: 2px;">${a.desc}</td>
+        <td style="width: 45px; font-weight: bold; text-align: center; vertical-align: top; padding-top: 5px;">${a.qty}x</td>
+        <td style="width: 75px; vertical-align: top; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; padding-top: 5px;">${a.code}</td>
+        <td style="vertical-align: top; padding-bottom: 5px; padding-top: 5px;">${a.desc}</td>
       </tr>`).join('');
 
     const notesBoxHtml = labelNotes ? `
