@@ -56,6 +56,7 @@ let isAutoScrollPaused = false;
 let masterScrollSpeed = 0.08;
 
 window.editingClientId = null;
+window.editingArticleIdx = null; 
 window.tempLabelArticles = [];
 
 let arcadeTimer = null;
@@ -201,8 +202,60 @@ function init() {
 }
 
 // ==========================================
-// FUNZIONI CORE (Orologio, Suoni, Avvisi)
+// FUNZIONI CORE (Orologio, Suoni, Avvisi, Toast, Indicatore Sync)
 // ==========================================
+
+// --- FUNZIONE INDICATORE SYNC (Rotellina/Spunta nella Commessa) ---
+function setSyncStatus(status) {
+  const el = document.getElementById('syncIndicator');
+  if (!el) return;
+  if (status === 'typing') {
+    el.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin text-amber-400"></i> <span class="text-amber-400">Modifica in corso...</span>';
+    el.classList.remove('opacity-0');
+    el.classList.add('opacity-100');
+    lucide.createIcons();
+  } else if (status === 'saved') {
+    el.innerHTML = '<i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-400"></i> <span class="text-emerald-400">Salvato in Cloud</span>';
+    el.classList.remove('opacity-0');
+    el.classList.add('opacity-100');
+    lucide.createIcons();
+    if (window.syncStatusTimer) clearTimeout(window.syncStatusTimer);
+    window.syncStatusTimer = setTimeout(() => {
+      el.classList.remove('opacity-100');
+      el.classList.add('opacity-0');
+    }, 2500);
+  }
+}
+
+// --- FUNZIONE TOAST ---
+function showToast(message) {
+  let toast = document.getElementById('customToast');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'customToast';
+    // Stile elegante scuro, al centro, con ombra glow
+    toast.className = 'fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-[300] bg-slate-800/95 backdrop-blur-md text-emerald-400 font-bold px-8 py-5 rounded-2xl shadow-[0_0_40px_rgba(0,0,0,0.5)] border border-emerald-500/30 flex items-center justify-center gap-4 transition-all duration-300 opacity-0 pointer-events-none scale-90 text-lg';
+    document.body.appendChild(toast);
+  }
+  
+  toast.innerHTML = `<i data-lucide="check-circle-2" class="w-8 h-8"></i> <span>${message}</span>`;
+  lucide.createIcons();
+  
+  // Forza il reflow per attivare l'animazione CSS
+  void toast.offsetWidth;
+  
+  // Mostra il toast
+  toast.classList.remove('opacity-0', 'scale-90');
+  toast.classList.add('opacity-100', 'scale-100');
+  
+  // Nasconde dopo 2 secondi
+  if (window.toastTimer) clearTimeout(window.toastTimer);
+  window.toastTimer = setTimeout(() => {
+    toast.classList.remove('opacity-100', 'scale-100');
+    toast.classList.add('opacity-0', 'scale-90');
+  }, 2000);
+}
+
 function updateLiveClock() {
   const now = new Date();
   const timeStr = now.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
@@ -213,6 +266,11 @@ function updateLiveClock() {
   if (timeEl) timeEl.innerText = timeStr;
   if (dateEl) dateEl.innerText = dateStr;
   checkScheduledAlarms(now);
+
+  // FORZA IL REFRESH DELLA PAGINA E DELLA CACHE OGNI MATTINA ALLE 07:00
+  if (timeStr === "07:00:00") {
+    window.location.reload(true);
+  }
 }
 setInterval(updateLiveClock, 1000);
 
@@ -344,7 +402,7 @@ function uploadCompanyLogo(event) {
     localStorage.setItem('workflow_sga_company_logo', sharedCompanyLogo);
     loadCompanyLogo(); playSound('success');
     if (db) db.collection('workflow_sga_settings').doc('config').set({ companyLogo: sharedCompanyLogo }, { merge: true }).catch(e => console.error(e));
-    alert("Logo aziendale caricato e condiviso con successo!");
+    showToast("Logo caricato!");
   };
   reader.readAsDataURL(file);
   event.target.value = '';
@@ -564,18 +622,19 @@ function openSubSettings(type) {
     titleEl.innerHTML = `<i data-lucide="users" class="w-5 h-5 text-indigo-400"></i> Gestione Clienti (CRM)`;
     contentEl.innerHTML = `<div class="space-y-4"><p class="text-xs text-slate-400">Gestisci l'anagrafica clienti con azienda, referente, email e WhatsApp:</p><div class="bg-slate-950 p-3 rounded-lg border border-slate-800 space-y-2.5"><h5 class="text-xs font-bold text-indigo-400 uppercase">Aggiungi / Modifica Cliente</h5><div class="grid grid-cols-2 gap-2"><input type="text" id="crmModalName" placeholder="Azienda / Cliente *" class="bg-slate-900 border border-slate-700 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"><input type="text" id="crmModalRef" placeholder="Referente" class="bg-slate-900 border border-slate-700 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"></div><div class="grid grid-cols-2 gap-2"><input type="email" id="crmModalEmail" placeholder="Email" class="bg-slate-900 border border-slate-700 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"><input type="text" id="crmModalWa" placeholder="WhatsApp" class="bg-slate-900 border border-slate-700 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"></div><button type="button" id="btnSaveCrmClient" onclick="addClientFromSettings()" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs px-3 py-2 rounded font-semibold w-full cursor-pointer transition-colors">Salva Cliente in Archivio</button></div><div id="settingsClientsList" class="space-y-1.5 max-h-44 overflow-y-auto pr-1">${renderCrmSettingsList()}</div></div>`;
   } else if (type === 'articles') {
+    window.editingArticleIdx = null; // Resetta lo stato di modifica articoli
     titleEl.innerHTML = `<i data-lucide="shopping-cart" class="w-5 h-5 text-emerald-400"></i> Gestione Articoli Base`;
     contentEl.innerHTML = `
       <div class="space-y-4">
-        <p class="text-xs text-slate-400">Inserisci gli articoli frequenti per l'autocompilazione rapida dei preventivi:</p>
+        <p class="text-xs text-slate-400">Gestisci gli articoli frequenti per l'autocompilazione rapida dei preventivi:</p>
         <div class="bg-slate-950 p-3 rounded-lg border border-slate-800 space-y-2.5">
-          <h5 class="text-xs font-bold text-emerald-400 uppercase">Aggiungi Nuovo Articolo</h5>
+          <h5 class="text-xs font-bold text-emerald-400 uppercase">Inserisci / Modifica Articolo</h5>
           <div class="grid grid-cols-4 gap-2">
             <input type="text" id="artModalCode" placeholder="Codice" class="col-span-1 bg-slate-900 border border-slate-700 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-emerald-500 font-mono">
             <input type="text" id="artModalDesc" placeholder="Descrizione Articolo *" class="col-span-2 bg-slate-900 border border-slate-700 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-emerald-500">
             <input type="number" step="any" id="artModalPrice" placeholder="Prezzo € *" class="col-span-1 bg-slate-900 border border-slate-700 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-emerald-500 text-right">
           </div>
-          <button type="button" onclick="addArticleFromSettings()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs px-3 py-2 rounded font-semibold w-full cursor-pointer transition-colors">Salva Articolo nel Database</button>
+          <button type="button" id="btnSaveArticle" onclick="addArticleFromSettings()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs px-3 py-2 rounded font-semibold w-full cursor-pointer transition-colors">Salva Articolo nel Database</button>
         </div>
         <div id="settingsArticlesList" class="space-y-1.5 max-h-44 overflow-y-auto pr-1">
           ${renderArticlesSettingsList()}
@@ -708,7 +767,7 @@ function saveSubSettings() {
   } else if (activeSubSettingsType === 'alarms') { localStorage.setItem('workflow_sga_alarms', JSON.stringify(USER_ALARMS)); }
   else if (activeSubSettingsType === 'zoom') { localStorage.setItem('workflow_sga_master_fontsize_px', masterFontSizePx); localStorage.setItem('workflow_sga_app_fontsize_px', appFontSizePx); }
   else if (activeSubSettingsType === 'messages') { const newTemplate = document.getElementById('msgTemplateText').value; sharedMsgTemplate = newTemplate; localStorage.setItem('workflow_sga_msg_template', sharedMsgTemplate); if (db) { db.collection('workflow_sga_settings').doc('config').set({ msgTemplate: sharedMsgTemplate }, { merge: true }).catch(e => console.error(e)); } }
-  playSound('success'); closeSubSettings(); alert("Impostazioni salvate con successo!");
+  playSound('success'); closeSubSettings(); showToast("Impostazioni salvate con successo!");
 }
 
 function resetDefaultSettings() {
@@ -1054,7 +1113,7 @@ function sendEmailNotification() { if (!activeNotifyCard || !activeNotifyCard.em
 
 function checkNewCustomJobType(val) { const customInput = document.getElementById('formCustomJobType'); if (val === 'custom') { customInput.classList.remove('hidden'); customInput.required = true; } else { customInput.classList.add('hidden'); customInput.required = false; customInput.value = ''; } }
 function checkEditCustomJobType(val) { const customInput = document.getElementById('editCustomJobType'); if (val === 'custom') customInput.classList.remove('hidden'); else { customInput.classList.add('hidden'); customInput.value = ''; } }
-function resetCardCustomColor() { const card = state.cards.find(c => c.id === activeCardId); if (card) { card.customColor = ""; const colDef = COLUMNS_CONFIG.find(col => col.id === card.stage); const colorInput = document.getElementById('editCardColor'); colorInput.value = colDef ? colDef.hexDefault : '#4f46e5'; colorInput.dataset.defaultColor = colorInput.value; saveLocal(); syncCardToCloud(card); alert("Colore personalizzato rimosso."); } }
+function resetCardCustomColor() { const card = state.cards.find(c => c.id === activeCardId); if (card) { card.customColor = ""; const colDef = COLUMNS_CONFIG.find(col => col.id === card.stage); const colorInput = document.getElementById('editCardColor'); colorInput.value = colDef ? colDef.hexDefault : '#4f46e5'; colorInput.dataset.defaultColor = colorInput.value; saveLocal(); syncCardToCloud(card); setSyncStatus('saved'); showToast("Colore personalizzato rimosso."); } }
 
 function handleFormFileSelect(event) { const file = event.target.files[0]; if (!file) return; tempFormFile = file; const previewEl = document.getElementById('formFilePreview'); previewEl.innerText = `Selezionato: ${file.name}`; previewEl.classList.remove('hidden'); }
 
@@ -1091,6 +1150,7 @@ async function createNewCard(event) {
 
   state.cards.unshift(newCard); saveLocal(); syncCardToCloud(newCard); populateGlobalFilterDropdown();
   document.getElementById('newCardForm').reset(); document.getElementById('formClientSelector').value = ''; document.getElementById('formCustomJobType').classList.add('hidden'); document.getElementById('formFilePreview').classList.add('hidden'); tempFormFile = null; closeModal('addCardModal');
+  showToast("Commessa creata con successo!");
 }
 
 // Funzione globale per aggiornare tutta l'anagrafica
@@ -1108,9 +1168,11 @@ function saveCardEdits(silent = false) {
   syncCardToCloud(card); 
   populateGlobalFilterDropdown(); 
   
+  setSyncStatus('saved');
+
   if (!silent) { 
     playSound('success'); 
-    alert("Aggiornato con successo!"); 
+    showToast("Anagrafica aggiornata con successo!"); 
   }
 }
 
@@ -1121,9 +1183,11 @@ function saveArticlesEdits(silent = false) {
   saveLocal(); 
   syncCardToCloud(card); 
   
+  setSyncStatus('saved');
+
   if (!silent) {
     playSound('success'); 
-    alert("Articoli salvati."); 
+    showToast("Articoli salvati con successo!"); 
   }
 }
 
@@ -1135,7 +1199,6 @@ function renderArticlesTable(card) {
     const rowTotalNet = qty * price, unitTaxPrice = price * (1 + taxRate / 100), rowTotalTaxed = rowTotalNet * (1 + taxRate / 100);
     const tr = document.createElement('tr'); tr.className = "hover:bg-slate-900/50 transition-colors";
     
-    // Inserito l'evento onchange="saveArticlesEdits(true)" per autosalvare la tabella ad ogni interazione completata
     tr.innerHTML = `
       <td class="py-1.5 px-1 text-center align-middle"><div class="flex items-center justify-center gap-0.5 bg-slate-900 rounded p-0.5 border border-slate-800"><button onclick="moveArticleRowVertical(${idx}, -1)" class="hover:bg-slate-800 text-slate-300 text-xs px-1 rounded cursor-pointer">▲</button><button onclick="moveArticleRowVertical(${idx}, 1)" class="hover:bg-slate-800 text-slate-300 text-xs px-1 rounded cursor-pointer">▼</button></div></td>
       <td class="py-1.5 px-1 relative">
@@ -1188,14 +1251,20 @@ function selectArticleSuggestion(code, desc, price, idx) {
   if (!card.articles[idx].qty) card.articles[idx].qty = 1;
   renderArticlesTable(card);
   saveLocal(); syncCardToCloud(card); playSound('click');
+  setSyncStatus('saved');
 }
 
 function moveArticleRowVertical(idx, direction) {
   playSound('click'); const card = state.cards.find(c => c.id === activeCardId); if (!card || !card.articles) return; const targetIdx = idx + direction;
-  if (targetIdx >= 0 && targetIdx < card.articles.length) { const temp = card.articles[idx]; card.articles[idx] = card.articles[targetIdx]; card.articles[targetIdx] = temp; renderArticlesTable(card); saveLocal(); syncCardToCloud(card); }
+  if (targetIdx >= 0 && targetIdx < card.articles.length) { 
+    const temp = card.articles[idx]; card.articles[idx] = card.articles[targetIdx]; card.articles[targetIdx] = temp; 
+    renderArticlesTable(card); saveLocal(); syncCardToCloud(card); 
+    setSyncStatus('saved');
+  }
 }
 
 function updateArticleField(input) {
+  setSyncStatus('typing'); // Segnala l'inizio della digitazione sulla riga articoli
   const idx = parseInt(input.dataset.index), field = input.dataset.field; const card = state.cards.find(c => c.id === activeCardId); if (!card || !card.articles[idx]) return; 
   card.articles[idx][field] = input.value;
 
@@ -1208,6 +1277,7 @@ function updateArticleField(input) {
       renderArticlesTable(card); 
       saveLocal(); syncCardToCloud(card);
       playSound('success');
+      setSyncStatus('saved');
       return; 
     }
   }
@@ -1227,7 +1297,12 @@ function calculateGrandTotals() {
 function addArticleRow() { const card = state.cards.find(c => c.id === activeCardId); if (!card) return; if (!Array.isArray(card.articles)) card.articles = []; card.articles.push({ code: '', desc: '', qty: 1, price: 0, tax: 22 }); renderArticlesTable(card); saveArticlesEdits(true); }
 function removeArticleRow(idx) {
   const card = state.cards.find(c => c.id === activeCardId); if (!card || !card.articles || !card.articles[idx]) return; const artName = card.articles[idx].desc || "Riga Vuota";
-  confirmDeletion(`Articolo: ${artName}`, () => { card.articles.splice(idx, 1); renderArticlesTable(card); saveLocal(); syncCardToCloud(card); });
+  confirmDeletion(`Articolo: ${artName}`, () => { 
+    card.articles.splice(idx, 1); 
+    renderArticlesTable(card); 
+    saveLocal(); syncCardToCloud(card); 
+    setSyncStatus('saved'); 
+  });
 }
 
 function openDetail(id) {
@@ -1238,6 +1313,23 @@ function openDetail(id) {
   badge.textContent = currentStageObj ? currentStageObj.label : (card.stage === 'archiviato' ? 'Archiviata' : 'N/A'); 
   badge.className = `px-2 py-0.5 rounded text-[11px] font-bold text-white uppercase ${currentStageObj ? currentStageObj.color.split(' ')[0] : 'bg-slate-600'}`;
   
+  // -- INIEZIONE DINAMICA DELL'INDICATORE DI SYNC --
+  let syncIndicator = document.getElementById('syncIndicator');
+  if (!syncIndicator) {
+    syncIndicator = document.createElement('span');
+    syncIndicator.id = 'syncIndicator';
+    // Stile compatto, fianco al badge
+    syncIndicator.className = 'ml-3 flex items-center gap-1.5 text-[11px] font-semibold transition-opacity duration-300 opacity-0 bg-slate-900/80 px-2 py-0.5 rounded-full border border-slate-700 shadow-inner';
+    if (badge && badge.parentNode) {
+      badge.parentNode.insertBefore(syncIndicator, badge.nextSibling);
+    }
+  }
+  // All'apertura della modale nascondiamo l'indicatore finché non scrive
+  if (syncIndicator) {
+      syncIndicator.classList.remove('opacity-100');
+      syncIndicator.classList.add('opacity-0');
+  }
+
   // Compilazione rapida dei campi
   document.getElementById('editClientSelector').value = ''; 
   document.getElementById('editTitle').value = card.title || ''; 
@@ -1257,7 +1349,7 @@ function openDetail(id) {
   colorInput.value = card.customColor || defaultColor; 
   colorInput.dataset.defaultColor = defaultColor; 
   
-  // INIZIALIZZAZIONE EVENTI AUTOSAVE PER ANAGRAFICA (Prevenendo ascoltatori duplicati)
+  // INIZIALIZZAZIONE EVENTI AUTOSAVE PER ANAGRAFICA
   const editFields = [
     'editTitle', 'editReferent', 'editEmail', 'editWhatsapp', 
     'editDeliveryDate', 'editMachine', 'editOrderRef', 
@@ -1267,11 +1359,12 @@ function openDetail(id) {
   editFields.forEach(fieldId => {
     const el = document.getElementById(fieldId);
     if (el && !el.dataset.autosave) {
+      // Evento input per far girare la rotellina mentre l'utente digita
+      el.addEventListener('input', () => setSyncStatus('typing'));
+      // Evento change per il salvataggio effettivo
       el.addEventListener('change', () => {
-        // Se si seleziona da CRM, gestisce l'inserimento prima di salvare
         if (fieldId === 'editClientSelector') autofillClientFromSelect(el.value, 'edit');
         if (fieldId === 'editJobType') checkEditCustomJobType(el.value);
-        
         saveCardEdits(true);
       });
       el.dataset.autosave = "true";
@@ -1334,10 +1427,20 @@ async function handleDocumentUpload(event) {
       }
     } catch (e) {}
   }
-  renderArticlesTable(card); saveLocal(); renderAttachments(card); syncCardToCloud(card); event.target.value = ''; playSound('success'); alert("Documento importato correttamente!");
+  renderArticlesTable(card); saveLocal(); renderAttachments(card); syncCardToCloud(card); 
+  event.target.value = ''; playSound('success'); showToast("Documento importato correttamente!");
+  setSyncStatus('saved');
 }
 
-function removePhoto(event, index) { event.stopPropagation(); const card = state.cards.find(c => c.id === activeCardId); if (card && card.photos) { confirmDeletion(`Allegato / Foto #${index + 1}`, () => { card.photos.splice(index, 1); saveLocal(); renderAttachments(card); syncCardToCloud(card); }); } }
+function removePhoto(event, index) { 
+  event.stopPropagation(); const card = state.cards.find(c => c.id === activeCardId); 
+  if (card && card.photos) { 
+    confirmDeletion(`Allegato / Foto #${index + 1}`, () => { 
+      card.photos.splice(index, 1); saveLocal(); renderAttachments(card); syncCardToCloud(card); 
+      setSyncStatus('saved');
+    }); 
+  } 
+}
 function openGallery(index) { currentGalleryIndex = index; updateGalleryView(); openModal('galleryModal'); }
 function closeGallery() { closeModal('galleryModal'); }
 function updateGalleryView() {
@@ -1346,7 +1449,12 @@ function updateGalleryView() {
 }
 function prevGalleryImage() { if (currentGalleryIndex > 0) { currentGalleryIndex--; updateGalleryView(); } }
 function nextGalleryImage() { const card = state.cards.find(c => c.id === activeCardId); if (card && currentGalleryIndex < card.photos.length - 1) { currentGalleryIndex++; updateGalleryView(); } }
-function rotateGalleryImage() { const card = state.cards.find(c => c.id === activeCardId); if (!card || !card.photos) return; const item = card.photos[currentGalleryIndex]; item.rotation = ((item.rotation || 0) + 90) % 360; saveLocal(); updateGalleryView(); renderAttachments(card); syncCardToCloud(card); }
+function rotateGalleryImage() { 
+  const card = state.cards.find(c => c.id === activeCardId); if (!card || !card.photos) return; 
+  const item = card.photos[currentGalleryIndex]; item.rotation = ((item.rotation || 0) + 90) % 360; 
+  saveLocal(); updateGalleryView(); renderAttachments(card); syncCardToCloud(card); 
+  setSyncStatus('saved');
+}
 function deleteCurrentCard() { const card = state.cards.find(c => c.id === activeCardId); if (!card) return; confirmDeletion(`Commessa: ${card.title || 'Senza Nome'}`, () => { state.cards = state.cards.filter(c => c.id !== activeCardId); saveLocal(); syncDeleteToCloud(activeCardId); closeModal('detailModal'); populateGlobalFilterDropdown(); }); }
 
 // ============================================
@@ -1431,7 +1539,7 @@ async function generateAndPrintLabels() {
   
   const packageNumbers = Object.keys(packages).map(Number).sort((a, b) => a - b);
   const totalPackages = packageNumbers.length;
-  if (totalPackages === 0) { alert("Nessun articolo selezionato per i colli."); return; }
+  if (totalPackages === 0) { showToast("Nessun articolo selezionato per i colli."); return; }
   
   const labelNotes = document.getElementById('labelNotesInput') ? document.getElementById('labelNotesInput').value.trim() : '';
   
@@ -1543,7 +1651,7 @@ async function generateAndPrintLabels() {
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
 
-  alert("✅ File etichetta generato a dimensione reale A6 (148x105)! Seleziona la cartella condivisa del NAS.");
+  showToast("File etichetta generato! (148x105mm)");
   closeModal('labelPrintModal');
 }
 
@@ -1677,7 +1785,7 @@ function updateStorageIndicator() {
 function printArchiveReport() {
   const archivedCards = state.cards.filter(c => c.stage === 'archiviato');
   if (archivedCards.length === 0) {
-    alert("Nessuna commessa in archivio da stampare.");
+    showToast("Nessuna commessa in archivio da stampare.");
     return;
   }
   
@@ -1782,19 +1890,39 @@ function printArchiveReport() {
 }
 
 // ============================================
-// GESTIONE DATABASE ARTICOLI BASE
+// GESTIONE DATABASE ARTICOLI BASE CON MODIFICA
 // ============================================
 function renderArticlesSettingsList() {
   return ARTICLES_DB.length === 0 ? '<p class="text-xs text-slate-500 italic py-2">Nessun articolo salvato.</p>' : 
   ARTICLES_DB.map((a, idx) => `
-    <div class="flex items-center justify-between bg-slate-950 p-2.5 rounded border border-slate-800 text-xs">
+    <div class="flex items-center justify-between bg-slate-950 p-2.5 rounded border border-slate-800 text-xs hover:border-indigo-500/50 transition-colors">
       <div>
         <span class="text-white font-bold">${a.desc}</span>
         <div class="text-[10px] text-slate-400 font-mono">Cod: ${a.code || 'N/D'} | Prezzo base: € ${parseFloat(a.price).toFixed(2)}</div>
       </div>
-      <button onclick="removeArticleFromDB(${idx})" class="text-slate-600 hover:text-red-400 p-1 cursor-pointer transition-colors"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+      <div class="flex gap-1.5">
+        <button onclick="editArticleFromDB(${idx})" class="text-slate-600 hover:text-indigo-400 p-1 cursor-pointer transition-colors" title="Modifica Articolo"><i data-lucide="edit-3" class="w-3.5 h-3.5"></i></button>
+        <button onclick="removeArticleFromDB(${idx})" class="text-slate-600 hover:text-red-400 p-1 cursor-pointer transition-colors" title="Elimina Articolo"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+      </div>
     </div>
   `).join('');
+}
+
+function editArticleFromDB(idx) {
+  playSound('click');
+  window.editingArticleIdx = idx;
+  const a = ARTICLES_DB[idx];
+  
+  document.getElementById('artModalCode').value = a.code || '';
+  document.getElementById('artModalDesc').value = a.desc || '';
+  document.getElementById('artModalPrice').value = a.price || 0;
+  
+  const btn = document.getElementById('btnSaveArticle');
+  if (btn) {
+    btn.innerText = "Aggiorna Articolo";
+    btn.classList.replace('bg-emerald-600', 'bg-indigo-600');
+    btn.classList.replace('hover:bg-emerald-500', 'hover:bg-indigo-500');
+  }
 }
 
 function addArticleFromSettings() {
@@ -1804,13 +1932,34 @@ function addArticleFromSettings() {
   
   if (!desc) return alert("Inserisci almeno la descrizione dell'articolo.");
   
-  ARTICLES_DB.push({ code, desc, price }); 
+  if (window.editingArticleIdx !== null) {
+    // Stiamo modificando un articolo esistente
+    ARTICLES_DB[window.editingArticleIdx] = { code, desc, price };
+    window.editingArticleIdx = null; // Resetta la variabile di stato
+    
+    // Ripristina il pulsante alla grafica di default
+    const btn = document.getElementById('btnSaveArticle');
+    if (btn) {
+      btn.innerText = "Salva Articolo nel Database";
+      btn.classList.replace('bg-indigo-600', 'bg-emerald-600');
+      btn.classList.replace('hover:bg-indigo-500', 'hover:bg-emerald-500');
+    }
+  } else {
+    // Inseriamo un nuovo articolo
+    ARTICLES_DB.push({ code, desc, price }); 
+  }
+  
   ARTICLES_DB.sort((a,b) => a.desc.localeCompare(b.desc));
   
   localStorage.setItem('workflow_sga_articles_db', JSON.stringify(ARTICLES_DB)); 
   syncArticlesToCloud();
   openSubSettings('articles'); 
   playSound('success');
+  
+  // Svuota i campi dopo il salvataggio
+  document.getElementById('artModalCode').value = '';
+  document.getElementById('artModalDesc').value = '';
+  document.getElementById('artModalPrice').value = '';
 }
 
 function removeArticleFromDB(idx) {
