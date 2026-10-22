@@ -8,6 +8,9 @@ const firebaseConfig = {
   storageBucket: "workflow-sga.firebasestorage.app"
 };
 
+// VERSIONE ATTUALE DEL SOFTWARE (Incrementare a ogni modifica strutturale)
+const CURRENT_APP_VERSION = 2;
+
 // ==========================================
 // CHIAVE IMGBB (FOTO 4K)
 // ==========================================
@@ -200,6 +203,22 @@ function patchSettingsMenu() {
 }
 
 function init() {
+  // Controllo automatico versione su Cloud (Firebase)
+  if (db) {
+    db.collection('workflow_sga_settings').doc('config').get().then((doc) => {
+      if (doc.exists) {
+        const cloudVersion = doc.data().appVersion || 1;
+        if (cloudVersion > CURRENT_APP_VERSION) {
+          window.location.reload(true);
+          return;
+        }
+      } else {
+        // Inizializza la versione sul cloud se non esiste
+        db.collection('workflow_sga_settings').doc('config').set({ appVersion: CURRENT_APP_VERSION }, { merge: true }).catch(() => {});
+      }
+    }).catch(() => {});
+  }
+
   loadUserSettings();
   loadState();
   
@@ -1574,7 +1593,7 @@ function listenToCloudUpdates() {
 
 function syncCardToCloud(card) {
   if (!db || !card) return;
-  db.collection('workflow_sga_cards').doc(card.id).set(card).catch(err => console.error(err));
+  db.collection('workflow_sga_cards').doc(card.id).set(card, { merge: true }).catch(err => console.error(err));
 }
 
 function syncDeleteToCloud(cardId) {
@@ -3739,7 +3758,7 @@ function editArticleFromDB(idx) {
 }
 
 function addArticleFromSettings() {
-  const code = document.getElementById('artModalCode').value.trim5 ? '' : document.getElementById('artModalCode').value.trim();
+  const code = document.getElementById('artModalCode').value.trim();
   const desc = document.getElementById('artModalDesc').value.trim();
   const price = parseFloat(document.getElementById('artModalPrice').value) || 0;
   
