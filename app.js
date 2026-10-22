@@ -3089,7 +3089,7 @@ async function generateAndPrintLabels() {
           <div class="box-header">CONTENUTO DEL COLLO:</div>
           <div class="box-body" style="padding: 4px; flex: 1; overflow: hidden; display: flex; flex-direction: column;">
             <table class="content-table" style="flex: 1; margin-bottom: auto;">
-              <thead><tr><th style="width: 45px; text-align: center;">Q.TÀ</th><th style="width: 75px;">CODICE</th><th>DESCRIZIONE MATERIALE</th></tr></thead>
+              <thead><tr><th style="width: 45px; text-align: center;">Q.T&Agrave;</th><th style="width: 75px;">CODICE</th><th>DESCRIZIONE MATERIALE</th></tr></thead>
               <tbody>${articlesListHtml}</tbody>
             </table>
             ${orderRefHtml}
@@ -3238,7 +3238,7 @@ function printFreeLabels() {
           <div class="box-header">CONTENUTO DEL COLLO:</div>
           <div class="box-body" style="padding: 4px; flex: 1; overflow: hidden; display: flex; flex-direction: column;">
             <table class="content-table" style="flex: 1; margin-bottom: auto;">
-              <thead><tr><th style="width: 45px; text-align: center;">Q.TÀ</th><th style="width: 75px;">CODICE</th><th>DESCRIZIONE MATERIALE</th></tr></thead>
+              <thead><tr><th style="width: 45px; text-align: center;">Q.T&Agrave;</th><th style="width: 75px;">CODICE</th><th>DESCRIZIONE MATERIALE</th></tr></thead>
               <tbody>${articlesListHtml}</tbody>
             </table>
             ${orderRefHtml}
