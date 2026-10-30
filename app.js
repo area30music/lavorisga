@@ -1769,11 +1769,12 @@ function sanitizeCard(card) {
   if (!Array.isArray(card.articles)) {
     card.articles = [];
     if (card.notes && card.notes.trim()) {
-      card.articles.push({ code: '', desc: card.notes, qty: 1, price: 0, tax: 22 });
+      card.articles.push({ code: '', desc: card.notes, qty: 1, price: 0, tax: 22, discount: 0 });
     }
   } else {
     card.articles = card.articles.map(art => {
       if (art.tax === undefined) art.tax = 22;
+      if (art.discount === undefined) art.discount = 0;
       return art;
     });
   }
@@ -1923,6 +1924,16 @@ function getContrastTextColor(hexColor) {
   return ((r * 299 + g * 587 + b * 114) / 1000) >= 128 ? '#0f172a' : '#f8fafc';
 }
 
+function getSavedLabelPackageCount(card) {
+  const items = card && card.labelPackages && Array.isArray(card.labelPackages.items)
+    ? card.labelPackages.items
+    : [];
+  const packageNumbers = items
+    .filter(item => item && item.desc && item.desc.trim())
+    .map(item => Math.max(1, parseInt(item.packageNum, 10) || 1));
+  return new Set(packageNumbers).size;
+}
+
 function createCardHTML(card) {
   if (!card) return '';
   const badgeStyle = getJobTypeClass(card.jobType);
@@ -1982,10 +1993,14 @@ function createCardHTML(card) {
       <i data-lucide="mail" class="w-3.5 h-3.5"></i>
     </button>` : '';
     
-  const printLabelIconHTML = (card.stage === 'lavorato-da-bollettare') ? `
-    <button onclick="event.stopPropagation(); openLabelPrintModal('${card.id}')" class="ml-2 p-1 bg-blue-500/20 hover:bg-blue-500/50 text-blue-400 rounded cursor-pointer transition-colors" title="Stampa Etichette Colli">
-      <i data-lucide="printer" class="w-3.5 h-3.5"></i>
-    </button>` : '';
+  const savedPackageCount = getSavedLabelPackageCount(card);
+  const printLabelIconHTML = (card.stage === 'lavorato-da-bollettare' || savedPackageCount > 0) ? `
+    <span class="ml-2 inline-flex items-center gap-1">
+      <button onclick="event.stopPropagation(); openLabelPrintModal('${card.id}')" class="p-1 bg-blue-500/20 hover:bg-blue-500/50 text-blue-400 rounded cursor-pointer transition-colors" title="${savedPackageCount > 0 ? 'Ristampa o modifica etichette colli' : 'Stampa etichette colli'}">
+        <i data-lucide="printer" class="w-3.5 h-3.5"></i>
+      </button>
+      ${savedPackageCount > 0 ? `<span class="px-1.5 py-0.5 rounded bg-blue-950/70 border border-blue-500/40 text-blue-300 text-[10px] font-semibold">${savedPackageCount} ${savedPackageCount === 1 ? 'collo' : 'colli'}</span>` : ''}
+    </span>` : '';
 
   return `
     <div draggable="true" ondragstart="handleDragStart(event)" id="card-${card.id}" data-id="${card.id}" onclick="${isMasterMode ? '' : `playSound('click'); openDetail('${card.id}')`}" style="${customCardStyle}" class="${baseCardClass} hover:border-indigo-500/50 p-3.5 rounded-lg shadow-md cursor-pointer transition-all active:scale-95 space-y-2 group relative ${isUrgent ? 'card-urgent' : ''}">
@@ -2374,21 +2389,45 @@ function saveArticlesEdits(silent = false) {
   }
 }
 
+function calculateArticleAmounts(art) {
+  const qty = parseFloat(art.qty) || 0;
+  const price = parseFloat(art.price) || 0;
+  const taxRate = parseFloat(art.tax) || 22;
+  const parsedDiscount = parseFloat(art.discount);
+  const discountRate = Number.isFinite(parsedDiscount) ? Math.min(100, Math.max(0, parsedDiscount)) : 0;
+  const originalNet = qty * price;
+  const discountAmount = originalNet * discountRate / 100;
+  const rowTotalNet = originalNet - discountAmount;
+  const taxAmount = rowTotalNet * taxRate / 100;
+  const unitTaxPrice = price * (1 - discountRate / 100) * (1 + taxRate / 100);
+  const rowTotalTaxed = rowTotalNet + taxAmount;
+  return { qty, price, taxRate, discountRate, discountAmount, rowTotalNet, taxAmount, unitTaxPrice, rowTotalTaxed };
+}
+
+function normalizeArticleDiscount(input) {
+  const idx = parseInt(input.dataset.index);
+  const card = state.cards.find(c => c.id === activeCardId);
+  if (!card || !card.articles[idx]) return;
+  const parsedDiscount = parseFloat(input.value);
+  const discount = Number.isFinite(parsedDiscount) ? Math.min(100, Math.max(0, parsedDiscount)) : 0;
+  input.value = discount;
+  card.articles[idx].discount = discount;
+  updateArticleField(input);
+}
+
 function renderArticlesTable(card) {
   const tbody = document.getElementById('articlesTableBody');
   tbody.innerHTML = '';
   
   if (!card.articles || card.articles.length === 0) {
-    card.articles = [{ code: '', desc: '', qty: '', price: '', tax: 22 }];
+    card.articles = [{ code: '', desc: '', qty: '', price: '', tax: 22, discount: 0 }];
   }
   
   card.articles.forEach((art, idx) => {
-    const qty = parseFloat(art.qty) || 0;
-    const price = parseFloat(art.price) || 0;
-    const taxRate = parseFloat(art.tax) !== undefined ? parseFloat(art.tax) : 22;
-    const rowTotalNet = qty * price;
-    const unitTaxPrice = price * (1 + taxRate / 100);
-    const rowTotalTaxed = rowTotalNet * (1 + taxRate / 100);
+    const amounts = calculateArticleAmounts(art);
+    const rowTotalNet = amounts.rowTotalNet;
+    const unitTaxPrice = amounts.unitTaxPrice;
+    const rowTotalTaxed = amounts.rowTotalTaxed;
     
     const tr = document.createElement('tr');
     tr.className = "hover:bg-slate-900/50 transition-colors";
@@ -2413,6 +2452,9 @@ function renderArticlesTable(card) {
       </td>
       <td class="py-1.5 px-1">
         <input type="number" step="any" value="${art.price !== undefined ? art.price : ''}" data-field="price" data-index="${idx}" oninput="updateArticleField(this)" onchange="saveArticlesEdits(true)" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-xs text-right focus:outline-none">
+      </td>
+      <td class="py-1.5 px-1">
+        <input type="number" min="0" max="100" step="0.01" value="${art.discount !== undefined ? art.discount : 0}" data-field="discount" data-index="${idx}" oninput="updateArticleField(this)" onchange="normalizeArticleDiscount(this); saveArticlesEdits(true)" class="w-full bg-slate-900 border border-slate-700 rounded px-1 py-1 text-slate-200 text-xs text-center focus:outline-none" title="Sconto percentuale sulla riga">
       </td>
       <td class="py-1.5 px-1">
         <input type="number" step="any" value="${art.tax !== undefined ? art.tax : 22}" data-field="tax" data-index="${idx}" oninput="updateArticleField(this)" onchange="saveArticlesEdits(true)" class="w-full bg-slate-900 border border-slate-700 rounded px-1 py-1 text-slate-200 text-xs text-center focus:outline-none">
@@ -2554,18 +2596,12 @@ function updateArticleField(input) {
     }
   }
 
-  if (['qty', 'price', 'tax'].includes(field)) {
-    const qty = parseFloat(card.articles[idx].qty) || 0;
-    const price = parseFloat(card.articles[idx].price) || 0;
-    const taxRate = parseFloat(card.articles[idx].tax) || 22;
+  if (['qty', 'price', 'tax', 'discount'].includes(field)) {
+    const amounts = calculateArticleAmounts(card.articles[idx]);
     
-    const rowTotalNet = qty * price;
-    const unitTaxPrice = price * (1 + taxRate / 100);
-    const rowTotalTaxed = rowTotalNet * (1 + taxRate / 100);
-    
-    document.getElementById(`row-net-${idx}`).innerText = `€ ${rowTotalNet.toFixed(2)}`;
-    document.getElementById(`row-unit-taxed-${idx}`).innerText = `€ ${unitTaxPrice.toFixed(2)}`;
-    document.getElementById(`row-total-${idx}`).innerText = `€ ${rowTotalTaxed.toFixed(2)}`;
+    document.getElementById(`row-net-${idx}`).innerText = `€ ${amounts.rowTotalNet.toFixed(2)}`;
+    document.getElementById(`row-unit-taxed-${idx}`).innerText = `€ ${amounts.unitTaxPrice.toFixed(2)}`;
+    document.getElementById(`row-total-${idx}`).innerText = `€ ${amounts.rowTotalTaxed.toFixed(2)}`;
     
     calculateGrandTotals();
   }
@@ -2576,22 +2612,19 @@ function calculateGrandTotals() {
   if (!card || !card.articles) return;
   
   let grandSubtotal = 0;
+  let grandDiscount = 0;
   let grandTax = 0;
   let grandTotalTaxed = 0;
   
   card.articles.forEach(art => {
-    const qty = parseFloat(art.qty) || 0;
-    const price = parseFloat(art.price) || 0;
-    const taxRate = parseFloat(art.tax) || 22;
-    
-    const sub = qty * price;
-    const taxAmt = sub * (taxRate / 100);
-    
-    grandSubtotal += sub;
-    grandTax += taxAmt;
-    grandTotalTaxed += (sub + taxAmt);
+    const amounts = calculateArticleAmounts(art);
+    grandSubtotal += amounts.rowTotalNet;
+    grandDiscount += amounts.discountAmount;
+    grandTax += amounts.taxAmount;
+    grandTotalTaxed += amounts.rowTotalTaxed;
   });
   
+  document.getElementById('grandDiscountDisplay').innerText = `€ ${grandDiscount.toFixed(2)}`;
   document.getElementById('grandSubtotalDisplay').innerText = `€ ${grandSubtotal.toFixed(2)}`;
   document.getElementById('grandTaxDisplay').innerText = `€ ${grandTax.toFixed(2)}`;
   document.getElementById('grandTotalDisplay').innerText = `€ ${grandTotalTaxed.toFixed(2)}`;
@@ -2602,7 +2635,7 @@ function addArticleRow() {
   if (!card) return;
   
   if (!Array.isArray(card.articles)) card.articles = [];
-  card.articles.push({ code: '', desc: '', qty: 1, price: 0, tax: 22 });
+  card.articles.push({ code: '', desc: '', qty: 1, price: 0, tax: 22, discount: 0 });
   
   renderArticlesTable(card);
   saveArticlesEdits(true);
@@ -2933,7 +2966,19 @@ function openLabelPrintModal(cardId) {
   }
   
   window.tempLabelArticles = [];
-  if (card.articles && card.articles.length > 0) {
+  const savedLabelItems = card.labelPackages && Array.isArray(card.labelPackages.items)
+    ? card.labelPackages.items
+    : null;
+  if (savedLabelItems) {
+    window.tempLabelArticles = savedLabelItems
+      .filter(art => art && art.desc && art.desc.trim())
+      .map(art => ({
+        code: art.code || '',
+        desc: art.desc,
+        qty: art.qty || 1,
+        packageNum: Math.max(1, parseInt(art.packageNum, 10) || 1)
+      }));
+  } else if (card.articles && card.articles.length > 0) {
     card.articles.forEach(art => {
       if(!art.desc || art.desc.trim() === '') return;
       window.tempLabelArticles.push({
@@ -3028,11 +3073,46 @@ async function generateAndPrintLabels() {
   }
   
   const labelNotes = document.getElementById('labelNotesInput') ? document.getElementById('labelNotesInput').value.trim() : '';
-  if (card.labelNotes !== labelNotes) {
-    card.labelNotes = labelNotes;
-    saveLocal();
-    syncCardToCloud(card);
+  const savedLabelItems = packageNumbers.flatMap((pkgNum, index) =>
+    packages[pkgNum].map(item => ({
+      code: item.code || '',
+      desc: item.desc,
+      qty: item.qty,
+      packageNum: index + 1
+    }))
+  );
+  const previousLabelPackages = card.labelPackages;
+  const previousLabelNotes = card.labelNotes;
+  card.labelNotes = labelNotes;
+  card.labelPackages = {
+    items: savedLabelItems,
+    savedAt: new Date().toISOString(),
+    totalPackages
+  };
+
+  if (!db) {
+    if (previousLabelPackages === undefined) delete card.labelPackages;
+    else card.labelPackages = previousLabelPackages;
+    if (previousLabelNotes === undefined) delete card.labelNotes;
+    else card.labelNotes = previousLabelNotes;
+    showToast("Database non disponibile: i colli non sono stati salvati e le etichette non sono state generate.");
+    return;
   }
+
+  try {
+    await db.collection('workflow_sga_cards').doc(card.id).set(card, { merge: true });
+  } catch (error) {
+    console.error(error);
+    if (previousLabelPackages === undefined) delete card.labelPackages;
+    else card.labelPackages = previousLabelPackages;
+    if (previousLabelNotes === undefined) delete card.labelNotes;
+    else card.labelNotes = previousLabelNotes;
+    showToast("Salvataggio colli non riuscito: etichette non generate.");
+    return;
+  }
+
+  saveLocal();
+  setSyncStatus('saved');
   
   playSound('success');
   
@@ -3324,23 +3404,18 @@ function printCard() {
 
   let articlesRowsHtml = '';
   let grandSubtotal = 0;
+  let grandDiscount = 0;
   let grandTax = 0;
   let grandTotalTaxed = 0;
   
   if (card.articles && card.articles.length > 0) {
     card.articles.forEach(art => {
-      const qty = parseFloat(art.qty) || 0;
-      const price = parseFloat(art.price) || 0;
-      const taxRate = parseFloat(art.tax) !== undefined ? parseFloat(art.tax) : 22;
+      const amounts = calculateArticleAmounts(art);
       
-      const sub = qty * price;
-      const taxAmt = sub * (taxRate / 100);
-      const rowTotalTaxed = sub + taxAmt;
-      const unitTaxed = price * (1 + taxRate / 100);
-      
-      grandSubtotal += sub;
-      grandTax += taxAmt;
-      grandTotalTaxed += rowTotalTaxed;
+      grandSubtotal += amounts.rowTotalNet;
+      grandDiscount += amounts.discountAmount;
+      grandTax += amounts.taxAmount;
+      grandTotalTaxed += amounts.rowTotalTaxed;
       
       articlesRowsHtml += `
         <tr style="border-bottom: 1px solid #e2e8f0;">
@@ -3348,13 +3423,14 @@ function printCard() {
           <td style="padding: 8px; font-size: 11px; color: #0f172a;">${art.desc || '-'}</td>
           <td style="padding: 8px; text-align: center; font-size: 11px; color: #334155;">${art.qty !== undefined && art.qty !== '' ? art.qty : '-'}</td>
           <td style="padding: 8px; text-align: right; font-size: 11px; color: #334155;">${art.price !== undefined && art.price !== '' ? '€ ' + parseFloat(art.price).toFixed(2) : '-'}</td>
-          <td style="padding: 8px; text-align: center; font-size: 11px; color: #334155;">${taxRate}%</td>
-          <td style="padding: 8px; text-align: right; font-size: 11px; color: #334155;">${(art.qty !== undefined && art.price !== undefined && art.qty !== '' && art.price !== '') ? '€ ' + unitTaxed.toFixed(2) : '-'}</td>
-          <td style="padding: 8px; text-align: right; font-size: 11px; font-weight: bold; color: #0f172a;">${(art.qty !== undefined && art.price !== undefined && art.qty !== '' && art.price !== '') ? '€ ' + rowTotalTaxed.toFixed(2) : '-'}</td>
+          <td style="padding: 8px; text-align: center; font-size: 11px; color: #334155;">${amounts.discountRate}%</td>
+          <td style="padding: 8px; text-align: center; font-size: 11px; color: #334155;">${amounts.taxRate}%</td>
+          <td style="padding: 8px; text-align: right; font-size: 11px; color: #334155;">${(art.qty !== undefined && art.price !== undefined && art.qty !== '' && art.price !== '') ? '€ ' + amounts.unitTaxPrice.toFixed(2) : '-'}</td>
+          <td style="padding: 8px; text-align: right; font-size: 11px; font-weight: bold; color: #0f172a;">${(art.qty !== undefined && art.price !== undefined && art.qty !== '' && art.price !== '') ? '€ ' + amounts.rowTotalTaxed.toFixed(2) : '-'}</td>
         </tr>`;
     });
   } else {
-    articlesRowsHtml = `<tr><td colspan="7" style="padding: 10px; text-align: center; color: #64748b; font-size: 11px;">Nessun articolo inserito</td></tr>`;
+    articlesRowsHtml = `<tr><td colspan="8" style="padding: 10px; text-align: center; color: #64748b; font-size: 11px;">Nessun articolo inserito</td></tr>`;
   }
 
   let attachmentsPrintHtml = '';
@@ -3423,6 +3499,7 @@ function printCard() {
                 <th>Descrizione</th>
                 <th style="width: 10%; text-align: center;">Q.tà</th>
                 <th style="width: 13%; text-align: right;">Prezzo Un.</th>
+                <th style="width: 8%; text-align: center;">Sconto %</th>
                 <th style="width: 8%; text-align: center;">IVA</th>
                 <th style="width: 13%; text-align: right;">Pr. Ivato</th>
                 <th style="width: 15%; text-align: right;">Tot. Ivato</th>
@@ -3431,7 +3508,7 @@ function printCard() {
             <tbody>${articlesRowsHtml}</tbody>
           </table>
           <div style="text-align: right; margin-top: 10px; font-size: 12px; color: #475569;">
-            Imponibile: € ${grandSubtotal.toFixed(2)} &nbsp;|&nbsp; Totale IVA: € ${grandTax.toFixed(2)}
+            Sconti: € ${grandDiscount.toFixed(2)} &nbsp;|&nbsp; Imponibile: € ${grandSubtotal.toFixed(2)} &nbsp;|&nbsp; Totale IVA: € ${grandTax.toFixed(2)}
           </div>
           <div style="text-align: right; margin-top: 4px; font-size: 14px;">
             <strong>Totale Ordine Ivato: <span style="color: #059669;">€ ${grandTotalTaxed.toFixed(2)}</span></strong>
@@ -3629,15 +3706,10 @@ function printArchiveReport() {
     
     if (card.articles && card.articles.length > 0) {
       card.articles.forEach(art => {
-        const qty = parseFloat(art.qty) || 0;
-        const price = parseFloat(art.price) || 0;
-        const taxRate = parseFloat(art.tax) !== undefined ? parseFloat(art.tax) : 22;
-        
-        const sub = qty * price;
-        const taxAmt = sub * (taxRate / 100);
-        cardNet += sub;
-        cardTax += taxAmt;
-        cardGross += (sub + taxAmt);
+        const amounts = calculateArticleAmounts(art);
+        cardNet += amounts.rowTotalNet;
+        cardTax += amounts.taxAmount;
+        cardGross += amounts.rowTotalTaxed;
       });
     }
     
