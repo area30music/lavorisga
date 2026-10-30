@@ -203,7 +203,6 @@ function patchSettingsMenu() {
 }
 
 function init() {
-  // Controllo automatico versione su Cloud (Firebase)
   if (db) {
     db.collection('workflow_sga_settings').doc('config').get().then((doc) => {
       if (doc.exists) {
@@ -213,7 +212,6 @@ function init() {
           return;
         }
       } else {
-        // Inizializza la versione sul cloud se non esiste
         db.collection('workflow_sga_settings').doc('config').set({ appVersion: CURRENT_APP_VERSION }, { merge: true }).catch(() => {});
       }
     }).catch(() => {});
@@ -1730,18 +1728,18 @@ async function extractArticlesFromArubaPdf(file) {
             }
             
             let desc = descItems.map(r => r.text).join(' ').trim();
-            if (desc) items.push({ code: '', desc: desc, qty: qty, price: priceVal, tax: tax });
+            if (desc) items.push({ code: '', desc: desc, qty: qty, price: priceVal, discount: 0, tax: tax });
           }
         }
       }
     }
     
     if (items.length === 0) {
-      items.push({ code: '', desc: 'Preventivo: ' + file.name, qty: 1, price: 0, tax: 22 });
+      items.push({ code: '', desc: 'Preventivo: ' + file.name, qty: 1, price: 0, discount: 0, tax: 22 });
     }
     return items;
   } catch (e) {
-    return [{ code: '', desc: 'Preventivo: ' + file.name, qty: 1, price: 0, tax: 22 }];
+    return [{ code: '', desc: 'Preventivo: ' + file.name, qty: 1, price: 0, discount: 0, tax: 22 }];
   }
 }
 
@@ -1769,11 +1767,12 @@ function sanitizeCard(card) {
   if (!Array.isArray(card.articles)) {
     card.articles = [];
     if (card.notes && card.notes.trim()) {
-      card.articles.push({ code: '', desc: card.notes, qty: 1, price: 0, tax: 22 });
+      card.articles.push({ code: '', desc: card.notes, qty: 1, price: 0, discount: 0, tax: 22 });
     }
   } else {
     card.articles = card.articles.map(art => {
       if (art.tax === undefined) art.tax = 22;
+      if (art.discount === undefined) art.discount = 0;
       return art;
     });
   }
@@ -1983,9 +1982,12 @@ function createCardHTML(card) {
     </button>` : '';
     
   const printLabelIconHTML = (card.stage === 'lavorato-da-bollettare') ? `
-    <button onclick="event.stopPropagation(); openLabelPrintModal('${card.id}')" class="ml-2 p-1 bg-blue-500/20 hover:bg-blue-500/50 text-blue-400 rounded cursor-pointer transition-colors" title="Stampa Etichette Colli">
-      <i data-lucide="printer" class="w-3.5 h-3.5"></i>
-    </button>` : '';
+    <div class="flex items-center ml-2 gap-1.5">
+      <button onclick="event.stopPropagation(); openLabelPrintModal('${card.id}')" class="p-1 bg-blue-500/20 hover:bg-blue-500/50 text-blue-400 rounded cursor-pointer transition-colors" title="Stampa Etichette Colli">
+        <i data-lucide="printer" class="w-3.5 h-3.5"></i>
+      </button>
+      ${card.totalColli ? `<span class="bg-blue-900/60 text-blue-300 border border-blue-700 px-1.5 py-0.5 rounded text-[10px] font-bold whitespace-nowrap shadow-sm shadow-blue-900/20">📦 ${card.totalColli} ${card.totalColli === 1 ? 'Collo' : 'Colli'}</span>` : ''}
+    </div>` : '';
 
   return `
     <div draggable="true" ondragstart="handleDragStart(event)" id="card-${card.id}" data-id="${card.id}" onclick="${isMasterMode ? '' : `playSound('click'); openDetail('${card.id}')`}" style="${customCardStyle}" class="${baseCardClass} hover:border-indigo-500/50 p-3.5 rounded-lg shadow-md cursor-pointer transition-all active:scale-95 space-y-2 group relative ${isUrgent ? 'card-urgent' : ''}">
@@ -2288,7 +2290,7 @@ async function createNewCard(event) {
   }
   
   if (extractedArticles.length === 0) {
-    extractedArticles = initialNote ? [{ code: '', desc: initialNote, qty: 1, price: 0, tax: 22 }] : [];
+    extractedArticles = initialNote ? [{ code: '', desc: initialNote, qty: 1, price: 0, discount: 0, tax: 22 }] : [];
   }
 
   const newCard = {
@@ -2379,15 +2381,21 @@ function renderArticlesTable(card) {
   tbody.innerHTML = '';
   
   if (!card.articles || card.articles.length === 0) {
-    card.articles = [{ code: '', desc: '', qty: '', price: '', tax: 22 }];
+    card.articles = [{ code: '', desc: '', qty: '', price: '', discount: '', tax: 22 }];
   }
   
   card.articles.forEach((art, idx) => {
     const qty = parseFloat(art.qty) || 0;
     const price = parseFloat(art.price) || 0;
+    const discount = parseFloat(art.discount) || 0;
     const taxRate = parseFloat(art.tax) !== undefined ? parseFloat(art.tax) : 22;
-    const rowTotalNet = qty * price;
-    const unitTaxPrice = price * (1 + taxRate / 100);
+    
+    // Calcolo del prezzo scontato percentualmente
+    const safeDiscount = Math.abs(discount);
+    const discountedPrice = price - (price * (safeDiscount / 100));
+    
+    const rowTotalNet = qty * discountedPrice;
+    const unitTaxPrice = discountedPrice * (1 + taxRate / 100);
     const rowTotalTaxed = rowTotalNet * (1 + taxRate / 100);
     
     const tr = document.createElement('tr');
@@ -2413,6 +2421,9 @@ function renderArticlesTable(card) {
       </td>
       <td class="py-1.5 px-1">
         <input type="number" step="any" value="${art.price !== undefined ? art.price : ''}" data-field="price" data-index="${idx}" oninput="updateArticleField(this)" onchange="saveArticlesEdits(true)" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-xs text-right focus:outline-none">
+      </td>
+      <td class="py-1.5 px-1">
+        <input type="number" step="any" value="${art.discount !== undefined ? art.discount : ''}" data-field="discount" data-index="${idx}" oninput="updateArticleField(this)" onchange="saveArticlesEdits(true)" placeholder="0" class="w-full bg-slate-900 border border-indigo-900/50 rounded px-2 py-1 text-indigo-300 text-xs text-center focus:outline-none focus:border-indigo-500 placeholder-indigo-900/50">
       </td>
       <td class="py-1.5 px-1">
         <input type="number" step="any" value="${art.tax !== undefined ? art.tax : 22}" data-field="tax" data-index="${idx}" oninput="updateArticleField(this)" onchange="saveArticlesEdits(true)" class="w-full bg-slate-900 border border-slate-700 rounded px-1 py-1 text-slate-200 text-xs text-center focus:outline-none">
@@ -2554,13 +2565,18 @@ function updateArticleField(input) {
     }
   }
 
-  if (['qty', 'price', 'tax'].includes(field)) {
+  if (['qty', 'price', 'discount', 'tax'].includes(field)) {
     const qty = parseFloat(card.articles[idx].qty) || 0;
     const price = parseFloat(card.articles[idx].price) || 0;
-    const taxRate = parseFloat(card.articles[idx].tax) || 22;
+    const discount = parseFloat(card.articles[idx].discount) || 0;
+    const taxRate = parseFloat(card.articles[idx].tax) !== undefined ? parseFloat(card.articles[idx].tax) : 22;
     
-    const rowTotalNet = qty * price;
-    const unitTaxPrice = price * (1 + taxRate / 100);
+    // Calcolo del prezzo scontato percentualmente
+    const safeDiscount = Math.abs(discount);
+    const discountedPrice = price - (price * (safeDiscount / 100));
+    
+    const rowTotalNet = qty * discountedPrice;
+    const unitTaxPrice = discountedPrice * (1 + taxRate / 100);
     const rowTotalTaxed = rowTotalNet * (1 + taxRate / 100);
     
     document.getElementById(`row-net-${idx}`).innerText = `€ ${rowTotalNet.toFixed(2)}`;
@@ -2582,9 +2598,13 @@ function calculateGrandTotals() {
   card.articles.forEach(art => {
     const qty = parseFloat(art.qty) || 0;
     const price = parseFloat(art.price) || 0;
-    const taxRate = parseFloat(art.tax) || 22;
+    const discount = parseFloat(art.discount) || 0;
+    const taxRate = parseFloat(art.tax) !== undefined ? parseFloat(art.tax) : 22;
     
-    const sub = qty * price;
+    const safeDiscount = Math.abs(discount);
+    const discountedPrice = price - (price * (safeDiscount / 100));
+    
+    const sub = qty * discountedPrice;
     const taxAmt = sub * (taxRate / 100);
     
     grandSubtotal += sub;
@@ -2602,7 +2622,7 @@ function addArticleRow() {
   if (!card) return;
   
   if (!Array.isArray(card.articles)) card.articles = [];
-  card.articles.push({ code: '', desc: '', qty: 1, price: 0, tax: 22 });
+  card.articles.push({ code: '', desc: '', qty: 1, price: 0, discount: 0, tax: 22 });
   
   renderArticlesTable(card);
   saveArticlesEdits(true);
@@ -2933,7 +2953,13 @@ function openLabelPrintModal(cardId) {
   }
   
   window.tempLabelArticles = [];
-  if (card.articles && card.articles.length > 0) {
+  
+  // VERIFICA SE ESISTE GIA' UNA CONFIGURAZIONE SALVATA
+  if (card.labelConfig && card.labelConfig.length > 0) {
+    window.tempLabelArticles = JSON.parse(JSON.stringify(card.labelConfig));
+  } 
+  // ALTRIMENTI GENERA LA SUDDIVISIONE DAI NUOVI ARTICOLI
+  else if (card.articles && card.articles.length > 0) {
     card.articles.forEach(art => {
       if(!art.desc || art.desc.trim() === '') return;
       window.tempLabelArticles.push({
@@ -3027,12 +3053,18 @@ async function generateAndPrintLabels() {
     return;
   }
   
+  // SALVATAGGIO SU DATABASE DELLA CONFIGURAZIONE E DEL NUMERO COLLI
+  card.labelConfig = JSON.parse(JSON.stringify(window.tempLabelArticles));
+  const maxColli = Math.max(...window.tempLabelArticles.map(a => a.packageNum || 1));
+  card.totalColli = maxColli;
+  
   const labelNotes = document.getElementById('labelNotesInput') ? document.getElementById('labelNotesInput').value.trim() : '';
   if (card.labelNotes !== labelNotes) {
     card.labelNotes = labelNotes;
-    saveLocal();
-    syncCardToCloud(card);
   }
+  
+  saveLocal();
+  syncCardToCloud(card);
   
   playSound('success');
   
@@ -3331,12 +3363,16 @@ function printCard() {
     card.articles.forEach(art => {
       const qty = parseFloat(art.qty) || 0;
       const price = parseFloat(art.price) || 0;
+      const discount = parseFloat(art.discount) || 0;
       const taxRate = parseFloat(art.tax) !== undefined ? parseFloat(art.tax) : 22;
       
-      const sub = qty * price;
+      const safeDiscount = Math.abs(discount);
+      const discountedPrice = price - (price * (safeDiscount / 100));
+      
+      const sub = qty * discountedPrice;
       const taxAmt = sub * (taxRate / 100);
       const rowTotalTaxed = sub + taxAmt;
-      const unitTaxed = price * (1 + taxRate / 100);
+      const unitTaxed = discountedPrice * (1 + taxRate / 100);
       
       grandSubtotal += sub;
       grandTax += taxAmt;
@@ -3348,13 +3384,14 @@ function printCard() {
           <td style="padding: 8px; font-size: 11px; color: #0f172a;">${art.desc || '-'}</td>
           <td style="padding: 8px; text-align: center; font-size: 11px; color: #334155;">${art.qty !== undefined && art.qty !== '' ? art.qty : '-'}</td>
           <td style="padding: 8px; text-align: right; font-size: 11px; color: #334155;">${art.price !== undefined && art.price !== '' ? '€ ' + parseFloat(art.price).toFixed(2) : '-'}</td>
+          <td style="padding: 8px; text-align: center; font-size: 11px; color: #ef4444;">${safeDiscount > 0 ? '-' + safeDiscount + '%' : ''}</td>
           <td style="padding: 8px; text-align: center; font-size: 11px; color: #334155;">${taxRate}%</td>
           <td style="padding: 8px; text-align: right; font-size: 11px; color: #334155;">${(art.qty !== undefined && art.price !== undefined && art.qty !== '' && art.price !== '') ? '€ ' + unitTaxed.toFixed(2) : '-'}</td>
           <td style="padding: 8px; text-align: right; font-size: 11px; font-weight: bold; color: #0f172a;">${(art.qty !== undefined && art.price !== undefined && art.qty !== '' && art.price !== '') ? '€ ' + rowTotalTaxed.toFixed(2) : '-'}</td>
         </tr>`;
     });
   } else {
-    articlesRowsHtml = `<tr><td colspan="7" style="padding: 10px; text-align: center; color: #64748b; font-size: 11px;">Nessun articolo inserito</td></tr>`;
+    articlesRowsHtml = `<tr><td colspan="8" style="padding: 10px; text-align: center; color: #64748b; font-size: 11px;">Nessun articolo inserito</td></tr>`;
   }
 
   let attachmentsPrintHtml = '';
@@ -3419,12 +3456,13 @@ function printCard() {
           <table class="articles">
             <thead>
               <tr>
-                <th style="width: 20%;">Codice</th>
+                <th style="width: 18%;">Codice</th>
                 <th>Descrizione</th>
-                <th style="width: 10%; text-align: center;">Q.tà</th>
-                <th style="width: 13%; text-align: right;">Prezzo Un.</th>
-                <th style="width: 8%; text-align: center;">IVA</th>
-                <th style="width: 13%; text-align: right;">Pr. Ivato</th>
+                <th style="width: 8%; text-align: center;">Q.tà</th>
+                <th style="width: 11%; text-align: right;">Pr. Un.</th>
+                <th style="width: 9%; text-align: center;">Sconto</th>
+                <th style="width: 7%; text-align: center;">IVA</th>
+                <th style="width: 12%; text-align: right;">Pr. Ivato</th>
                 <th style="width: 15%; text-align: right;">Tot. Ivato</th>
               </tr>
             </thead>
@@ -3454,156 +3492,6 @@ function printCard() {
   }, 800);
 }
 
-// ============================================
-// SVEGLIE
-// ============================================
-function addAlarmRule() {
-  USER_ALARMS.push({ id: 'a' + Date.now(), time: "09:00", active: true, days: [1, 2, 3, 4, 5] });
-  renderAlarmsList();
-}
-
-function removeAlarmRule(id) {
-  const a = USER_ALARMS.find(x => x.id === id);
-  if(!a) return;
-  confirmDeletion(`Sveglia delle ore ${a.time}`, () => {
-    USER_ALARMS = USER_ALARMS.filter(x => x.id !== id);
-    renderAlarmsList();
-  });
-}
-
-function updateAlarmTime(id, val) {
-  const alarm = USER_ALARMS.find(a => a.id === id);
-  if (alarm) alarm.time = val;
-}
-
-function toggleAlarmActive(id, val) {
-  const alarm = USER_ALARMS.find(a => a.id === id);
-  if (alarm) alarm.active = val;
-}
-
-function toggleAlarmDay(id, dayVal) {
-  playSound('click');
-  const alarm = USER_ALARMS.find(a => a.id === id);
-  if (alarm) {
-    if (!Array.isArray(alarm.days)) alarm.days = [];
-    const index = alarm.days.indexOf(dayVal);
-    if (index >= 0) {
-      alarm.days.splice(index, 1);
-    } else {
-      alarm.days.push(dayVal);
-    }
-    renderAlarmsList();
-  }
-}
-
-function renderAlarmsList() {
-  const container = document.getElementById('alarmsListContainer');
-  if (!container) return;
-  container.innerHTML = '';
-  
-  if (USER_ALARMS.length === 0) {
-    container.innerHTML = `<p class="text-xs text-slate-500 italic py-3 text-center">Nessuna sveglia impostata.</p>`;
-    return;
-  }
-  
-  const daysDef = [
-    {val: 1, label: "L"},
-    {val: 2, label: "M"},
-    {val: 3, label: "M"},
-    {val: 4, label: "G"},
-    {val: 5, label: "V"},
-    {val: 6, label: "S"},
-    {val: 0, label: "D"}
-  ];
-  
-  USER_ALARMS.forEach(alarm => {
-    const card = document.createElement('div');
-    card.className = "bg-slate-900 p-3 rounded-lg border border-slate-800 space-y-3";
-    
-    let daysBtnsHtml = daysDef.map(d => {
-      const isSelected = Array.isArray(alarm.days) && alarm.days.includes(d.val);
-      const btnClass = isSelected ? "w-7 h-7 rounded-full bg-indigo-600 text-white font-bold text-xs flex items-center justify-center shadow cursor-pointer transition-all" : "w-7 h-7 rounded-full bg-slate-950 text-slate-400 font-semibold text-xs flex items-center justify-center border border-slate-800 hover:border-slate-700 cursor-pointer transition-all";
-      return `<button type="button" onclick="toggleAlarmDay('${alarm.id}', ${d.val})" class="${btnClass}">${d.label}</button>`;
-    }).join('');
-    
-    card.innerHTML = `
-      <div class="flex items-center justify-between gap-3">
-        <div class="flex items-center gap-3">
-          <input type="time" value="${alarm.time || '09:00'}" onchange="updateAlarmTime('${alarm.id}', this.value)" class="bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-base text-emerald-400 font-mono font-bold focus:outline-none focus:border-indigo-500">
-          <label class="flex items-center cursor-pointer select-none text-xs text-slate-300 gap-1.5">
-            <input type="checkbox" ${alarm.active ? 'checked' : ''} onchange="toggleAlarmActive('${alarm.id}', this.checked)" class="w-4 h-4 rounded bg-slate-950 border-slate-700 text-indigo-600 cursor-pointer">
-            <span>Attiva</span>
-          </label>
-        </div>
-        <button onclick="removeAlarmRule('${alarm.id}')" class="text-red-400 hover:text-red-300 p-1.5 rounded-lg bg-red-950/35 hover:bg-red-950/60 transition-colors cursor-pointer">
-          <i data-lucide="trash-2" class="w-4 h-4"></i>
-        </button>
-      </div>
-      <div class="flex items-center justify-between pt-1 border-t border-slate-800/60 flex-wrap gap-2">
-        <span class="text-[10px] text-slate-400 uppercase font-semibold">Giorni attivo:</span>
-        <div class="flex gap-1.5">${daysBtnsHtml}</div>
-      </div>
-    `;
-    container.appendChild(card);
-  });
-  
-  lucide.createIcons();
-}
-
-function openModal(modalId) {
-  document.getElementById(modalId).classList.remove('hidden');
-}
-
-function closeModal(modalId) {
-  document.getElementById(modalId).classList.add('hidden');
-}
-
-// ============================================
-// GESTIONE ARCHIVIO
-// ============================================
-function deleteArchivedCard(cardId) {
-  const card = state.cards.find(c => c.id === cardId);
-  if (!card) return;
-  
-  confirmDeletion(`Sei sicuro di voler eliminare DEFINITIVAMENTE l'ordine "${card.title}" dall'archivio? Questa operazione non è reversibile.`, () => {
-    state.cards = state.cards.filter(c => c.id !== cardId);
-    saveLocal();
-    syncDeleteToCloud(cardId);
-    
-    const searchInput = document.getElementById('archiveSearchInput');
-    filterArchive(searchInput ? searchInput.value : '');
-    updateStorageIndicator();
-  });
-}
-
-function updateStorageIndicator() {
-  const indicator = document.getElementById('storageUsageIndicator');
-  if (!indicator) return;
-  
-  let lsTotal = 0;
-  for (let x in localStorage) {
-    if (!localStorage.hasOwnProperty(x)) continue;
-    lsTotal += ((localStorage[x].length + x.length) * 2);
-  }
-  
-  const kbTotal = (lsTotal / 1024).toFixed(2);
-  const maxKb = 5120;
-  const percentage = ((kbTotal / maxKb) * 100).toFixed(1);
-  
-  indicator.innerText = `${percentage}% (${kbTotal} KB)`;
-  
-  if (percentage > 80) {
-    indicator.classList.replace('text-emerald-400', 'text-red-500');
-    indicator.classList.add('animate-pulse');
-  } else if (percentage > 50) {
-    indicator.classList.replace('text-emerald-400', 'text-yellow-400');
-  } else {
-    indicator.classList.replace('text-red-500', 'text-emerald-400');
-    indicator.classList.replace('text-yellow-400', 'text-emerald-400');
-    indicator.classList.remove('animate-pulse');
-  }
-}
-
 function printArchiveReport() {
   const archivedCards = state.cards.filter(c => c.stage === 'archiviato');
   if (archivedCards.length === 0) {
@@ -3631,10 +3519,15 @@ function printArchiveReport() {
       card.articles.forEach(art => {
         const qty = parseFloat(art.qty) || 0;
         const price = parseFloat(art.price) || 0;
+        const discount = parseFloat(art.discount) || 0;
         const taxRate = parseFloat(art.tax) !== undefined ? parseFloat(art.tax) : 22;
         
-        const sub = qty * price;
+        const safeDiscount = Math.abs(discount);
+        const discountedPrice = price - (price * (safeDiscount / 100));
+        
+        const sub = qty * discountedPrice;
         const taxAmt = sub * (taxRate / 100);
+        
         cardNet += sub;
         cardTax += taxAmt;
         cardGross += (sub + taxAmt);
