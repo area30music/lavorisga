@@ -1996,6 +1996,7 @@ function extractOrderMeta(rows) {
 }
 
 async function extractArticlesFromArubaPdf(file) {
+  const T0 = performance.now();
   // Lettura delle righe del PDF (serve per i layout non Aruba e per i dati dell'ordine)
   let rows = [];
   try {
@@ -2003,9 +2004,11 @@ async function extractArticlesFromArubaPdf(file) {
     const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
     rows = await getPdfRows(pdf);
   } catch (e) { rows = []; }
+  const T1 = performance.now();
 
   // 1) Formato Aruba: logica originale, invariata
   const legacy = await extractArticlesArubaLegacy(file);
+  console.log('[TEMPI-SGA] lettore: righe PDF ' + Math.round(T1 - T0) + ' ms | lettore Aruba ' + Math.round(performance.now() - T1) + ' ms');
   const isPlaceholder = legacy.length === 1 && String(legacy[0].desc || '').indexOf('Preventivo: ') === 0 && !legacy[0].price;
 
   let items = [];
@@ -2627,10 +2630,15 @@ async function createNewCardInner() {
     try {
       let imgData = "";
       if (tempFormFile.type === 'application/pdf') {
+        // Avvio la conversione in immagine in parallelo alla lettura degli articoli (piu' veloce)
+        const tA = performance.now();
+        const imgPromise = convertPdfToImage(tempFormFile, imgbbKey ? 3.0 : 2.0, imgbbKey ? 0.90 : 0.8).then(r => { console.log('[TEMPI-SGA] immagine pronta dopo ' + Math.round(performance.now() - tA) + ' ms (dimensione ' + Math.round((r || '').length / 1024) + ' KB)'); return r; }).catch(() => "");
         const ex = await extractArticlesSafe(tempFormFile);
+        console.log('[TEMPI-SGA] articoli letti dopo ' + Math.round(performance.now() - tA) + ' ms');
         extractedArticles = ex.articles;
         extractedMeta = ex.meta || {};
-        imgData = await convertPdfToImage(tempFormFile, imgbbKey ? 3.0 : 2.0, imgbbKey ? 0.90 : 0.8);
+        imgData = await imgPromise;
+        console.log('[TEMPI-SGA] lettura + immagine complete dopo ' + Math.round(performance.now() - tA) + ' ms');
       } else {
         imgData = await compressImage(tempFormFile, imgbbKey ? 2400 : 1600, imgbbKey ? 2400 : 1600, imgbbKey ? 0.90 : 0.8);
       }
@@ -2641,8 +2649,10 @@ async function createNewCardInner() {
             const base64Str = imgData.split(',')[1];
             const formData = new FormData();
             formData.append("image", base64Str);
+            const tU = performance.now();
             const response = await fetch(`https://api.imgbb.com/1/upload?key=${imgbbKey}`, { method: 'POST', body: formData });
             const data = await response.json();
+            console.log('[TEMPI-SGA] invio a ImgBB: ' + Math.round(performance.now() - tU) + ' ms');
             if (data && data.success) {
               initialPhotos.push({ image: data.data.url, rotation: 0 });
             } else {
@@ -3300,6 +3310,7 @@ async function handleDocumentUpload(event) {
     try {
       let imgData = "";
       if (file.type === 'application/pdf') {
+        const imgPromise = convertPdfToImage(file, imgbbKey ? 3.0 : 2.0, imgbbKey ? 0.90 : 0.8).catch(() => "");
         const exRes = await extractArticlesSafe(file);
         const extractedArticles = exRes.articles;
         const exMeta = exRes.meta || {};
@@ -3324,7 +3335,7 @@ async function handleDocumentUpload(event) {
             card.articles.push(...extractedArticles);
           }
         }
-        imgData = await convertPdfToImage(file, imgbbKey ? 3.0 : 2.0, imgbbKey ? 0.90 : 0.8);
+        imgData = await imgPromise;
       } else {
         imgData = await compressImage(file, imgbbKey ? 2400 : 1600, imgbbKey ? 2400 : 1600, imgbbKey ? 0.90 : 0.8);
       }
