@@ -2147,6 +2147,7 @@ function refreshUploadingUI(card) {
 async function finishBackgroundUpload(cardId, imgData, imgbbKey, keepSpinner) {
   let photo = null;
   let imgbbFailed = false;
+  let imgbbReason = '';
   try {
     if (imgData) {
       if (imgbbKey) {
@@ -2155,12 +2156,17 @@ async function finishBackgroundUpload(cardId, imgData, imgbbKey, keepSpinner) {
           formData.append('image', imgData.split(',')[1]);
           const tU = performance.now();
           const response = await fetch('https://api.imgbb.com/1/upload?key=' + imgbbKey, { method: 'POST', body: formData });
-          const data = await response.json();
-          console.log('[TEMPI-SGA] invio a ImgBB: ' + Math.round(performance.now() - tU) + ' ms');
+          let data = null;
+          try { data = await response.json(); } catch (je) { data = null; }
+          console.log('[TEMPI-SGA] invio a ImgBB: ' + Math.round(performance.now() - tU) + ' ms (stato ' + response.status + ', immagine ' + Math.round(imgData.length / 1024) + ' KB)');
           if (data && data.success) photo = { image: data.data.url, rotation: 0 };
-          else throw new Error('Upload ImgBB non riuscito');
+          else {
+            const apiMsg = data && data.error && (data.error.message || data.error) ? String(data.error.message || data.error) : '';
+            throw new Error('Risposta ImgBB: stato ' + response.status + (apiMsg ? ' - ' + apiMsg : ''));
+          }
         } catch (e) {
           console.error(e);
+          imgbbReason = (e && e.message ? e.message : String(e)) + ' | immagine ' + Math.round(imgData.length / 1024) + ' KB';
           // Come in origine: se ImgBB non risponde, l'immagine resta nella commessa in alta qualita'
           imgbbFailed = true;
           photo = { image: imgData, rotation: 0 };
@@ -2193,7 +2199,8 @@ async function finishBackgroundUpload(cardId, imgData, imgbbKey, keepSpinner) {
   if (imgbbFailed) {
     showInAppNotice(
       'Il documento della commessa "' + (card.title || 'Senza titolo') + '" non è stato caricato sul server ImgBB.\n\n' +
-      "L'allegato è comunque stato salvato dentro la commessa, in alta qualità. Se vuoi caricarlo anche su ImgBB, eliminalo e riallegalo più tardi.",
+      "L'allegato è comunque stato salvato dentro la commessa, in alta qualità. Se vuoi caricarlo anche su ImgBB, eliminalo e riallegalo più tardi." +
+      (imgbbReason ? "\n\nDettaglio tecnico: " + imgbbReason : ''),
       'Caricamento su ImgBB non riuscito'
     );
   }
