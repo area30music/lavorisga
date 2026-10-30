@@ -8,8 +8,7 @@ const firebaseConfig = {
   storageBucket: "workflow-sga.firebasestorage.app"
 };
 
-// VERSIONE ATTUALE DEL SOFTWARE (Incrementare a ogni modifica strutturale)
-const CURRENT_APP_VERSION = 2;
+// (L'aggiornamento automatico e' in fondo a questo file: nessun numero di versione da incrementare)
 
 // ==========================================
 // CHIAVE IMGBB (FOTO 4K)
@@ -42,7 +41,23 @@ if (!firebase.apps.length) {
   firebase.initializeApp(firebaseConfig);
 }
 const db = firebase.firestore();
+// Cache offline gestita da Firebase (IndexedDB): sostituisce la copia in localStorage
+db.enablePersistence({ synchronizeTabs: true }).catch((e) => console.warn('Cache offline non attiva:', e.code));
 const auth = firebase.auth();
+
+
+// ==========================================
+// SICUREZZA TESTI: escape HTML
+// ==========================================
+function esc(v) {
+  if (v === null || v === undefined) return '';
+  return String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+// Per testi dentro onclick="fn('...')": prima escape JS, poi escape HTML
+function jsArg(v) {
+  if (v === null || v === undefined) return '';
+  return esc(String(v).replace(/\\/g, '\\\\').replace(/'/g, "\\'"));
+}
 
 // ==========================================
 // VARIABILI GLOBALI
@@ -203,22 +218,6 @@ function patchSettingsMenu() {
 }
 
 function init() {
-  // Controllo automatico versione su Cloud (Firebase)
-  if (db) {
-    db.collection('workflow_sga_settings').doc('config').get().then((doc) => {
-      if (doc.exists) {
-        const cloudVersion = doc.data().appVersion || 1;
-        if (cloudVersion > CURRENT_APP_VERSION) {
-          window.location.reload(true);
-          return;
-        }
-      } else {
-        // Inizializza la versione sul cloud se non esiste
-        db.collection('workflow_sga_settings').doc('config').set({ appVersion: CURRENT_APP_VERSION }, { merge: true }).catch(() => {});
-      }
-    }).catch(() => {});
-  }
-
   loadUserSettings();
   loadState();
   
@@ -250,6 +249,11 @@ function init() {
   updateCloudStatus(true);
   listenToCloudUpdates();
   lucide.createIcons();
+
+  // Dopo un aggiornamento automatico o un riavvio, il PC del proiettore torna da solo in Master View
+  try {
+    if (localStorage.getItem('sga_master_mode') === '1' && !isMasterMode) toggleMasterMode();
+  } catch(e) {}
 }
 
 // ==========================================
@@ -711,8 +715,8 @@ function populateClientSelectors() {
   let optionsHtml = `<option value="">-- Seleziona dal CRM --</option>`;
   
   CLIENTS_DB.forEach(c => {
-    let label = c.name;
-    if (c.referent) label += ` (${c.referent})`;
+    let label = esc(c.name);
+    if (c.referent) label += ` (${esc(c.referent)})`;
     optionsHtml += `<option value="${c.id}">${label}</option>`;
   });
   
@@ -769,8 +773,8 @@ function handleClientInput(query, containerId, refInputId, emailInputId, waInput
   }
   
   container.innerHTML = matches.map(m => `
-    <div onclick="selectClientSuggestion('${m.name.replace(/'/g, "\\'")}', '${m.referent.replace(/'/g, "\\'")}', '${m.email}', '${m.whatsapp}', '${containerId}', '${refInputId}', '${emailInputId}', '${waInputId}')" class="px-3 py-2 hover:bg-indigo-600/30 text-slate-200 cursor-pointer text-xs border-b border-slate-800/60 last:border-0 truncate">
-      <span class="font-bold text-white">${m.name}</span> ${m.referent ? `<span class="text-indigo-300">(${m.referent})</span>` : ''}
+    <div onclick="selectClientSuggestion('${jsArg(m.name)}', '${jsArg(m.referent)}', '${jsArg(m.email)}', '${jsArg(m.whatsapp)}', '${containerId}', '${refInputId}', '${emailInputId}', '${waInputId}')" class="px-3 py-2 hover:bg-indigo-600/30 text-slate-200 cursor-pointer text-xs border-b border-slate-800/60 last:border-0 truncate">
+      <span class="font-bold text-white">${esc(m.name)}</span> ${m.referent ? `<span class="text-indigo-300">(${esc(m.referent)})</span>` : ''}
     </div>
   `).join('');
   
@@ -856,8 +860,8 @@ function renderArchiveList(query = '') {
   return archived.map(c => `
     <div class="bg-slate-950 p-3 rounded-lg border border-slate-800 hover:border-slate-500/50 transition-colors group flex justify-between items-center">
       <div onclick="openDetail('${c.id}')" class="flex-1 cursor-pointer">
-        <h5 class="text-sm font-bold text-slate-200 group-hover:text-white transition-colors">${c.title}</h5>
-        <div class="text-[10px] text-slate-400 mt-0.5">Cliente: <span class="text-indigo-300 font-semibold">${c.client || 'N/D'}</span> | Inserimento: ${new Date(c.createdAt).toLocaleDateString('it-IT')}</div>
+        <h5 class="text-sm font-bold text-slate-200 group-hover:text-white transition-colors">${esc(c.title)}</h5>
+        <div class="text-[10px] text-slate-400 mt-0.5">Cliente: <span class="text-indigo-300 font-semibold">${esc(c.client || 'N/D')}</span> | Inserimento: ${new Date(c.createdAt).toLocaleDateString('it-IT')}</div>
       </div>
       <div class="flex items-center gap-2">
         <button onclick="openDetail('${c.id}')" class="text-slate-600 hover:text-indigo-400 p-1.5 transition-colors cursor-pointer" title="Apri Dettaglio"><i data-lucide="external-link" class="w-4 h-4"></i></button>
@@ -886,8 +890,8 @@ function renderFreeLabelTable() {
   window.tempFreeLabelArticles.forEach((art, idx) => {
     tbody.innerHTML += `
       <tr class="border-b border-slate-800/50 hover:bg-slate-900/50">
-        <td class="py-1 pr-1"><input type="text" value="${art.code}" onchange="updateFreeLabelRow(${idx}, 'code', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded px-1.5 py-1 text-slate-200 text-xs font-mono focus:border-indigo-500 outline-none"></td>
-        <td class="py-1 px-1"><input type="text" value="${art.desc}" onchange="updateFreeLabelRow(${idx}, 'desc', this.value)" placeholder="Materiale..." class="w-full bg-slate-900 border border-slate-700 rounded px-1.5 py-1 text-slate-200 text-xs focus:border-indigo-500 outline-none"></td>
+        <td class="py-1 pr-1"><input type="text" value="${esc(art.code)}" onchange="updateFreeLabelRow(${idx}, 'code', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded px-1.5 py-1 text-slate-200 text-xs font-mono focus:border-indigo-500 outline-none"></td>
+        <td class="py-1 px-1"><input type="text" value="${esc(art.desc)}" onchange="updateFreeLabelRow(${idx}, 'desc', this.value)" placeholder="Materiale..." class="w-full bg-slate-900 border border-slate-700 rounded px-1.5 py-1 text-slate-200 text-xs focus:border-indigo-500 outline-none"></td>
         <td class="py-1 px-1"><input type="number" min="1" value="${art.qty}" onchange="updateFreeLabelRow(${idx}, 'qty', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded px-1.5 py-1 text-slate-200 text-xs text-center focus:border-indigo-500 outline-none"></td>
         <td class="py-1 px-1"><input type="number" min="1" value="${art.packageNum}" onchange="updateFreeLabelRow(${idx}, 'packageNum', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded px-1.5 py-1 text-slate-200 text-xs text-center focus:border-indigo-500 outline-none"></td>
         <td class="py-1 pl-1 text-center"><button onclick="removeFreeLabelRow(${idx})" class="text-red-400 hover:text-red-300 cursor-pointer"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button></td>
@@ -923,6 +927,16 @@ function removeFreeLabelRow(idx) {
 // ------------------------------------------
 function openSubSettings(type) {
   activeSubSettingsType = type;
+  if (type === 'archive') {
+    loadArchivedCards().then(() => {
+      const list = document.getElementById('archiveSettingsList');
+      if (list && activeSubSettingsType === 'archive') {
+        const si = document.getElementById('archiveSearchInput');
+        list.innerHTML = renderArchiveList(si ? si.value : '');
+        lucide.createIcons();
+      }
+    });
+  }
   const titleEl = document.getElementById('subSettingsTitle');
   const contentEl = document.getElementById('subSettingsContent');
   contentEl.innerHTML = '';
@@ -1140,8 +1154,8 @@ function renderCrmSettingsList() {
   CLIENTS_DB.map(c => `
     <div onclick="loadClientForEdit('${c.id}')" class="flex items-center justify-between bg-slate-950 p-2.5 rounded border border-slate-800 text-xs hover:border-indigo-500/50 cursor-pointer transition-colors group">
       <div>
-        <span class="text-white font-bold">${c.name}</span> ${c.referent ? `<span class="text-indigo-300">(${c.referent})</span>` : ''}
-        <div class="text-[10px] text-slate-400">${c.email ? 'Email: ' + c.email : ''} ${c.whatsapp ? '| WA: ' + c.whatsapp : ''}</div>
+        <span class="text-white font-bold">${esc(c.name)}</span> ${c.referent ? `<span class="text-indigo-300">(${esc(c.referent)})</span>` : ''}
+        <div class="text-[10px] text-slate-400">${c.email ? 'Email: ' + esc(c.email) : ''} ${c.whatsapp ? '| WA: ' + esc(c.whatsapp) : ''}</div>
       </div>
       <button onclick="event.stopPropagation(); removeClient('${c.id}')" class="text-slate-600 group-hover:text-red-400 hover:!text-red-300 p-1 cursor-pointer transition-colors"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
     </div>
@@ -1317,8 +1331,8 @@ function showArcadeAlert(cards) {
     item.className = "bg-black/70 border-2 border-red-500/60 p-4 rounded-xl flex justify-between items-center gap-4 shadow-lg";
     item.innerHTML = `
       <div class="overflow-hidden space-y-1">
-        <h4 class="font-bold text-lg text-white truncate">${card.title}</h4>
-        <p class="text-sm text-slate-300">Cliente: <span class="text-indigo-300">${card.client || 'N/D'}</span> | Stato: <span class="text-yellow-300">${stageName}</span></p>
+        <h4 class="font-bold text-lg text-white truncate">${esc(card.title)}</h4>
+        <p class="text-sm text-slate-300">Cliente: <span class="text-indigo-300">${esc(card.client || 'N/D')}</span> | Stato: <span class="text-yellow-300">${stageName}</span></p>
       </div>
       <div class="shrink-0 text-right space-y-1">
         <span class="text-xs px-3 py-1.5 rounded-lg font-mono uppercase tracking-wider ${badgeColor}">${timeText}</span>
@@ -1399,6 +1413,7 @@ function toggleMasterMode() {
     if(board) board.scrollLeft = 0;
     renderBoard();
   }
+  try { localStorage.setItem('sga_master_mode', isMasterMode ? '1' : '0'); } catch(e) {}
 }
 
 function startAutoScroll() {
@@ -1540,17 +1555,13 @@ function listenToCloudUpdates() {
     }
   });
   
-  db.collection('workflow_sga_cards').onSnapshot((snapshot) => {
-    if (snapshot.empty && state.cards.length > 0) {
-      state.cards.forEach(card => syncCardToCloud(card));
-      return;
-    }
-    
+  db.collection('workflow_sga_cards').where('stage', '!=', 'archiviato').onSnapshot((snapshot) => {
     let needsMigration = false;
-    
-    snapshot.docChanges().forEach((change) => {
-      let docData = change.doc.data();
-      
+    const activeMap = new Map();
+
+    snapshot.docs.forEach((d) => {
+      let docData = d.data();
+      if (!docData.id) docData.id = d.id;
       if (docData.stage === 'lavorato') {
         docData.stage = 'lavorato-da-bollettare';
         needsMigration = true;
@@ -1558,42 +1569,66 @@ function listenToCloudUpdates() {
         docData.stage = 'bollettato-da-consegnare';
         needsMigration = true;
       }
-      
-      if (change.type === "added" || change.type === "modified") {
-        const existingIndex = state.cards.findIndex(c => c.id === docData.id);
-        if (existingIndex >= 0) {
-          state.cards[existingIndex] = sanitizeCard(docData);
-        } else {
-          state.cards.push(sanitizeCard(docData));
-        }
-      }
-      
-      if (change.type === "removed") {
-        state.cards = state.cards.filter(c => c.id !== docData.id);
-      }
+      activeMap.set(docData.id, sanitizeCard(docData));
     });
-    
+
+    // Le archiviate restano in memoria solo se l'archivio e' stato aperto
+    const keepArchived = window.__archivedLoaded
+      ? state.cards.filter(c => c && c.stage === 'archiviato' && !activeMap.has(c.id))
+      : [];
+    state.cards = [...activeMap.values(), ...keepArchived];
     state.cards.sort((a,b) => (a.order || 0) - (b.order || 0) || new Date(b.createdAt) - new Date(a.createdAt));
+
     const board = document.getElementById('board');
     const currentScroll = board ? board.scrollLeft : 0;
-    
+
+    // Dati confermati dal server: la vecchia copia locale non serve piu'
+    if (!snapshot.metadata.fromCache) {
+      try { localStorage.removeItem('workflow_sga_state'); } catch(e) {}
+    }
+
     saveLocal();
-    
+
     if (needsMigration) {
       state.cards.forEach(c => syncCardToCloud(c));
     }
-    
+    if (!window.__firstCardsSnapshotDone) {
+      window.__firstCardsSnapshotDone = true;
+      checkAutoArchive();
+    }
+
     populateGlobalFilterDropdown();
-    
+
     if (isMasterMode && board) {
       board.scrollLeft = currentScroll;
     }
+  }, (err) => {
+    console.error(err);
+    showToast('⚠️ Errore di sincronizzazione con il cloud');
   });
 }
 
 function syncCardToCloud(card) {
   if (!db || !card) return;
-  db.collection('workflow_sga_cards').doc(card.id).set(card, { merge: true }).catch(err => console.error(err));
+  db.collection('workflow_sga_cards').doc(card.id).set(card, { merge: true }).catch(err => {
+    console.error(err);
+    showToast('⚠️ Salvataggio sul cloud NON riuscito. Controlla la connessione.');
+  });
+}
+
+// Carica le commesse archiviate solo quando servono (archivio, report, backup)
+function loadArchivedCards() {
+  if (!db) return Promise.resolve();
+  return db.collection('workflow_sga_cards').where('stage', '==', 'archiviato').get().then((snap) => {
+    const activeCards = state.cards.filter(c => c && c.stage !== 'archiviato');
+    const activeIds = new Set(activeCards.map(c => c.id));
+    const archived = snap.docs.map(d => sanitizeCard(d.data())).filter(c => c && !activeIds.has(c.id));
+    state.cards = [...activeCards, ...archived];
+    window.__archivedLoaded = true;
+  }).catch((e) => {
+    console.error(e);
+    showToast("⚠️ Impossibile caricare l'archivio");
+  });
 }
 
 function syncDeleteToCloud(cardId) {
@@ -1783,6 +1818,8 @@ function sanitizeCard(card) {
 }
 
 function loadState() {
+  state = { cards: [] };
+  return;
   const saved = localStorage.getItem('workflow_sga_state');
   if (saved) {
     try {
@@ -1801,13 +1838,12 @@ function loadState() {
 }
 
 function saveLocal() {
+  // Le commesse vivono su Firebase (con cache offline propria): qui ridisegniamo soltanto
   renderBoard();
-  try {
-    localStorage.setItem('workflow_sga_state', JSON.stringify(state));
-  } catch(e){}
 }
 
-function exportBackup() {
+async function exportBackup() {
+  await loadArchivedCards();
   const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state));
   const downloadAnchorNode = document.createElement('a');
   downloadAnchorNode.setAttribute("href", dataStr);
@@ -1964,7 +2000,7 @@ function createCardHTML(card) {
     
   const machineBadgeHTML = card.machine ? `
     <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono bg-cyan-950 text-cyan-300 border border-cyan-800 mt-1">
-      <i data-lucide="cpu" class="w-3 h-3"></i> ${card.machine}
+      <i data-lucide="cpu" class="w-3 h-3"></i> ${esc(card.machine)}
     </span>` : '';
     
   const thumbnailHTML = card.photos && card.photos.length > 0 ? `
@@ -1978,12 +2014,12 @@ function createCardHTML(card) {
   const referentHTML = card.referent ? `
     <div class="truncate text-xs flex items-center gap-1.5 ${customSubTextStyle}">
       <i data-lucide="user" class="w-3.5 h-3.5 shrink-0"></i> 
-      <span class="text-indigo-300 font-semibold">${card.referent}</span>
+      <span class="text-indigo-300 font-semibold">${esc(card.referent)}</span>
     </div>` : '';
     
   const orderRefHTML = card.orderRef ? `
     <div class="mt-1">
-      <span class="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-[10px] font-mono text-slate-300">Rif: ${card.orderRef}</span>
+      <span class="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-[10px] font-mono text-slate-300">Rif: ${esc(card.orderRef)}</span>
     </div>` : '';
   
   const cardIdShort = card.id ? card.id.slice(-4).toUpperCase() : '0000';
@@ -2005,10 +2041,10 @@ function createCardHTML(card) {
   return `
     <div draggable="true" ondragstart="handleDragStart(event)" id="card-${card.id}" data-id="${card.id}" onclick="${isMasterMode ? '' : `playSound('click'); openDetail('${card.id}')`}" style="${customCardStyle}" class="${baseCardClass} hover:border-indigo-500/50 p-3.5 rounded-lg shadow-md cursor-pointer transition-all active:scale-95 space-y-2 group relative ${isUrgent ? 'card-urgent' : ''}">
       <div class="flex justify-between items-start gap-1">
-        <span class="px-2 py-0.5 rounded font-medium text-[11px] ${badgeStyle}">${card.jobType || 'Generico'}</span>
+        <span class="px-2 py-0.5 rounded font-medium text-[11px] ${badgeStyle}">${esc(card.jobType || 'Generico')}</span>
         <span class="text-xs" style="${card.customColor ? customTextStyle : 'color: #64748b;'}">${card.createdAt ? new Date(card.createdAt).toLocaleDateString('it-IT', {day: 'numeric', month: 'short'}) : ''}</span>
       </div>
-      <h4 class="font-bold text-sm leading-snug truncate transition-colors" style="${card.customColor ? customTextStyle : 'color: #f8fafc;'}">${card.title || 'Senza Titolo'}</h4>
+      <h4 class="font-bold text-sm leading-snug truncate transition-colors" style="${card.customColor ? customTextStyle : 'color: #f8fafc;'}">${esc(card.title || 'Senza Titolo')}</h4>
       
       ${referentHTML}
       ${orderRefHTML}
@@ -2291,9 +2327,14 @@ async function createNewCard(event) {
             formData.append("image", base64Str);
             const response = await fetch(`https://api.imgbb.com/1/upload?key=${imgbbKey}`, { method: 'POST', body: formData });
             const data = await response.json();
-            initialPhotos.push({ image: data.success ? data.data.url : imgData, rotation: 0 });
+            if (data && data.success) {
+              initialPhotos.push({ image: data.data.url, rotation: 0 });
+            } else {
+              throw new Error('Upload ImgBB non riuscito');
+            }
           } catch(e) {
-            initialPhotos.push({ image: imgData, rotation: 0 });
+            console.error(e);
+            alert("⚠️ Impossibile caricare l'immagine sul server (ImgBB). L'allegato NON è stato salvato: riprova tra poco.");
           }
         } else {
           initialPhotos.push({ image: imgData, rotation: 0 });
@@ -2440,11 +2481,11 @@ function renderArticlesTable(card) {
         </div>
       </td>
       <td class="py-1.5 px-1 relative">
-        <input type="text" value="${art.code || ''}" data-field="code" data-index="${idx}" autocomplete="off" oninput="updateArticleField(this); handleArticleCodeAutocomplete(this.value, ${idx})" onchange="saveArticlesEdits(true)" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-xs font-mono focus:outline-none focus:border-indigo-500">
+        <input type="text" value="${esc(art.code || '')}" data-field="code" data-index="${idx}" autocomplete="off" oninput="updateArticleField(this); handleArticleCodeAutocomplete(this.value, ${idx})" onchange="saveArticlesEdits(true)" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-xs font-mono focus:outline-none focus:border-indigo-500">
         <div id="articleCodeSuggestions-${idx}" class="hidden absolute left-0 right-0 top-full mt-1 bg-slate-800 border border-slate-600 rounded shadow-xl z-50 max-h-32 overflow-y-auto min-w-[200px]"></div>
       </td>
       <td class="py-1.5 px-1 relative">
-        <input type="text" value="${art.desc || ''}" data-field="desc" data-index="${idx}" autocomplete="off" oninput="updateArticleField(this); handleArticleAutocomplete(this.value, ${idx})" onchange="saveArticlesEdits(true)" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-xs focus:outline-none focus:border-indigo-500">
+        <input type="text" value="${esc(art.desc || '')}" data-field="desc" data-index="${idx}" autocomplete="off" oninput="updateArticleField(this); handleArticleAutocomplete(this.value, ${idx})" onchange="saveArticlesEdits(true)" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-xs focus:outline-none focus:border-indigo-500">
         <div id="articleSuggestions-${idx}" class="hidden absolute left-0 right-0 top-full mt-1 bg-slate-800 border border-slate-600 rounded shadow-xl z-50 max-h-32 overflow-y-auto min-w-[250px]"></div>
       </td>
       <td class="py-1.5 px-1">
@@ -2495,9 +2536,9 @@ function handleArticleCodeAutocomplete(query, idx) {
   }
   
   container.innerHTML = matches.map(m => `
-    <div onclick="selectArticleSuggestion('${(m.code||'').replace(/'/g, "\\'")}', '${m.desc.replace(/'/g, "\\'")}', ${m.price}, ${idx})" class="px-2 py-1.5 hover:bg-indigo-600/50 cursor-pointer text-xs border-b border-slate-700 last:border-0">
-      <div class="font-bold text-white">${m.desc}</div>
-      <div class="text-[10px] text-slate-400 font-mono">Cod: ${m.code || 'N/D'} | Prezzo base: € ${m.price}</div>
+    <div onclick="selectArticleSuggestion('${jsArg(m.code)}', '${jsArg(m.desc)}', ${m.price}, ${idx})" class="px-2 py-1.5 hover:bg-indigo-600/50 cursor-pointer text-xs border-b border-slate-700 last:border-0">
+      <div class="font-bold text-white">${esc(m.desc)}</div>
+      <div class="text-[10px] text-slate-400 font-mono">Cod: ${esc(m.code || 'N/D')} | Prezzo base: € ${m.price}</div>
     </div>
   `).join('');
   
@@ -2520,9 +2561,9 @@ function handleArticleAutocomplete(query, idx) {
   }
   
   container.innerHTML = matches.map(m => `
-    <div onclick="selectArticleSuggestion('${(m.code||'').replace(/'/g, "\\'")}', '${m.desc.replace(/'/g, "\\'")}', ${m.price}, ${idx})" class="px-2 py-1.5 hover:bg-indigo-600/50 cursor-pointer text-xs border-b border-slate-700 last:border-0">
-      <div class="font-bold text-white">${m.desc}</div>
-      <div class="text-[10px] text-slate-400 font-mono">Cod: ${m.code || 'N/D'} | Prezzo base: € ${m.price}</div>
+    <div onclick="selectArticleSuggestion('${jsArg(m.code)}', '${jsArg(m.desc)}', ${m.price}, ${idx})" class="px-2 py-1.5 hover:bg-indigo-600/50 cursor-pointer text-xs border-b border-slate-700 last:border-0">
+      <div class="font-bold text-white">${esc(m.desc)}</div>
+      <div class="text-[10px] text-slate-400 font-mono">Cod: ${esc(m.code || 'N/D')} | Prezzo base: € ${m.price}</div>
     </div>
   `).join('');
   
@@ -2731,7 +2772,7 @@ function openDetail(id) {
         <div class="absolute -left-[23px] mt-1.5 w-4.5 h-4.5 rounded-full border border-slate-900 ${circleBg} flex items-center justify-center text-[8px] font-bold text-slate-100 shadow-sm">${idx+1}</div>
         <div class="flex-1 bg-slate-950/40 p-2.5 rounded border border-slate-800/80">
           <div class="flex justify-between items-center mb-0.5">
-            <span class="font-bold text-xs text-slate-200 uppercase">${h.label}</span>
+            <span class="font-bold text-xs text-slate-200 uppercase">${esc(h.label)}</span>
             <span class="text-[10px] text-slate-500">${new Date(h.timestamp).toLocaleString('it-IT')}</span>
           </div>
         </div>
@@ -2839,9 +2880,14 @@ async function handleDocumentUpload(event) {
             formData.append("image", base64Str);
             const response = await fetch(`https://api.imgbb.com/1/upload?key=${imgbbKey}`, { method: 'POST', body: formData });
             const data = await response.json();
-            card.photos.push({ image: data.success ? data.data.url : imgData, rotation: 0 });
+            if (data && data.success) {
+              card.photos.push({ image: data.data.url, rotation: 0 });
+            } else {
+              throw new Error('Upload ImgBB non riuscito');
+            }
           } catch(e) {
-            card.photos.push({ image: imgData, rotation: 0 });
+            console.error(e);
+            alert("⚠️ Impossibile caricare l'immagine sul server (ImgBB). L'allegato NON è stato salvato: riprova tra poco.");
           }
         } else {
           card.photos.push({ image: imgData, rotation: 0 });
@@ -3006,8 +3052,8 @@ function renderLabelArticlesTable() {
       const tr = document.createElement('tr');
       tr.className = "hover:bg-slate-900/50 transition-colors";
       tr.innerHTML = `
-        <td class="py-2 px-2 w-24"><input type="text" value="${art.code || ''}" onchange="updateLabelRow(${idx}, 'code', this.value)" class="w-full bg-transparent border-b border-slate-700 text-slate-200 text-xs font-mono focus:outline-none focus:border-blue-500"></td>
-        <td class="py-2 px-2"><input type="text" value="${art.desc}" onchange="updateLabelRow(${idx}, 'desc', this.value)" class="w-full bg-transparent border-b border-slate-700 text-slate-200 text-xs focus:outline-none focus:border-blue-500"></td>
+        <td class="py-2 px-2 w-24"><input type="text" value="${esc(art.code || '')}" onchange="updateLabelRow(${idx}, 'code', this.value)" class="w-full bg-transparent border-b border-slate-700 text-slate-200 text-xs font-mono focus:outline-none focus:border-blue-500"></td>
+        <td class="py-2 px-2"><input type="text" value="${esc(art.desc)}" onchange="updateLabelRow(${idx}, 'desc', this.value)" class="w-full bg-transparent border-b border-slate-700 text-slate-200 text-xs focus:outline-none focus:border-blue-500"></td>
         <td class="py-2 px-2 text-center"><input type="number" min="1" value="${art.qty}" onchange="updateLabelRow(${idx}, 'qty', this.value)" class="w-16 bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-sm text-center focus:outline-none focus:border-blue-500"></td>
         <td class="py-2 px-2 text-center"><input type="number" min="1" value="${art.packageNum}" onchange="updateLabelRow(${idx}, 'packageNum', this.value)" class="w-16 bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-sm text-center focus:outline-none focus:border-blue-500"></td>
         <td class="py-2 px-2 text-center flex items-center justify-center gap-2">
@@ -3124,7 +3170,7 @@ async function generateAndPrintLabels() {
   if (card.orderRef && card.orderRef.trim() !== "") {
     orderRefHtml = `
       <div style="margin-top: 8px; font-size: 11.5px; font-weight: bold; border-top: 1px dashed #888; padding-top: 4px;">
-        Rif. Ordine: <span style="font-weight: normal;">${card.orderRef}</span>
+        Rif. Ordine: <span style="font-weight: normal;">${esc(card.orderRef)}</span>
       </div>
     `;
   }
@@ -3136,8 +3182,8 @@ async function generateAndPrintLabels() {
     const articlesListHtml = articlesInPkg.map(a => `
       <tr>
         <td style="width: 45px; font-weight: bold; text-align: center; vertical-align: top; padding-top: 5px;">${a.qty}x</td>
-        <td style="width: 75px; vertical-align: top; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; padding-top: 5px;">${a.code}</td>
-        <td style="vertical-align: top; padding-bottom: 5px; padding-top: 5px;">${a.desc}</td>
+        <td style="width: 75px; vertical-align: top; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; padding-top: 5px;">${esc(a.code)}</td>
+        <td style="vertical-align: top; padding-bottom: 5px; padding-top: 5px;">${esc(a.desc)}</td>
       </tr>`).join('');
       
     const notesBoxHtml = labelNotes ? `
@@ -3160,7 +3206,7 @@ async function generateAndPrintLabels() {
           <div class="box dest-box">
             <div class="box-header">DESTINATARIO:</div>
             <div class="box-body" style="font-size: 16px; font-weight: bold; padding-top: 6px;">
-              ${card.client || 'Cliente N/D'}<br><span style="font-weight: normal; font-size: 12px;">${card.referent ? 'Rif: ' + card.referent : ''}</span>
+              ${esc(card.client || 'Cliente N/D')}<br><span style="font-weight: normal; font-size: 12px;">${card.referent ? 'Rif: ' + esc(card.referent) : ''}</span>
             </div>
           </div>
           <div class="collo-box">Collo ${currentPkgIndex} di ${totalPackages}</div>
@@ -3183,7 +3229,7 @@ async function generateAndPrintLabels() {
   const fullHtml = `<!DOCTYPE html>
   <html>
   <head>
-    <title>Etichette_${card.title}</title>
+    <title>Etichette_${esc(card.title)}</title>
     <style>
       @page { size: 148mm 105mm; margin: 0; }
       body, html { margin: 0; padding: 0; width: 148mm; background: #fff; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
@@ -3285,8 +3331,8 @@ function printFreeLabels() {
     const articlesListHtml = articlesInPkg.map(a => `
       <tr>
         <td style="width: 45px; font-weight: bold; text-align: center; vertical-align: top; padding-top: 5px;">${a.qty}x</td>
-        <td style="width: 75px; vertical-align: top; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; padding-top: 5px;">${a.code}</td>
-        <td style="vertical-align: top; padding-bottom: 5px; padding-top: 5px;">${a.desc}</td>
+        <td style="width: 75px; vertical-align: top; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; padding-top: 5px;">${esc(a.code)}</td>
+        <td style="vertical-align: top; padding-bottom: 5px; padding-top: 5px;">${esc(a.desc)}</td>
       </tr>`).join('');
 
     const notesBoxHtml = labelNotes ? `
@@ -3397,7 +3443,7 @@ function printCard() {
     return `
       <div style="margin-bottom: 8px; padding-left: 12px; border-left: 2px solid #cbd5e1; position: relative;">
         <div style="position: absolute; left: -5px; top: 2px; width: 8px; height: 8px; border-radius: 50%; background: #475569;"></div>
-        <div style="font-weight: bold; font-size: 11px; color: #1e293b;">Passaggio #${i+1}: ${h.label}</div>
+        <div style="font-weight: bold; font-size: 11px; color: #1e293b;">Passaggio #${i+1}: ${esc(h.label)}</div>
         <div style="font-size: 9px; color: #64748b;">Data: ${new Date(h.timestamp).toLocaleString('it-IT')}</div>
       </div>`; 
   }).join('');
@@ -3419,8 +3465,8 @@ function printCard() {
       
       articlesRowsHtml += `
         <tr style="border-bottom: 1px solid #e2e8f0;">
-          <td style="padding: 8px; font-family: monospace; font-size: 11px; color: #334155;">${art.code || '-'}</td>
-          <td style="padding: 8px; font-size: 11px; color: #0f172a;">${art.desc || '-'}</td>
+          <td style="padding: 8px; font-family: monospace; font-size: 11px; color: #334155;">${esc(art.code || '-')}</td>
+          <td style="padding: 8px; font-size: 11px; color: #0f172a;">${esc(art.desc || '-')}</td>
           <td style="padding: 8px; text-align: center; font-size: 11px; color: #334155;">${art.qty !== undefined && art.qty !== '' ? art.qty : '-'}</td>
           <td style="padding: 8px; text-align: right; font-size: 11px; color: #334155;">${art.price !== undefined && art.price !== '' ? '€ ' + parseFloat(art.price).toFixed(2) : '-'}</td>
           <td style="padding: 8px; text-align: center; font-size: 11px; color: #334155;">${amounts.discountRate}%</td>
@@ -3486,9 +3532,9 @@ function printCard() {
             </div>
           </div>
           <div class="details">
-            <div><label>Cliente / Azienda</label><strong>${card.title || '-'}</strong></div>
-            <div><label>Tipo Lavorazione</label><strong>${card.jobType || '-'} ${card.machine ? ' | Macchina: ' + card.machine : ''}</strong></div>
-            <div><label>Referente & Contatti</label><strong>${card.client || 'N/D'} ${card.referent ? '(' + card.referent + ')' : ''}</strong></div>
+            <div><label>Cliente / Azienda</label><strong>${esc(card.title || '-')}</strong></div>
+            <div><label>Tipo Lavorazione</label><strong>${esc(card.jobType || '-')} ${card.machine ? ' | Macchina: ' + esc(card.machine) : ''}</strong></div>
+            <div><label>Referente & Contatti</label><strong>${esc(card.client || 'N/D')} ${card.referent ? '(' + esc(card.referent) + ')' : ''}</strong></div>
             <div><label>Data di Consegna</label><strong style="color: #ea580c;">${deliveryStr}</strong></div>
           </div>
           <div class="section-title">Articoli & Specifiche Lavorazione</div>
@@ -3721,8 +3767,8 @@ function printArchiveReport() {
     rowsHtml += `
       <tr>
         <td style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0;">${dateStr}</td>
-        <td style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0; font-weight: bold;">${card.title}</td>
-        <td style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0;">${card.client || '-'}</td>
+        <td style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0; font-weight: bold;">${esc(card.title)}</td>
+        <td style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0;">${esc(card.client || '-')}</td>
         <td style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0; text-align: right;">€ ${cardNet.toFixed(2)}</td>
         <td style="padding: 6px 8px; border-bottom: 1px solid #e2e8f0; text-align: right; font-weight: bold; color: #0f172a;">€ ${cardGross.toFixed(2)}</td>
       </tr>
@@ -3801,8 +3847,8 @@ function renderArticlesSettingsList() {
   ARTICLES_DB.map((a, idx) => `
     <div class="flex items-center justify-between bg-slate-950 p-2.5 rounded border border-slate-800 text-xs hover:border-indigo-500/50 transition-colors">
       <div>
-        <span class="text-white font-bold">${a.desc}</span>
-        <div class="text-[10px] text-slate-400 font-mono">Cod: ${a.code || 'N/D'} | Prezzo base: € ${parseFloat(a.price).toFixed(2)}</div>
+        <span class="text-white font-bold">${esc(a.desc)}</span>
+        <div class="text-[10px] text-slate-400 font-mono">Cod: ${esc(a.code || 'N/D')} | Prezzo base: € ${parseFloat(a.price).toFixed(2)}</div>
       </div>
       <div class="flex gap-1.5">
         <button onclick="editArticleFromDB(${idx})" class="text-slate-600 hover:text-indigo-400 p-1 cursor-pointer transition-colors" title="Modifica Articolo"><i data-lucide="edit-3" class="w-3.5 h-3.5"></i></button>
@@ -3870,3 +3916,59 @@ function removeArticleFromDB(idx) {
     openSubSettings('articles');
   });
 }
+
+// ==========================================
+// AGGIORNAMENTO AUTOMATICO (GitHub Pages)
+// Confronta index.html, app.js e style.css con quelli in esecuzione.
+// Non serve incrementare nessun numero di versione.
+// ==========================================
+(function setupAutoUpdate() {
+  const CHECK_EVERY_MS = 90 * 1000;
+  let toastShown = false;
+
+  function hash(t) {
+    return (window.__sgaHash ? window.__sgaHash(t) : String(t.length));
+  }
+  async function getText(url) {
+    const r = await fetch(url + (url.includes('?') ? '&' : '?') + '_=' + Date.now(), { cache: 'no-store' });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return r.text();
+  }
+  async function fetchRemoteVersion() {
+    try {
+      const [h, a, c] = await Promise.all([getText('./index.html'), getText('./app.js'), getText('./style.css')]);
+      return { index: hash(h), app: hash(a), css: hash(c) };
+    } catch (e) { return null; }
+  }
+  function isBusy() {
+    if (isMasterMode) return false; // il proiettore si aggiorna subito
+    const ids = ['detailModal','addCardModal','settingsModal','subSettingsModal','labelPrintModal','clientNotifyModal','cloudModal','galleryModal','deleteConfirmModal'];
+    return ids.some(id => { const el = document.getElementById(id); return el && !el.classList.contains('hidden'); });
+  }
+  async function check() {
+    const base = window.__SGA_BASE;
+    if (!base) return;
+    const cur = await fetchRemoteVersion();
+    if (!cur) return;
+    if (cur.index === base.index && cur.app === base.app && cur.css === base.css) return;
+
+    if (isBusy()) {
+      if (!toastShown) { showToast('\ud83d\udd04 Nuova versione disponibile: si installer\u00e0 appena chiudi la finestra aperta.'); toastShown = true; }
+      return;
+    }
+    const last = parseInt(sessionStorage.getItem('sga_last_reload') || '0', 10);
+    if (Date.now() - last < 60000) return; // anti-loop
+    sessionStorage.setItem('sga_last_reload', String(Date.now()));
+    showToast('\ud83d\udd04 Aggiornamento in corso...');
+    setTimeout(() => {
+      const u = new URL(location.href);
+      u.searchParams.set('_v', Date.now());
+      location.replace(u.toString());
+    }, 700);
+  }
+
+  setTimeout(check, 20000);
+  setInterval(check, CHECK_EVERY_MS);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) check(); });
+  window.addEventListener('online', check);
+})();
