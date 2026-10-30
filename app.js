@@ -1693,7 +1693,7 @@ function convertPdfToImage(file, scaleFactor, quality) {
   });
 }
 
-async function extractArticlesFromArubaPdf(file) {
+async function extractArticlesArubaLegacy(file) {
   try {
     const arrayBuffer = await file.arrayBuffer();
     const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
@@ -1780,6 +1780,259 @@ async function extractArticlesFromArubaPdf(file) {
   }
 }
 
+// ==========================================
+// IMPORT INTELLIGENTE ORDINI / PREVENTIVI (gratuito, nel browser)
+// 1) formato Aruba (invariato)  2) tabelle con intestazione (layout di qualsiasi cliente)
+// 3) riconoscimento a righe  4) segnaposto con il nome del file
+// ==========================================
+async function getPdfRows(pdf) {
+  const allRows = [];
+  for (let p = 1; p <= pdf.numPages; p++) {
+    const page = await pdf.getPage(p);
+    const tc = await page.getTextContent();
+    const rows = [];
+    tc.items.forEach(it => {
+      const str = (it.str || '').trim();
+      if (!str) return;
+      const y = it.transform[5], x = it.transform[4], w = it.width || 0;
+      let row = rows.find(r => Math.abs(r.y - y) <= 4);
+      if (!row) { row = { y: y, items: [] }; rows.push(row); }
+      row.items.push({ text: str, x: x, w: w });
+    });
+    rows.sort((a, b) => b.y - a.y);
+    rows.forEach(r => {
+      r.items.sort((a, b) => a.x - b.x);
+      r.text = r.items.map(i => i.text).join(' ');
+      r.page = p;
+      allRows.push(r);
+    });
+  }
+  return allRows;
+}
+
+function parseItNumber(s) {
+  if (s === null || s === undefined) return NaN;
+  let t = String(s).replace(/[€\s]/g, '').replace(/%$/, '');
+  if (!/^-?[\d.,]+$/.test(t) || !/\d/.test(t)) return NaN;
+  if (t.indexOf(',') !== -1) t = t.replace(/\./g, '').replace(',', '.');
+  else if ((t.match(/\./g) || []).length > 1) t = t.replace(/\./g, '');
+  const v = parseFloat(t);
+  return isNaN(v) ? NaN : v;
+}
+
+function classifyHeaderToken(raw) {
+  const t = (raw || '').toLowerCase().replace(/\s+/g, ' ').trim();
+  if (!t) return null;
+  if (/^(q\.?t[àa]|qt[àa]|q\.?ta|quantit|qty|quantity|pz\b|pezzi|n\.? ?pezzi|nr\.? ?pz)/.test(t)) return 'qty';
+  if (/(prezzo|unitar|price|p\.? ?u\.?$|€ ?\/)/.test(t)) return 'price';
+  if (/^(sconto|sc\.|sc\b|disc|% ?sc)/.test(t)) return 'discount';
+  if (/^(iva|% ?iva|aliq|vat)/.test(t)) return 'tax';
+  if (/^(importo|totale|tot\.|amount|total|valore|netto)/.test(t)) return 'total';
+  if (/^(descri|prodott|articol|denomin|servizi|lavoraz|oggetto|item|dettagli)/.test(t)) return 'desc';
+  if (/^(cod|sku|rif|ref)/.test(t)) return 'code';
+  if (/^(u\.? ?m\.?$|um$|unit[àa]$)/.test(t)) return 'um';
+  return null;
+}
+
+function buildHeaderColumns(row) {
+  const toks = [];
+  row.items.forEach(it => {
+    const last = toks[toks.length - 1];
+    if (last && (it.x - (last.x + last.w)) < 6) {
+      last.text += ' ' + it.text;
+      last.w = (it.x + it.w) - last.x;
+    } else {
+      toks.push({ text: it.text, x: it.x, w: it.w });
+    }
+  });
+  const cols = [];
+  toks.forEach(tk => {
+    const type = classifyHeaderToken(tk.text);
+    if (type && !cols.find(c => c.type === type)) cols.push({ type: type, x: tk.x, w: tk.w });
+  });
+  return cols;
+}
+
+function isValidHeader(cols) {
+  return cols.length >= 2 && cols.some(c => c.type === 'desc') && cols.some(c => ['qty', 'price', 'total'].includes(c.type));
+}
+
+const IMPORT_NUMERIC_COLS = ['qty', 'price', 'discount', 'tax', 'total'];
+const IMPORT_STOP_REGEX = /totale\s+(imponibile|documento|merce|ordine|fattura|iva|netto|generale|complessivo)|imponibile|metodo di pagamento|condizioni di pagamento|modalit[àa] di pagamento|\biban\b|riepilogo iva/i;
+
+function assignRowToColumns(row, cols) {
+  const cell = {};
+  const numCols = cols.filter(c => IMPORT_NUMERIC_COLS.includes(c.type));
+  const txtCols = cols.filter(c => !IMPORT_NUMERIC_COLS.includes(c.type));
+  const firstNumX = numCols.length ? Math.min(...numCols.map(c => c.x)) : Infinity;
+  row.items.forEach(it => {
+    let target = null;
+    const isNum = !isNaN(parseItNumber(it.text)) && numCols.length && (it.x + it.w) > firstNumX - 15;
+    if (isNum) {
+      let best = Infinity;
+      const ic = it.x + it.w / 2, ir = it.x + it.w;
+      numCols.forEach(c => {
+        const d = Math.min(Math.abs(ic - (c.x + c.w / 2)), Math.abs(ir - (c.x + c.w)), Math.abs(it.x - c.x));
+        if (d < best) { best = d; target = c; }
+      });
+      if (best > 60) target = null;
+    }
+    if (!target && txtCols.length) {
+      const cand = txtCols.filter(c => c.x <= it.x + 12);
+      target = cand.length ? cand[cand.length - 1] : txtCols[0];
+    }
+    if (!target) target = cols[0];
+    (cell[target.type] = cell[target.type] || []).push(it);
+  });
+  return cell;
+}
+
+function cellToArticle(cell) {
+  const txt = k => (cell[k] || []).map(i => i.text).join(' ').trim();
+  const num = k => {
+    const v = (cell[k] || []).map(i => parseItNumber(i.text)).filter(v => !isNaN(v));
+    return v.length ? v[0] : NaN;
+  };
+  const desc = txt('desc');
+  const code = txt('code');
+  let qty = num('qty'), price = num('price'), total = num('total'), tax = num('tax'), disc = num('discount');
+  if (isNaN(price) && isNaN(total)) return null;
+  if (!desc && !code) return null;
+  if (isNaN(qty) || qty <= 0) qty = 1;
+  if (isNaN(price)) price = total / qty;
+  if (isNaN(tax) || tax < 0 || tax > 30) tax = 22;
+  const art = { code: code, desc: desc || code, qty: qty, price: Math.round(price * 10000) / 10000, tax: tax };
+  if (!isNaN(disc) && disc > 0 && disc <= 100) art.discount = disc;
+  return art;
+}
+
+function extractArticlesByHeader(rows) {
+  let cols = null;
+  const items = [];
+  let lastRow = null;
+  for (const row of rows) {
+    if (!cols) {
+      const c = buildHeaderColumns(row);
+      if (isValidHeader(c)) { cols = c; lastRow = row; }
+      continue;
+    }
+    if (IMPORT_STOP_REGEX.test(row.text)) {
+      if (items.length > 0) break;
+      continue;
+    }
+    const maybeHeader = buildHeaderColumns(row);
+    if (isValidHeader(maybeHeader)) { cols = maybeHeader; lastRow = row; continue; }
+
+    const art = cellToArticle(assignRowToColumns(row, cols));
+    if (art) {
+      items.push(art);
+    } else if (items.length > 0 && lastRow && lastRow.page === row.page && (lastRow.y - row.y) < 22) {
+      // riga di sola descrizione: continuazione dell'articolo precedente
+      const onlyText = row.items.every(i => isNaN(parseItNumber(i.text)));
+      if (onlyText && row.text.length < 160) items[items.length - 1].desc += ' ' + row.text;
+    }
+    lastRow = row;
+  }
+  return items;
+}
+
+function extractArticlesHeuristic(rows) {
+  const SKIP = /(totale|imponibile|\biva\b|p\.? ?iva|c\.? ?f\.?|iban|\btel\b|fax|\bpec\b|\bcap\b|spedizione|bollo|acconto|scadenza|pagamento|banca)/i;
+  const MONEY = /^-?(\d{1,3}(\.\d{3})+|\d+),\d{2}$/;
+  const items = [];
+  rows.forEach(row => {
+    if (SKIP.test(row.text)) return;
+    const money = row.items.filter(i => MONEY.test(i.text.replace(/[€\s]/g, '')));
+    if (!money.length) return;
+    const firstMoneyX = money[0].x;
+    const left = row.items.filter(i => i.x < firstMoneyX - 1);
+    if (!left.length) return;
+    const intTokens = left.filter(i => /^\d+([,.]0+)?$/.test(i.text));
+    let qty = 1;
+    let qtyItem = null;
+    if (intTokens.length) {
+      qtyItem = intTokens[intTokens.length - 1];
+      qty = parseInt(qtyItem.text, 10) || 1;
+    }
+    let descItems = left.filter(i => i !== qtyItem);
+    if (descItems.length && /^\d+$/.test(descItems[0].text)) descItems.shift();
+    const desc = descItems.map(i => i.text).join(' ').trim();
+    if ((desc.match(/[A-Za-zÀ-ÿ]/g) || []).length < 3) return;
+    const vals = money.map(m => parseItNumber(m.text));
+    let price = vals[0];
+    if (vals.length >= 2 && qty > 1 && Math.abs(vals[0] * qty - vals[vals.length - 1]) > 0.02 * Math.max(1, vals[vals.length - 1])) {
+      price = vals[vals.length - 1] / qty;
+    }
+    items.push({ code: '', desc: desc, qty: qty, price: Math.round(price * 10000) / 10000, tax: 22 });
+  });
+  return items;
+}
+
+function extractOrderMeta(rows) {
+  const meta = {};
+  for (const row of rows) {
+    const t = row.text;
+    if (!meta.orderRef) {
+      const m = t.match(/(?:ordine(?: di acquisto| cliente)?|order(?: no\.?| number)?|preventivo|offerta|conferma d['’]ordine|rif\.? ?ordine)\s*(?:n\.?|nr\.?|n°|no\.?|num\.?|numero|#)?\s*[:\-]?\s*([A-Z0-9\/\-_.]*\d[A-Z0-9\/\-_.]*)/i);
+      if (m && m[1].length <= 25) meta.orderRef = m[1].replace(/[.\-_\/]+$/, '');
+    }
+    if (!meta.deliveryDate) {
+      const d = t.match(/consegna[^0-9]{0,30}(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})/i);
+      if (d) {
+        const dd = parseInt(d[1], 10), mm = parseInt(d[2], 10);
+        const yy = d[3].length === 2 ? '20' + d[3] : d[3];
+        if (dd >= 1 && dd <= 31 && mm >= 1 && mm <= 12) {
+          meta.deliveryDate = `${yy}-${String(mm).padStart(2, '0')}-${String(dd).padStart(2, '0')}`;
+        }
+      }
+    }
+    if (meta.docNet === undefined) {
+      const n = t.match(/imponibile[^\d]{0,15}(-?\d{1,3}(?:\.\d{3})*,\d{2})/i);
+      if (n) meta.docNet = parseItNumber(n[1]);
+    }
+  }
+  return meta;
+}
+
+async function extractArticlesFromArubaPdf(file) {
+  // Lettura delle righe del PDF (serve per i layout non Aruba e per i dati dell'ordine)
+  let rows = [];
+  try {
+    const buf = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+    rows = await getPdfRows(pdf);
+  } catch (e) { rows = []; }
+
+  // 1) Formato Aruba: logica originale, invariata
+  const legacy = await extractArticlesArubaLegacy(file);
+  const isPlaceholder = legacy.length === 1 && String(legacy[0].desc || '').indexOf('Preventivo: ') === 0 && !legacy[0].price;
+
+  let items = [];
+  if (!isPlaceholder) {
+    items = legacy;
+  } else if (rows.length) {
+    try {
+      // 2) tabella con intestazione, 3) riconoscimento a righe
+      items = extractArticlesByHeader(rows);
+      if (items.length === 0) items = extractArticlesHeuristic(rows);
+    } catch (e) { items = []; }
+  }
+  if (items.length === 0) items = legacy; // 4) segnaposto
+
+  try { items.meta = extractOrderMeta(rows); } catch (e) { items.meta = {}; }
+  return items;
+}
+
+// Confronta il totale imponibile letto dal PDF con la somma degli articoli importati
+function checkImportTotals(items) {
+  const m = items && items.meta;
+  if (!m || m.docNet === undefined || isNaN(m.docNet)) return '';
+  if (!items.some(a => a.price > 0)) return '';
+  const sum = items.reduce((s, a) => s + (parseFloat(a.qty) || 0) * (parseFloat(a.price) || 0) * (1 - (parseFloat(a.discount) || 0) / 100), 0);
+  if (Math.abs(sum - m.docNet) <= 0.05) return '';
+  return `⚠️ Controlla gli articoli importati.\nTotale imponibile letto dal documento: € ${m.docNet.toFixed(2)}\nSomma degli articoli importati: € ${sum.toFixed(2)}\n(può mancare qualche riga o uno sconto)`;
+}
+
 function sanitizeCard(card) {
   if (!card) return null;
   
@@ -1797,6 +2050,7 @@ function sanitizeCard(card) {
   if (!card.whatsapp) card.whatsapp = '';
   if (!card.machine) card.machine = '';
   if (!card.orderRef) card.orderRef = '';
+  if (!Array.isArray(card.checklist)) card.checklist = [];
   
   if (card.stage === 'lavorato') card.stage = 'lavorato-da-bollettare';
   if (card.stage === 'consegnato') card.stage = 'bollettato-da-consegnare';
@@ -2022,6 +2276,15 @@ function createCardHTML(card) {
       <span class="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-[10px] font-mono text-slate-300">Rif: ${esc(card.orderRef)}</span>
     </div>` : '';
   
+  const checklistTotal = Array.isArray(card.checklist) ? card.checklist.length : 0;
+  const checklistDone = checklistTotal ? card.checklist.filter(i => i.done).length : 0;
+  const checklistBadgeHTML = checklistTotal ? `
+    <div class="mt-1">
+      <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded border text-[10px] font-mono ${checklistDone === checklistTotal ? 'bg-emerald-950 text-emerald-300 border-emerald-700' : 'bg-slate-800 text-slate-300 border-slate-700'}">
+        <i data-lucide="check-square" class="w-3 h-3"></i> ${checklistDone}/${checklistTotal}
+      </span>
+    </div>` : '';
+
   const cardIdShort = card.id ? card.id.slice(-4).toUpperCase() : '0000';
   
   const notifyIconHTML = (card.stage === 'bollettato-da-consegnare' && (card.email || card.whatsapp)) ? `
@@ -2048,6 +2311,7 @@ function createCardHTML(card) {
       
       ${referentHTML}
       ${orderRefHTML}
+      ${checklistBadgeHTML}
       ${machineBadgeHTML}
       ${deliveryHTML}
       ${thumbnailHTML}
@@ -2292,8 +2556,8 @@ async function createNewCard(event) {
   const email = document.getElementById('formEmail') ? document.getElementById('formEmail').value.trim() : '';
   const whatsapp = document.getElementById('formWhatsapp') ? document.getElementById('formWhatsapp').value.trim() : '';
   const machine = document.getElementById('formMachine') ? document.getElementById('formMachine').value : '';
-  const deliveryDate = document.getElementById('formDeliveryDate') ? document.getElementById('formDeliveryDate').value : '';
-  const orderRef = document.getElementById('formOrderRef') ? document.getElementById('formOrderRef').value.trim() : '';
+  let deliveryDate = document.getElementById('formDeliveryDate') ? document.getElementById('formDeliveryDate').value : '';
+  let orderRef = document.getElementById('formOrderRef') ? document.getElementById('formOrderRef').value.trim() : '';
   
   let jobType = document.getElementById('formJobType').value;
   if (jobType === 'custom') jobType = document.getElementById('formCustomJobType').value.trim() || 'Altro';
@@ -2343,6 +2607,13 @@ async function createNewCard(event) {
     } catch(e) {}
   }
   
+  let importNote = '';
+  if (extractedArticles && extractedArticles.meta) {
+    if (!orderRef && extractedArticles.meta.orderRef) orderRef = extractedArticles.meta.orderRef;
+    if (!deliveryDate && extractedArticles.meta.deliveryDate) deliveryDate = extractedArticles.meta.deliveryDate;
+    importNote = checkImportTotals(extractedArticles);
+  }
+
   if (extractedArticles.length === 0) {
     extractedArticles = initialNote ? [{ code: '', desc: initialNote, qty: 1, price: 0, tax: 22 }] : [];
   }
@@ -2371,6 +2642,7 @@ async function createNewCard(event) {
   
   closeModal('addCardModal');
   showToast("Commessa creata con successo!");
+  if (importNote) alert(importNote);
 }
 
 function saveCardEdits(silent = false) {
@@ -2758,6 +3030,7 @@ function openDetail(id) {
 
   renderArticlesTable(card);
   renderAttachments(card);
+  renderChecklist(card);
   
   const timeline = document.getElementById('storyboardTimeline');
   timeline.innerHTML = '';
@@ -2791,6 +3064,118 @@ function openDetail(id) {
   }
   
   openModal('detailModal');
+}
+
+// ==========================================
+// CHECKLIST PER COMMESSA
+// ==========================================
+const DEFAULT_CHECKLIST_SUGGESTIONS = ['File ricevuto', 'Bozza approvata', 'Materiale arrivato', 'Acconto ricevuto', 'Controllo qualità'];
+
+function renderChecklist(card) {
+  const listEl = document.getElementById('checklistItems');
+  const sugEl = document.getElementById('checklistSuggestions');
+  const counterEl = document.getElementById('checklistCounter');
+  if (!listEl || !card) return;
+  const items = Array.isArray(card.checklist) ? card.checklist : [];
+  const done = items.filter(i => i.done).length;
+  if (counterEl) counterEl.textContent = items.length ? `(${done}/${items.length})` : '';
+
+  listEl.innerHTML = items.length === 0
+    ? '<p class="text-xs text-slate-500 italic">Nessuna voce.</p>'
+    : items.map(i => `
+      <div class="flex items-center gap-2 bg-slate-900 border border-slate-800 rounded px-2 py-1.5">
+        <input type="checkbox" ${i.done ? 'checked' : ''} onchange="toggleChecklistItem('${esc(i.id)}')" class="w-4 h-4 accent-emerald-500 cursor-pointer shrink-0">
+        <span class="flex-1 text-xs ${i.done ? 'line-through text-slate-500' : 'text-slate-200'}">${esc(i.text)}</span>
+        <button onclick="removeChecklistItem('${esc(i.id)}')" class="text-slate-600 hover:text-red-400 p-1 cursor-pointer" title="Rimuovi voce"><i data-lucide="x" class="w-3.5 h-3.5"></i></button>
+      </div>`).join('');
+
+  if (sugEl) {
+    const existing = items.map(i => (i.text || '').toLowerCase());
+    sugEl.innerHTML = DEFAULT_CHECKLIST_SUGGESTIONS
+      .filter(s => !existing.includes(s.toLowerCase()))
+      .map(s => `<button onclick="addChecklistItem(this.dataset.text)" data-text="${esc(s)}" class="text-[11px] px-2 py-1 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 cursor-pointer transition-colors">+ ${esc(s)}</button>`)
+      .join('');
+  }
+  lucide.createIcons();
+}
+
+function persistChecklist(card) {
+  saveLocal();
+  syncCardToCloud(card);
+  renderChecklist(card);
+}
+
+function addChecklistItem(text) {
+  const card = state.cards.find(c => c.id === activeCardId);
+  if (!card) return;
+  const input = document.getElementById('checklistNewItem');
+  const fromChip = (typeof text === 'string');
+  const t = (fromChip ? text : (input ? input.value : '')).trim();
+  if (!t) return;
+  if (!Array.isArray(card.checklist)) card.checklist = [];
+  card.checklist.push({ id: 'k' + Date.now().toString(36) + Math.random().toString(36).substring(2, 6), text: t, done: false });
+  if (!fromChip && input) input.value = '';
+  playSound('click');
+  persistChecklist(card);
+}
+
+function toggleChecklistItem(itemId) {
+  const card = state.cards.find(c => c.id === activeCardId);
+  if (!card || !Array.isArray(card.checklist)) return;
+  const item = card.checklist.find(i => i.id === itemId);
+  if (!item) return;
+  item.done = !item.done;
+  playSound('click');
+  persistChecklist(card);
+}
+
+function removeChecklistItem(itemId) {
+  const card = state.cards.find(c => c.id === activeCardId);
+  if (!card || !Array.isArray(card.checklist)) return;
+  card.checklist = card.checklist.filter(i => i.id !== itemId);
+  persistChecklist(card);
+}
+
+// ==========================================
+// DUPLICA COMMESSA
+// ==========================================
+function duplicateCurrentCard() {
+  const src = state.cards.find(c => c.id === activeCardId);
+  if (!src) return;
+  if (!confirm(`Creare una nuova commessa copiando "${src.title || 'Senza titolo'}"?`)) return;
+
+  saveCardEdits(true); // salva eventuali modifiche appena digitate
+  const stage = 'prev-da-fare';
+  const stageLabel = (COLUMNS_CONFIG.find(col => col.id === stage) || {}).label || 'Prev. da fare';
+  const now = new Date().toISOString();
+
+  const newCard = {
+    id: 'c' + Date.now().toString(36) + Math.random().toString(36).substring(2, 7),
+    title: src.title || '',
+    client: src.client || '',
+    referent: src.referent || '',
+    email: src.email || '',
+    whatsapp: src.whatsapp || '',
+    orderRef: '',
+    machine: src.machine || '',
+    jobType: src.jobType || '',
+    deliveryDate: '',
+    articles: JSON.parse(JSON.stringify(src.articles || [])),
+    checklist: (src.checklist || []).map(i => ({ id: 'k' + Date.now().toString(36) + Math.random().toString(36).substring(2, 6), text: i.text, done: false })),
+    stage: stage,
+    order: Date.now(),
+    createdAt: now,
+    photos: [],
+    history: [{ stage: stage, label: `Duplicata da "${src.title || 'Senza titolo'}" - inserita in "${stageLabel}"`, timestamp: now }]
+  };
+
+  state.cards.unshift(newCard);
+  saveLocal();
+  syncCardToCloud(newCard);
+  populateGlobalFilterDropdown();
+  playSound('success');
+  showToast('Commessa duplicata!');
+  openDetail(newCard.id); // apre subito la nuova per aggiornare data consegna, riferimento, ecc.
 }
 
 function restoreCardFromArchive() {
@@ -2855,11 +3240,26 @@ async function handleDocumentUpload(event) {
   
   let imgbbKey = IMGBB_API_KEY && IMGBB_API_KEY !== "INSERISCI_QUI_LA_TUA_CHIAVE_IMGBB" ? IMGBB_API_KEY : null;
   
+  const uploadNotes = [];
   for (const file of files) {
     try {
       let imgData = "";
       if (file.type === 'application/pdf') {
         const extractedArticles = await extractArticlesFromArubaPdf(file);
+        if (extractedArticles && extractedArticles.meta) {
+          if (!card.orderRef && extractedArticles.meta.orderRef) {
+            card.orderRef = extractedArticles.meta.orderRef;
+            const oe = document.getElementById('editOrderRef');
+            if (oe) oe.value = card.orderRef;
+          }
+          if (!card.deliveryDate && extractedArticles.meta.deliveryDate) {
+            card.deliveryDate = extractedArticles.meta.deliveryDate;
+            const de = document.getElementById('editDeliveryDate');
+            if (de) de.value = card.deliveryDate;
+          }
+          const note = checkImportTotals(extractedArticles);
+          if (note) uploadNotes.push(note);
+        }
         if (extractedArticles && extractedArticles.length > 0) {
           if (!card.articles || card.articles.length === 0 || (card.articles.length === 1 && !card.articles[0].desc)) {
             card.articles = extractedArticles;
@@ -2904,6 +3304,7 @@ async function handleDocumentUpload(event) {
   event.target.value = '';
   playSound('success');
   showToast("Documento importato correttamente!");
+  if (uploadNotes.length) alert(uploadNotes.join("\n\n"));
   setSyncStatus('saved');
 }
 
