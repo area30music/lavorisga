@@ -562,6 +562,20 @@
 
         <div>
           <div class="flex justify-between items-center mb-2">
+            <label class="text-xs text-slate-400 font-semibold uppercase tracking-wider block">Checklist <span id="checklistCounter" class="ml-1 text-slate-500 normal-case font-mono"></span></label>
+          </div>
+          <div class="bg-slate-950 p-2.5 rounded-lg border border-slate-800 space-y-2">
+            <div id="checklistItems" class="space-y-1"></div>
+            <div id="checklistSuggestions" class="flex flex-wrap gap-1.5"></div>
+            <div class="flex gap-2">
+              <input type="text" id="checklistNewItem" placeholder="Aggiungi una voce..." autocomplete="off" onkeydown="if(event.key==='Enter'){event.preventDefault(); addChecklistItem();}" class="flex-1 bg-slate-900 border border-slate-700 rounded px-3 py-1.5 text-slate-200 text-xs focus:outline-none focus:border-indigo-500">
+              <button onclick="addChecklistItem();" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs px-3 py-1.5 rounded font-semibold cursor-pointer active:scale-95 transition-transform">Aggiungi</button>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div class="flex justify-between items-center mb-2">
             <label class="text-xs text-slate-400 font-semibold uppercase tracking-wider block">Foto & Documenti PDF</label>
             <label id="uploadLabelBtn" class="bg-slate-800 hover:bg-slate-700 text-xs px-3 py-1.5 rounded-lg cursor-pointer flex items-center gap-1.5 text-slate-200 transition-colors">
               <span id="uploadLabelIcon"><i data-lucide="paperclip" class="w-3.5 h-3.5"></i></span>
@@ -593,6 +607,9 @@
         </div>
         
         <div class="flex gap-2">
+          <button onclick="duplicateCurrentCard();" class="bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-cyan-900/60 px-4 py-2 rounded-lg font-semibold flex items-center gap-2 active:scale-95 transition-all text-xs cursor-pointer" title="Crea una nuova commessa con gli stessi dati">
+            <i data-lucide="copy" class="w-4 h-4"></i> Duplica
+          </button>
           <button onclick="playSound('click'); printCard();" class="bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded-lg font-semibold flex items-center gap-2 active:scale-95 transition-all text-xs cursor-pointer">
             <i data-lucide="printer" class="w-4 h-4"></i> Stampa Scheda
           </button>
