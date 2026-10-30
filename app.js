@@ -1668,6 +1668,7 @@ function compressImage(file, maxWidth, maxHeight, quality) {
   });
 }
 
+
 function convertPdfToImage(file, scaleFactor, quality) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -2019,18 +2020,49 @@ async function extractArticlesFromArubaPdf(file) {
   }
   if (items.length === 0) items = legacy; // 4) segnaposto
 
-  try { items.meta = extractOrderMeta(rows); } catch (e) { items.meta = {}; }
-  return items;
+  let meta = {};
+  try { meta = extractOrderMeta(rows); } catch (e) { meta = {}; }
+  return { articles: items.map(a => Object.assign({}, a)), meta: meta };
 }
 
 // Confronta il totale imponibile letto dal PDF con la somma degli articoli importati
-function checkImportTotals(items) {
-  const m = items && items.meta;
+function checkImportTotals(items, meta) {
+  const m = meta;
   if (!m || m.docNet === undefined || isNaN(m.docNet)) return '';
   if (!items.some(a => a.price > 0)) return '';
   const sum = items.reduce((s, a) => s + (parseFloat(a.qty) || 0) * (parseFloat(a.price) || 0) * (1 - (parseFloat(a.discount) || 0) / 100), 0);
   if (Math.abs(sum - m.docNet) <= 0.05) return '';
   return `⚠️ Controlla gli articoli importati.\nTotale imponibile letto dal documento: € ${m.docNet.toFixed(2)}\nSomma degli articoli importati: € ${sum.toFixed(2)}\n(può mancare qualche riga o uno sconto)`;
+}
+
+
+// Rete di sicurezza: il nuovo lettore non deve mai bloccare l'inserimento o il caricamento di un documento
+async function extractArticlesSafe(file) {
+  const fallback = () => ({ articles: [{ code: '', desc: 'Preventivo: ' + file.name, qty: 1, price: 0, tax: 22 }], meta: {} });
+  try {
+    const result = await Promise.race([
+      extractArticlesFromArubaPdf(file),
+      new Promise((resolve) => setTimeout(() => resolve(null), 20000))
+    ]);
+    if (!result || !Array.isArray(result.articles) || result.articles.length === 0) return fallback();
+    // Copia pulita: solo numeri e testi, nessun valore che Firebase possa rifiutare
+    const clean = result.articles.map(a => {
+      const o = {
+        code: String(a.code || ''),
+        desc: String(a.desc || ''),
+        qty: Number.isFinite(parseFloat(a.qty)) ? parseFloat(a.qty) : 1,
+        price: Number.isFinite(parseFloat(a.price)) ? parseFloat(a.price) : 0,
+        tax: Number.isFinite(parseFloat(a.tax)) ? parseFloat(a.tax) : 22
+      };
+      const d = parseFloat(a.discount);
+      if (Number.isFinite(d) && d > 0) o.discount = d;
+      return o;
+    });
+    return { articles: clean, meta: result.meta || {} };
+  } catch (e) {
+    console.error('Lettura PDF non riuscita:', e);
+    return fallback();
+  }
 }
 
 function sanitizeCard(card) {
@@ -2548,7 +2580,24 @@ function handleFormFileSelect(event) {
 
 async function createNewCard(event) {
   event.preventDefault();
+  if (window.__creatingCard) return;
+  window.__creatingCard = true;
+  try {
+    await createNewCardInner();
+  } catch (e) {
+    console.error(e);
+    alert("⚠️ Errore durante la creazione della commessa: " + (e && e.message ? e.message : e));
+  } finally {
+    window.__creatingCard = false;
+    const sb = document.querySelector('#newCardForm button[type="submit"]');
+    if (sb) { sb.disabled = false; if (sb.dataset.oldText) sb.innerHTML = sb.dataset.oldText; }
+  }
+}
+
+async function createNewCardInner() {
   playSound('success');
+  const sb = document.querySelector('#newCardForm button[type="submit"]');
+  if (sb) { sb.dataset.oldText = sb.innerHTML; sb.disabled = true; sb.textContent = 'Sto leggendo il documento...'; }
   
   const title = document.getElementById('formTitle').value.trim();
   const client = title;
@@ -2570,6 +2619,7 @@ async function createNewCard(event) {
   if (client) registerClientAdvanced(client, referent, email, whatsapp);
 
   let extractedArticles = [];
+  let extractedMeta = {};
   let initialPhotos = [];
   
   if (tempFormFile) {
@@ -2577,7 +2627,9 @@ async function createNewCard(event) {
     try {
       let imgData = "";
       if (tempFormFile.type === 'application/pdf') {
-        extractedArticles = await extractArticlesFromArubaPdf(tempFormFile);
+        const ex = await extractArticlesSafe(tempFormFile);
+        extractedArticles = ex.articles;
+        extractedMeta = ex.meta || {};
         imgData = await convertPdfToImage(tempFormFile, imgbbKey ? 3.0 : 2.0, imgbbKey ? 0.90 : 0.8);
       } else {
         imgData = await compressImage(tempFormFile, imgbbKey ? 2400 : 1600, imgbbKey ? 2400 : 1600, imgbbKey ? 0.90 : 0.8);
@@ -2598,7 +2650,8 @@ async function createNewCard(event) {
             }
           } catch(e) {
             console.error(e);
-            alert("⚠️ Impossibile caricare l'immagine sul server (ImgBB). L'allegato NON è stato salvato: riprova tra poco.");
+            // Come in origine: se ImgBB non risponde, l'immagine resta nella commessa in alta qualita'
+            initialPhotos.push({ image: imgData, rotation: 0 });
           }
         } else {
           initialPhotos.push({ image: imgData, rotation: 0 });
@@ -2608,10 +2661,10 @@ async function createNewCard(event) {
   }
   
   let importNote = '';
-  if (extractedArticles && extractedArticles.meta) {
-    if (!orderRef && extractedArticles.meta.orderRef) orderRef = extractedArticles.meta.orderRef;
-    if (!deliveryDate && extractedArticles.meta.deliveryDate) deliveryDate = extractedArticles.meta.deliveryDate;
-    importNote = checkImportTotals(extractedArticles);
+  if (extractedArticles.length > 0) {
+    if (!orderRef && extractedMeta.orderRef) orderRef = extractedMeta.orderRef;
+    if (!deliveryDate && extractedMeta.deliveryDate) deliveryDate = extractedMeta.deliveryDate;
+    importNote = checkImportTotals(extractedArticles, extractedMeta);
   }
 
   if (extractedArticles.length === 0) {
@@ -2629,9 +2682,11 @@ async function createNewCard(event) {
     history: [{ stage: initialStage, label: `Inserito in "${initialStageLabel}"`, timestamp: new Date().toISOString() }]
   };
 
-  state.cards.unshift(newCard);
+  // Copia pulita: elimina eventuali valori non salvabili (undefined, NaN, proprieta' extra)
+  const cleanCard = JSON.parse(JSON.stringify(newCard));
+  state.cards.unshift(cleanCard);
   saveLocal();
-  syncCardToCloud(newCard);
+  syncCardToCloud(cleanCard);
   populateGlobalFilterDropdown();
   
   document.getElementById('newCardForm').reset();
@@ -3245,19 +3300,21 @@ async function handleDocumentUpload(event) {
     try {
       let imgData = "";
       if (file.type === 'application/pdf') {
-        const extractedArticles = await extractArticlesFromArubaPdf(file);
-        if (extractedArticles && extractedArticles.meta) {
-          if (!card.orderRef && extractedArticles.meta.orderRef) {
-            card.orderRef = extractedArticles.meta.orderRef;
+        const exRes = await extractArticlesSafe(file);
+        const extractedArticles = exRes.articles;
+        const exMeta = exRes.meta || {};
+        if (extractedArticles && extractedArticles.length) {
+          if (!card.orderRef && exMeta.orderRef) {
+            card.orderRef = exMeta.orderRef;
             const oe = document.getElementById('editOrderRef');
             if (oe) oe.value = card.orderRef;
           }
-          if (!card.deliveryDate && extractedArticles.meta.deliveryDate) {
-            card.deliveryDate = extractedArticles.meta.deliveryDate;
+          if (!card.deliveryDate && exMeta.deliveryDate) {
+            card.deliveryDate = exMeta.deliveryDate;
             const de = document.getElementById('editDeliveryDate');
             if (de) de.value = card.deliveryDate;
           }
-          const note = checkImportTotals(extractedArticles);
+          const note = checkImportTotals(extractedArticles, exMeta);
           if (note) uploadNotes.push(note);
         }
         if (extractedArticles && extractedArticles.length > 0) {
@@ -3287,7 +3344,8 @@ async function handleDocumentUpload(event) {
             }
           } catch(e) {
             console.error(e);
-            alert("⚠️ Impossibile caricare l'immagine sul server (ImgBB). L'allegato NON è stato salvato: riprova tra poco.");
+            // Come in origine: se ImgBB non risponde, l'immagine resta nella commessa in alta qualita'
+            card.photos.push({ image: imgData, rotation: 0 });
           }
         } else {
           card.photos.push({ image: imgData, rotation: 0 });
@@ -4324,21 +4382,24 @@ function removeArticleFromDB(idx) {
 // Non serve incrementare nessun numero di versione.
 // ==========================================
 (function setupAutoUpdate() {
-  const CHECK_EVERY_MS = 90 * 1000;
+  const CHECK_EVERY_MS = 120 * 1000;
+  const FILES = ['./index.html', './app.js', './style.css'];
   let toastShown = false;
+  let baseline = null;
 
-  function hash(t) {
-    return (window.__sgaHash ? window.__sgaHash(t) : String(t.length));
-  }
-  async function getText(url) {
-    const r = await fetch(url + (url.includes('?') ? '&' : '?') + '_=' + Date.now(), { cache: 'no-store' });
-    if (!r.ok) throw new Error('HTTP ' + r.status);
-    return r.text();
-  }
-  async function fetchRemoteVersion() {
+  // Impronta leggera: usa ETag / Last-Modified / Content-Length restituiti da GitHub (HEAD: non scarica il file)
+  async function fetchSignature() {
     try {
-      const [h, a, c] = await Promise.all([getText('./index.html'), getText('./app.js'), getText('./style.css')]);
-      return { index: hash(h), app: hash(a), css: hash(c) };
+      const sigs = await Promise.all(FILES.map(async (f) => {
+        const r = await fetch(f + '?_=' + Date.now(), { method: 'HEAD', cache: 'no-store' });
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        const etag = (r.headers.get('etag') || '').replace(/^W\//, '');
+        const lm = r.headers.get('last-modified') || '';
+        const len = r.headers.get('content-length') || '';
+        if (!etag && !lm) throw new Error('nessuna intestazione utile');
+        return etag || (lm + '|' + len);
+      }));
+      return sigs.join('#');
     } catch (e) { return null; }
   }
   function isBusy() {
@@ -4347,19 +4408,19 @@ function removeArticleFromDB(idx) {
     return ids.some(id => { const el = document.getElementById(id); return el && !el.classList.contains('hidden'); });
   }
   async function check() {
-    const base = window.__SGA_BASE;
-    if (!base) return;
-    const cur = await fetchRemoteVersion();
-    if (!cur) return;
-    if (cur.index === base.index && cur.app === base.app && cur.css === base.css) return;
+    const sig = await fetchSignature();
+    if (!sig) return;                       // se non riesco a leggerla, non faccio nulla
+    if (baseline === null) { baseline = sig; return; }   // prima lettura = versione in uso
+    if (sig === baseline) return;           // nessuna novità
 
     if (isBusy()) {
       if (!toastShown) { showToast('\ud83d\udd04 Nuova versione disponibile: si installer\u00e0 appena chiudi la finestra aperta.'); toastShown = true; }
       return;
     }
-    const last = parseInt(sessionStorage.getItem('sga_last_reload') || '0', 10);
-    if (Date.now() - last < 60000) return; // anti-loop
-    sessionStorage.setItem('sga_last_reload', String(Date.now()));
+    // Limite: massimo un ricaricamento ogni 10 minuti, anche se qualcosa va storto
+    const last = parseInt(localStorage.getItem('sga_last_reload') || '0', 10);
+    if (Date.now() - last < 10 * 60 * 1000) return;
+    localStorage.setItem('sga_last_reload', String(Date.now()));
     showToast('\ud83d\udd04 Aggiornamento in corso...');
     setTimeout(() => {
       const u = new URL(location.href);
@@ -4368,7 +4429,7 @@ function removeArticleFromDB(idx) {
     }, 700);
   }
 
-  setTimeout(check, 20000);
+  setTimeout(check, 5000);   // fotografa la versione in uso poco dopo l'avvio
   setInterval(check, CHECK_EVERY_MS);
   document.addEventListener('visibilitychange', () => { if (!document.hidden) check(); });
   window.addEventListener('online', check);
