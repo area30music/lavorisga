@@ -512,7 +512,7 @@
           
           <!-- CONTENITORE TABELLA: overflow-visible permette alla tendina di uscire e coprire i totali -->
           <div class="w-full overflow-visible relative z-30">
-            <table class="w-full text-left text-xs min-w-[700px]">
+            <table class="w-full text-left text-xs min-w-[760px]">
               <thead>
                 <tr class="border-b border-slate-800 text-slate-400 uppercase text-[10px]">
                   <th class="py-2 px-1 w-16 text-center">Sposta</th>
@@ -520,6 +520,7 @@
                   <th class="py-2 px-2">Descrizione</th>
                   <th class="py-2 px-2 w-16 text-center">Q.tà</th>
                   <th class="py-2 px-2 w-20 text-right">Prezzo Un.</th>
+                  <th class="py-2 px-2 w-16 text-center">Sconto %</th>
                   <th class="py-2 px-2 w-16 text-center">IVA %</th>
                   <th class="py-2 px-2 w-20 text-right">Tot. Netto</th>
                   <th class="py-2 px-2 w-20 text-right">Prezzo Ivato</th>
@@ -538,7 +539,11 @@
             <button onclick="playSound('success'); saveArticlesEdits();" class="bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-300 border border-indigo-500/30 text-xs px-3 py-1.5 rounded font-semibold flex items-center gap-1.5 transition-colors cursor-pointer">
               <i data-lucide="save" class="w-3.5 h-3.5"></i> Salva Articoli
             </button>
-            <div class="flex gap-4 text-right">
+            <div class="flex flex-wrap justify-end gap-4 text-right">
+              <div>
+                <span class="text-[10px] text-slate-400 uppercase block font-bold">Sconti:</span>
+                <span id="grandDiscountDisplay" class="text-xs font-semibold text-amber-300">€ 0,00</span>
+              </div>
               <div>
                 <span class="text-[10px] text-slate-400 uppercase block font-bold">Imponibile:</span>
                 <span id="grandSubtotalDisplay" class="text-xs font-semibold text-slate-300">€ 0,00</span>
