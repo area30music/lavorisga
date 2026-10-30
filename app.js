@@ -144,9 +144,7 @@ function handleLogin(event) {
 }
 
 function logoutApp() {
-  if (confirm("Vuoi disconnetterti da SGA Workflow?")) {
-    auth.signOut();
-  }
+  showInAppConfirm("Vuoi disconnetterti da SGA Workflow?", () => { auth.signOut(); }, 'Disconnetti');
 }
 
 // Controllo Archivio Automatico
@@ -1185,12 +1183,12 @@ function addClientFromSettings() {
   const email = document.getElementById('crmModalEmail').value.trim();
   const wa = document.getElementById('crmModalWa').value.trim();
   
-  if (!name) return alert("Inserisci almeno il nome del cliente/azienda.");
+  if (!name) return showInAppNotice("Inserisci almeno il nome del cliente/azienda.");
   
   const isDuplicate = CLIENTS_DB.find(c => c.name.toLowerCase() === name.toLowerCase() && (c.referent || '').toLowerCase() === ref.toLowerCase() && c.id !== window.editingClientId);
   if (isDuplicate) {
     playSound('alert');
-    return alert(`ATTENZIONE: Esiste già il referente "${ref || 'Nessuno'}" per l'azienda "${name}".\nModifica la voce esistente per non creare duplicati.`);
+    return showInAppNotice(`Esiste già il referente "${ref || 'Nessuno'}" per l'azienda "${name}".\nModifica la voce esistente per non creare duplicati.`);
   }
   
   if (window.editingClientId) {
@@ -1270,7 +1268,7 @@ function saveSubSettings() {
 }
 
 function resetDefaultSettings() {
-  if (confirm("Vuoi ripristinare tutti i valori predefiniti?")) {
+  showInAppConfirm("Vuoi ripristinare tutti i valori predefiniti?", () => {
     COLUMNS_CONFIG = JSON.parse(JSON.stringify(DEFAULT_COLUMNS_CONFIG));
     USER_ALARMS = [];
     masterFontSizePx = 24;
@@ -1287,8 +1285,8 @@ function resetDefaultSettings() {
     applyAppFontSize(15);
     closeModal('settingsModal');
     renderBoard();
-    alert("Ripristino completato.");
-  }
+    showInAppNotice("Ripristino completato.", "Fatto", 'ok');
+  }, 'Ripristina');
 }
 
 function showArcadeAlert(cards) {
@@ -2068,6 +2066,139 @@ async function extractArticlesSafe(file) {
   }
 }
 
+
+// Avviso interno al programma (al posto della finestra di Chrome)
+function showInAppNotice(message, title, tone) {
+  const old = document.getElementById('sgaNotice');
+  if (old) old.remove();
+  const box = document.createElement('div');
+  box.id = 'sgaNotice';
+  box.className = 'fixed inset-0 z-[400] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4';
+  const inner = document.createElement('div');
+  const isOk = tone === 'ok';
+  inner.className = 'max-w-md w-full bg-slate-900 border ' + (isOk ? 'border-emerald-500/40' : 'border-amber-500/40') + ' rounded-2xl shadow-2xl p-5 space-y-3';
+  const h = document.createElement('div');
+  h.className = (isOk ? 'text-emerald-300' : 'text-amber-300') + ' font-bold text-base';
+  h.textContent = title || (isOk ? 'Fatto' : 'Attenzione');
+  const m = document.createElement('div');
+  m.className = 'text-slate-200 text-sm whitespace-pre-line';
+  m.textContent = String(message || '').replace(/^\u26a0\ufe0f\s*/, '');
+  const b = document.createElement('button');
+  b.className = 'w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2 rounded-lg cursor-pointer';
+  b.textContent = 'OK, ho capito';
+  b.onclick = () => box.remove();
+  inner.appendChild(h); inner.appendChild(m); inner.appendChild(b);
+  box.appendChild(inner);
+  document.body.appendChild(box);
+}
+
+
+// Domanda di conferma interna (al posto della finestra di Chrome): l'azione parte solo se premi Conferma
+function showInAppConfirm(message, onConfirm, confirmLabel, title) {
+  const old = document.getElementById('sgaConfirm');
+  if (old) old.remove();
+  const box = document.createElement('div');
+  box.id = 'sgaConfirm';
+  box.className = 'fixed inset-0 z-[410] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4';
+  const inner = document.createElement('div');
+  inner.className = 'max-w-md w-full bg-slate-900 border border-indigo-500/40 rounded-2xl shadow-2xl p-5 space-y-4';
+  const h = document.createElement('div');
+  h.className = 'text-indigo-300 font-bold text-base';
+  h.textContent = title || 'Conferma';
+  const m = document.createElement('div');
+  m.className = 'text-slate-200 text-sm whitespace-pre-line';
+  m.textContent = String(message || '');
+  const row = document.createElement('div');
+  row.className = 'flex gap-2';
+  const no = document.createElement('button');
+  no.className = 'flex-1 bg-slate-700 hover:bg-slate-600 text-white font-semibold py-2 rounded-lg cursor-pointer';
+  no.textContent = 'Annulla';
+  no.onclick = () => box.remove();
+  const yes = document.createElement('button');
+  yes.className = 'flex-1 bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2 rounded-lg cursor-pointer';
+  yes.textContent = confirmLabel || 'Conferma';
+  yes.onclick = () => { box.remove(); try { onConfirm(); } catch (e) { console.error(e); } };
+  row.appendChild(no); row.appendChild(yes);
+  inner.appendChild(h); inner.appendChild(m); inner.appendChild(row);
+  box.appendChild(inner);
+  document.body.appendChild(box);
+}
+
+// Avviso se si prova a chiudere o ricaricare la pagina mentre un allegato sta ancora caricando
+window.addEventListener('beforeunload', function (e) {
+  const busy = (state.cards || []).some(c => isCardUploading(c));
+  if (busy) { e.preventDefault(); e.returnValue = ''; return ''; }
+});
+
+// Caricamento allegato in secondo piano: la commessa compare subito, la rotellina sparisce a fine invio
+const UPLOAD_MAX_MS = 3 * 60 * 1000;
+function isCardUploading(card) {
+  return !!(card && card.uploading && (Date.now() - card.uploading) < UPLOAD_MAX_MS);
+}
+function refreshUploadingUI(card) {
+  try {
+    if (typeof renderBoard === 'function') renderBoard();
+    if (card && card.id === activeCardId) {
+      renderAttachments(card);
+      renderArticlesTable(card);
+    }
+  } catch (e) { console.error(e); }
+}
+async function finishBackgroundUpload(cardId, imgData, imgbbKey, keepSpinner) {
+  let photo = null;
+  let imgbbFailed = false;
+  try {
+    if (imgData) {
+      if (imgbbKey) {
+        try {
+          const formData = new FormData();
+          formData.append('image', imgData.split(',')[1]);
+          const tU = performance.now();
+          const response = await fetch('https://api.imgbb.com/1/upload?key=' + imgbbKey, { method: 'POST', body: formData });
+          const data = await response.json();
+          console.log('[TEMPI-SGA] invio a ImgBB: ' + Math.round(performance.now() - tU) + ' ms');
+          if (data && data.success) photo = { image: data.data.url, rotation: 0 };
+          else throw new Error('Upload ImgBB non riuscito');
+        } catch (e) {
+          console.error(e);
+          // Come in origine: se ImgBB non risponde, l'immagine resta nella commessa in alta qualita'
+          imgbbFailed = true;
+          photo = { image: imgData, rotation: 0 };
+        }
+      } else {
+        photo = { image: imgData, rotation: 0 };
+      }
+    }
+  } catch (e) { console.error(e); }
+
+  const card = state.cards.find(c => c.id === cardId);
+  if (!card) {
+    if (imgbbFailed) showInAppNotice("Il documento non è stato caricato sul server ImgBB.");
+    return;
+  }
+  if (!Array.isArray(card.photos)) card.photos = [];
+  if (photo) card.photos.push(photo);
+  if (!keepSpinner) delete card.uploading;
+  try {
+    if (db) {
+      const upd = { photos: card.photos };
+      if (!keepSpinner) upd.uploading = firebase.firestore.FieldValue.delete();
+      await db.collection('workflow_sga_cards').doc(cardId).set(upd, { merge: true });
+    }
+  } catch (e) {
+    console.error(e);
+    showToast('\u26a0\ufe0f Salvataggio allegato NON riuscito. Controlla la connessione.');
+  }
+  refreshUploadingUI(card);
+  if (imgbbFailed) {
+    showInAppNotice(
+      'Il documento della commessa "' + (card.title || 'Senza titolo') + '" non è stato caricato sul server ImgBB.\n\n' +
+      "L'allegato è comunque stato salvato dentro la commessa, in alta qualità. Se vuoi caricarlo anche su ImgBB, eliminalo e riallegalo più tardi.",
+      'Caricamento su ImgBB non riuscito'
+    );
+  }
+}
+
 function sanitizeCard(card) {
   if (!card) return null;
   
@@ -2167,10 +2298,10 @@ function importBackup(event) {
         state.cards.sort((a,b) => (a.order || 0) - (b.order || 0));
         saveLocal();
         playSound('success');
-        alert(`Backup ripristinato con successo! Importate ${count} commesse.`);
+        showInAppNotice(`Backup ripristinato con successo! Importate ${count} commesse.`, 'Fatto', 'ok');
       }
     } catch(err) {
-      alert("Errore lettura file.");
+      showInAppNotice("Errore lettura file.");
     }
   };
   reader.readAsText(file);
@@ -2320,6 +2451,13 @@ function createCardHTML(card) {
       </span>
     </div>` : '';
 
+  const uploadingBadgeHTML = isCardUploading(card) ? `
+    <div class="mt-1">
+      <span class="inline-flex items-center gap-1.5 px-1.5 py-0.5 rounded border border-indigo-500/40 bg-indigo-950/60 text-indigo-300 text-[10px] font-semibold">
+        <span class="inline-block w-3 h-3 rounded-full border-2 border-indigo-300 border-t-transparent animate-spin"></span> Caricamento allegato...
+      </span>
+    </div>` : '';
+
   const cardIdShort = card.id ? card.id.slice(-4).toUpperCase() : '0000';
   
   const notifyIconHTML = (card.stage === 'bollettato-da-consegnare' && (card.email || card.whatsapp)) ? `
@@ -2346,6 +2484,7 @@ function createCardHTML(card) {
       
       ${referentHTML}
       ${orderRefHTML}
+      ${uploadingBadgeHTML}
       ${checklistBadgeHTML}
       ${machineBadgeHTML}
       ${deliveryHTML}
@@ -2589,7 +2728,7 @@ async function createNewCard(event) {
     await createNewCardInner();
   } catch (e) {
     console.error(e);
-    alert("⚠️ Errore durante la creazione della commessa: " + (e && e.message ? e.message : e));
+    showInAppNotice("Errore durante la creazione della commessa: " + (e && e.message ? e.message : e));
   } finally {
     window.__creatingCard = false;
     const sb = document.querySelector('#newCardForm button[type="submit"]');
@@ -2625,49 +2764,23 @@ async function createNewCardInner() {
   let extractedMeta = {};
   let initialPhotos = [];
   
+  let pendingImgData = '';
+  let pendingImgbbKey = null;
+
   if (tempFormFile) {
-    let imgbbKey = IMGBB_API_KEY && IMGBB_API_KEY !== "INSERISCI_QUI_LA_TUA_CHIAVE_IMGBB" ? IMGBB_API_KEY : null;
+    pendingImgbbKey = IMGBB_API_KEY && IMGBB_API_KEY !== "INSERISCI_QUI_LA_TUA_CHIAVE_IMGBB" ? IMGBB_API_KEY : null;
     try {
-      let imgData = "";
       if (tempFormFile.type === 'application/pdf') {
-        // Avvio la conversione in immagine in parallelo alla lettura degli articoli (piu' veloce)
-        const tA = performance.now();
-        const imgPromise = convertPdfToImage(tempFormFile, imgbbKey ? 3.0 : 2.0, imgbbKey ? 0.90 : 0.8).then(r => { console.log('[TEMPI-SGA] immagine pronta dopo ' + Math.round(performance.now() - tA) + ' ms (dimensione ' + Math.round((r || '').length / 1024) + ' KB)'); return r; }).catch(() => "");
+        // Conversione in immagine in parallelo alla lettura degli articoli
+        const imgPromise = convertPdfToImage(tempFormFile, pendingImgbbKey ? 3.0 : 2.0, pendingImgbbKey ? 0.90 : 0.8).catch(() => "");
         const ex = await extractArticlesSafe(tempFormFile);
-        console.log('[TEMPI-SGA] articoli letti dopo ' + Math.round(performance.now() - tA) + ' ms');
         extractedArticles = ex.articles;
         extractedMeta = ex.meta || {};
-        imgData = await imgPromise;
-        console.log('[TEMPI-SGA] lettura + immagine complete dopo ' + Math.round(performance.now() - tA) + ' ms');
+        pendingImgData = await imgPromise;
       } else {
-        imgData = await compressImage(tempFormFile, imgbbKey ? 2400 : 1600, imgbbKey ? 2400 : 1600, imgbbKey ? 0.90 : 0.8);
+        pendingImgData = await compressImage(tempFormFile, pendingImgbbKey ? 2400 : 1600, pendingImgbbKey ? 2400 : 1600, pendingImgbbKey ? 0.90 : 0.8);
       }
-      
-      if (imgData) {
-        if (imgbbKey) {
-          try {
-            const base64Str = imgData.split(',')[1];
-            const formData = new FormData();
-            formData.append("image", base64Str);
-            const tU = performance.now();
-            const response = await fetch(`https://api.imgbb.com/1/upload?key=${imgbbKey}`, { method: 'POST', body: formData });
-            const data = await response.json();
-            console.log('[TEMPI-SGA] invio a ImgBB: ' + Math.round(performance.now() - tU) + ' ms');
-            if (data && data.success) {
-              initialPhotos.push({ image: data.data.url, rotation: 0 });
-            } else {
-              throw new Error('Upload ImgBB non riuscito');
-            }
-          } catch(e) {
-            console.error(e);
-            // Come in origine: se ImgBB non risponde, l'immagine resta nella commessa in alta qualita'
-            initialPhotos.push({ image: imgData, rotation: 0 });
-          }
-        } else {
-          initialPhotos.push({ image: imgData, rotation: 0 });
-        }
-      }
-    } catch(e) {}
+    } catch(e) { console.error(e); }
   }
   
   let importNote = '';
@@ -2691,6 +2804,7 @@ async function createNewCardInner() {
     photos: initialPhotos,
     history: [{ stage: initialStage, label: `Inserito in "${initialStageLabel}"`, timestamp: new Date().toISOString() }]
   };
+  if (pendingImgData) newCard.uploading = Date.now();
 
   // Copia pulita: elimina eventuali valori non salvabili (undefined, NaN, proprieta' extra)
   const cleanCard = JSON.parse(JSON.stringify(newCard));
@@ -2707,7 +2821,8 @@ async function createNewCardInner() {
   
   closeModal('addCardModal');
   showToast("Commessa creata con successo!");
-  if (importNote) alert(importNote);
+  if (pendingImgData) finishBackgroundUpload(cleanCard.id, pendingImgData, pendingImgbbKey);
+  if (importNote) showInAppNotice(importNote, 'Controlla gli articoli importati');
 }
 
 function saveCardEdits(silent = false) {
@@ -3207,7 +3322,12 @@ function removeChecklistItem(itemId) {
 function duplicateCurrentCard() {
   const src = state.cards.find(c => c.id === activeCardId);
   if (!src) return;
-  if (!confirm(`Creare una nuova commessa copiando "${src.title || 'Senza titolo'}"?`)) return;
+  showInAppConfirm(`Creare una nuova commessa copiando "${src.title || 'Senza titolo'}"?`, () => doDuplicateCard(src.id), 'Duplica');
+}
+
+function doDuplicateCard(srcId) {
+  const src = state.cards.find(c => c.id === srcId);
+  if (!src) return;
 
   saveCardEdits(true); // salva eventuali modifiche appena digitate
   const stage = 'prev-da-fare';
@@ -3272,6 +3392,14 @@ function renderAttachments(card) {
   const container = document.getElementById('attachmentsContainer');
   container.innerHTML = '';
   
+  if (isCardUploading(card) && !(card.photos && card.photos.length > 0)) {
+    container.innerHTML = `
+      <div class="col-span-2 md:col-span-4 flex items-center justify-center gap-3 py-6 text-indigo-300 border border-dashed border-indigo-500/40 rounded-lg bg-indigo-950/30">
+        <span class="inline-block w-5 h-5 rounded-full border-2 border-indigo-300 border-t-transparent animate-spin"></span>
+        <span class="text-xs font-semibold">Caricamento allegato in corso...</span>
+      </div>`;
+    return;
+  }
   if (card.photos && card.photos.length > 0) {
     card.photos.forEach((photoObj, index) => {
       const thumb = document.createElement('div');
@@ -3306,6 +3434,7 @@ async function handleDocumentUpload(event) {
   let imgbbKey = IMGBB_API_KEY && IMGBB_API_KEY !== "INSERISCI_QUI_LA_TUA_CHIAVE_IMGBB" ? IMGBB_API_KEY : null;
   
   const uploadNotes = [];
+  const pendingImages = [];
   for (const file of files) {
     try {
       let imgData = "";
@@ -3339,32 +3468,12 @@ async function handleDocumentUpload(event) {
       } else {
         imgData = await compressImage(file, imgbbKey ? 2400 : 1600, imgbbKey ? 2400 : 1600, imgbbKey ? 0.90 : 0.8);
       }
-      
-      if (imgData) {
-        if (imgbbKey) {
-          try {
-            const base64Str = imgData.split(',')[1];
-            const formData = new FormData();
-            formData.append("image", base64Str);
-            const response = await fetch(`https://api.imgbb.com/1/upload?key=${imgbbKey}`, { method: 'POST', body: formData });
-            const data = await response.json();
-            if (data && data.success) {
-              card.photos.push({ image: data.data.url, rotation: 0 });
-            } else {
-              throw new Error('Upload ImgBB non riuscito');
-            }
-          } catch(e) {
-            console.error(e);
-            // Come in origine: se ImgBB non risponde, l'immagine resta nella commessa in alta qualita'
-            card.photos.push({ image: imgData, rotation: 0 });
-          }
-        } else {
-          card.photos.push({ image: imgData, rotation: 0 });
-        }
-      }
-    } catch (e) {}
+      if (imgData) pendingImages.push(imgData);
+    } catch (e) { console.error(e); }
   }
   
+  // Gli articoli entrano subito; le immagini si caricano in secondo piano con la rotellina
+  if (pendingImages.length) card.uploading = Date.now();
   renderArticlesTable(card);
   saveLocal();
   renderAttachments(card);
@@ -3372,9 +3481,16 @@ async function handleDocumentUpload(event) {
   
   event.target.value = '';
   playSound('success');
-  showToast("Documento importato correttamente!");
-  if (uploadNotes.length) alert(uploadNotes.join("\n\n"));
+  showToast(pendingImages.length ? "Documento letto: carico l'allegato..." : "Documento importato correttamente!");
+  if (uploadNotes.length) showInAppNotice(uploadNotes.join("\n\n"), 'Controlla gli articoli importati');
   setSyncStatus('saved');
+
+  // Invio sequenziale delle immagini; la rotellina si spegne dopo l'ultima
+  (async () => {
+    for (let i = 0; i < pendingImages.length; i++) {
+      await finishBackgroundUpload(card.id, pendingImages[i], imgbbKey, i < pendingImages.length - 1);
+    }
+  })();
 }
 
 function removePhoto(event, index) { 
@@ -3903,7 +4019,7 @@ function printCard() {
   
   const printWindow = window.open('', '_blank');
   if (!printWindow) {
-    alert("⚠️ ATTENZIONE: Il pop-up per la stampa è stato bloccato dal browser.");
+    showInAppNotice("Il pop-up per la stampa è stato bloccato dal browser. Consenti i pop-up per questo sito e riprova.");
     return;
   }
 
@@ -4206,7 +4322,7 @@ function printArchiveReport() {
   
   const printWindow = window.open('', '_blank');
   if (!printWindow) {
-    alert("⚠️ ATTENZIONE: Il pop-up per la stampa è stato bloccato dal browser.");
+    showInAppNotice("Il pop-up per la stampa è stato bloccato dal browser. Consenti i pop-up per questo sito e riprova.");
     return;
   }
   
@@ -4350,7 +4466,7 @@ function addArticleFromSettings() {
   const desc = document.getElementById('artModalDesc').value.trim();
   const price = parseFloat(document.getElementById('artModalPrice').value) || 0;
   
-  if (!desc) return alert("Inserisci almeno la descrizione dell'articolo.");
+  if (!desc) return showInAppNotice("Inserisci almeno la descrizione dell'articolo.");
   
   if (window.editingArticleIdx !== null) {
     ARTICLES_DB[window.editingArticleIdx] = { code, desc, price };
