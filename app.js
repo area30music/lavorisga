@@ -1722,6 +1722,12 @@ async function extractArticlesArubaLegacy(file) {
       for (let yKey of sortedYKeys) {
         let rowItems = rowsMap[yKey];
         rowItems.sort((a, b) => a.x - b.x);
+        for (let q = rowItems.length - 1; q > 0; q--) {
+          if (rowItems[q].text.trim() === '%' && /^[-+]?\d+([.,]\d+)?$/.test(rowItems[q - 1].text.trim())) {
+            rowItems[q - 1].text = rowItems[q - 1].text.trim() + ' %';
+            rowItems.splice(q, 1);
+          }
+        }
         let rowTextFull = rowItems.map(r => r.text).join(' ');
         let lower = rowTextFull.toLowerCase();
         
@@ -2030,8 +2036,8 @@ function itDateToIso(str) {
 
 function detectSupplierLayout(rows) {
   const all = rows.map(r => r.text).join('\n');
-  if (/SABELT\s+S\.?\s?p\.?\s?A/i.test(all) && /Ordine fornitore/i.test(all)) return 'sabelt';
-  if (/O\.\s?M\.\s?LER/i.test(all) && /Ordine d['’`]acquisto/i.test(all)) return 'omler';
+  if (/SABELT/i.test(all) && /Ordine\s*fornitore/i.test(all)) return 'sabelt';
+  if (/O\.\s?M\.\s?LER/i.test(all) && /Ordine\s*d\s*['’`]?\s*acquisto/i.test(all)) return 'omler';
   return '';
 }
 
@@ -2041,6 +2047,24 @@ function minIsoDate(list) {
 }
 
 // SABELT: Riga | Articolo | Nome | Quantita' UM | Consegna | Valuta | Prezzo | Unita' di prezzo | Sconto | Importo
+function explodeRowWords(row) {
+  // Divide ogni blocco di testo in parole, con la posizione stimata: cosi' la lettura non dipende
+  // da come la versione di pdf.js raggruppa il testo (es. "200,00 nr" in un blocco o in due)
+  const words = [];
+  row.items.forEach(it => {
+    const txt = String(it.text || '');
+    const len = Math.max(1, txt.length);
+    const w = it.w || 0;
+    const re = /\S+/g;
+    let m;
+    while ((m = re.exec(txt)) !== null) {
+      words.push({ text: m[0], x: it.x + (w * m.index / len), w: w * m[0].length / len });
+    }
+  });
+  words.sort((a, b) => a.x - b.x);
+  return words;
+}
+
 function extractSabeltOrder(rows) {
   const meta = {};
   const items = [];
@@ -2051,8 +2075,9 @@ function extractSabeltOrder(rows) {
     const r = rows[i];
     if (r.items.length && /^Ordine$/i.test(r.items[0].text) && r.items.some(x => /^Data$/i.test(x.text))) {
       const nr = rows[i + 1];
-      const num = nr.items[0];
-      const dt = nr.items.find(x => IT_DATE_RE.test(x.text));
+      const ws = explodeRowWords(nr);
+      const num = ws[0];
+      const dt = ws.find(x => IT_DATE_RE.test(x.text));
       if (num) meta.orderRef = 'Ordine ' + num.text + (dt ? ' del ' + dt.text : '');
       break;
     }
@@ -2060,9 +2085,11 @@ function extractSabeltOrder(rows) {
   if (!meta.orderRef) {
     const all = rows.map(r => r.text).join('\n');
     const m = all.match(/\b(OF\d{6,})\b/);
-    if (m) meta.orderRef = 'Ordine ' + m[1];
+    const d = all.match(/\bOF\d{6,}\s+(\d{1,2}\/\d{1,2}\/\d{2,4})/);
+    if (m) meta.orderRef = 'Ordine ' + m[1] + (d ? ' del ' + d[1] : '');
   }
 
+  const NUM_RE = /^\d{1,3}(?:\.\d{3})*,\d{1,3}$/;
   let started = false, ended = false;
   let cur = null; // { item, qtyX, lastY }
   for (const row of rows) {
@@ -2079,14 +2106,22 @@ function extractSabeltOrder(rows) {
     }
     if (ended) continue;
 
-    const head = row.items.filter(i => i.x < 150).map(i => i.text).join(' ');
-    const mh = head.match(/^(\d+)\s+([A-Za-z0-9][A-Za-z0-9\-_.\/]*)/);
-    const qtyIt = row.items.find(i => /^\d{1,3}(?:\.\d{3})*,\d{1,3}\s*[A-Za-z]{1,4}$/.test(i.text));
-    const dateIt = row.items.find(i => IT_DATE_RE.test(i.text));
-    if (mh && qtyIt) {
-      const qty = parseItNumber(qtyIt.text.replace(/\s*[A-Za-z]+$/, ''));
-      const eurIdx = row.items.findIndex(i => /^[A-Z]{3}$/.test(i.text));
-      const nums = (eurIdx >= 0 ? row.items.slice(eurIdx + 1) : []).map(i => parseItNumber(i.text)).filter(v => !isNaN(v));
+    const ws = explodeRowWords(row);
+    const di = ws.findIndex(w => IT_DATE_RE.test(w.text));
+    // riga articolo: "<riga> <codice> ... <quantita> <UM> <data consegna> EUR <prezzo> <unita prezzo> <sconto> <importo>"
+    const head = ws.filter(w => w.x < 150).map(w => w.text);
+    const mh = head.length >= 2 && /^\d+$/.test(head[0]) && /^[A-Za-z0-9][A-Za-z0-9\-_.\/]*$/.test(head[1]);
+    let qi = -1;
+    if (di > 0) {
+      let k = di - 1;
+      if (/^[A-Za-z]{1,4}$/.test(ws[k].text)) k--;          // unita' di misura (nr, pz...)
+      if (k >= 0 && NUM_RE.test(ws[k].text)) qi = k;
+    }
+    if (mh && qi >= 0) {
+      const qtyW = ws[qi];
+      const qty = parseItNumber(qtyW.text);
+      const eurIdx = ws.findIndex((w, i) => i > di && /^[A-Z]{3}$/.test(w.text));
+      const nums = (eurIdx >= 0 ? ws.slice(eurIdx + 1) : []).map(w => parseItNumber(w.text)).filter(v => !isNaN(v));
       let price = NaN, disc = 0, amount = NaN;
       if (nums.length >= 4) {
         price = nums[0] / (nums[1] > 0 ? nums[1] : 1);
@@ -2098,20 +2133,21 @@ function extractSabeltOrder(rows) {
       }
       if (isNaN(price) && !isNaN(amount) && qty > 0) price = amount / qty;
       if (isNaN(price)) continue;
-      const descItems = row.items.filter(i => i.x >= 150 && i.x < qtyIt.x - 2 && !/^\d+$/.test(i.text));
+      // descrizione = parole tra il codice e la quantita'; salta il numero di versione (colonna stretta a ridosso del codice)
+      const descWords = ws.filter(w => w.x >= 150 && w.x < qtyW.x - 2 && !(/^\d+$/.test(w.text) && w.x < 190));
       const art = {
-        code: mh[2],
-        desc: descItems.map(i => i.text).join(' ').trim() || mh[2],
+        code: head[1],
+        desc: descWords.map(w => w.text).join(' ').trim() || head[1],
         qty: (isNaN(qty) || qty <= 0) ? 1 : qty,
         price: Math.round(price * 10000) / 10000,
         tax: 22
       };
       if (disc > 0 && disc <= 100) art.discount = disc;
       items.push(art);
-      if (dateIt) dates.push(itDateToIso(dateIt.text));
-      cur = { item: art, qtyX: qtyIt.x, lastY: row.y };
-    } else if (cur && row.items.length && row.items.every(i => i.x >= 150 && i.x < cur.qtyX - 2) && (cur.lastY - row.y) < 20 && (cur.lastY - row.y) > 0) {
-      cur.item.desc += ' ' + t.trim();
+      dates.push(itDateToIso(ws[di].text));
+      cur = { item: art, qtyX: qtyW.x, lastY: row.y };
+    } else if (cur && ws.length && ws.every(w => w.x >= 150 && w.x < cur.qtyX - 2) && (cur.lastY - row.y) < 20 && (cur.lastY - row.y) > 0) {
+      cur.item.desc += ' ' + ws.map(w => w.text).join(' ');
       cur.lastY = row.y;
     } else {
       cur = null;
@@ -2130,20 +2166,21 @@ function extractOmlerOrder(rows) {
   // Riferimento ordine: "Ordine 3713/OF del 27/10/2026" (numero documento + data documento)
   for (let i = 0; i < rows.length - 1; i++) {
     const r = rows[i];
-    const hNum = r.items.find(x => /^Numero doc\.?$/i.test(x.text));
-    const hDat = r.items.find(x => /^Data doc\.?$/i.test(x.text));
-    if (hNum && hDat) {
-      // i valori possono stare su una o due righe sotto l'intestazione (es. il numero di pagina e' un po' piu' in alto)
-      const nr = { items: [] };
-      for (let k = 1; k <= 4 && rows[i + k]; k++) {
-        if (r.y - rows[i + k].y < 30) nr.items.push(...rows[i + k].items);
-      }
-      const closest = (hx, test) => nr.items.filter(test).sort((a, b) => Math.abs(a.x - hx) - Math.abs(b.x - hx))[0];
-      const num = closest(hNum.x, it => /\d/.test(it.text) && it.text.length <= 20 && !IT_DATE_RE.test(it.text));
-      const dat = closest(hDat.x, it => IT_DATE_RE.test(it.text));
-      if (num) meta.orderRef = 'Ordine ' + num.text + (dat ? ' del ' + dat.text : '');
-      break;
+    if (!(/Numero\s*doc/i.test(r.text) && /Data\s*doc/i.test(r.text))) continue;
+    const hw = explodeRowWords(r);
+    const hNum = hw.find(w => /^Numero$/i.test(w.text));
+    const hDat = hw.find((w, k) => /^Data$/i.test(w.text) && hw[k + 1] && /^doc/i.test(hw[k + 1].text));
+    if (!hNum || !hDat) continue;
+    // i valori possono stare su una o due righe sotto l'intestazione (es. il numero di pagina e' un po' piu' in alto)
+    let nw = [];
+    for (let k = 1; k <= 4 && rows[i + k]; k++) {
+      if (r.y - rows[i + k].y < 30) nw = nw.concat(explodeRowWords(rows[i + k]));
     }
+    const closest = (hx, test) => nw.filter(test).sort((a, b) => Math.abs(a.x - hx) - Math.abs(b.x - hx))[0];
+    const num = closest(hNum.x, w => /\d/.test(w.text) && w.text.length <= 20 && !IT_DATE_RE.test(w.text));
+    const dat = closest(hDat.x, w => IT_DATE_RE.test(w.text));
+    if (num) meta.orderRef = 'Ordine ' + num.text + (dat ? ' del ' + dat.text : '');
+    break;
   }
 
   let cols = null; // { descX, descEnd, umX }
@@ -2152,11 +2189,13 @@ function extractOmlerOrder(rows) {
     const t = row.text;
     if (!cols) {
       if (/\bPos\b/.test(t) && /Cod\.\s*Articolo/i.test(t) && /Importo/i.test(t)) {
-        const d = row.items.find(i => /^Descrizione/i.test(i.text));
-        const u = row.items.find(i => /^U\.?\s?M\.?$/i.test(i.text));
+        const hw = explodeRowWords(row);
+        const d = hw.find(w => /^Descrizione/i.test(w.text));
+        const u = hw.find(w => /^U\.?\s?M\.?$/i.test(w.text));
         if (d && u) {
-          const next = row.items.filter(i => i.x > d.x + 20).sort((a, b) => a.x - b.x)[0];
-          cols = { descX: d.x, descEnd: (next ? next.x : u.x) - 3, umX: u.x };
+          // la colonna descrizione finisce dove inizia la prima colonna successiva (Comm., Gruppo o U.M.)
+          const ends = hw.filter(w => w.x > d.x + 20 && /^(Comm\.?|Gruppo|U\.?\s?M\.?)$/i.test(w.text)).map(w => w.x);
+          cols = { descX: d.x, descEnd: Math.min.apply(null, ends.concat([u.x])) - 3, umX: u.x };
         }
       }
       continue;
@@ -2168,32 +2207,33 @@ function extractOmlerOrder(rows) {
     }
     if (/Sconti\/maggiorazioni|Spese di (trasporto|incasso|imballo)/i.test(t)) { cur = null; continue; }
 
-    const first = row.items[0];
-    const dateIt = row.items.find(i => IT_DATE_RE.test(i.text));
-    const isArticleRow = first && /^\d+$/.test(first.text) && first.x < 60 && dateIt;
+    const ws = explodeRowWords(row);
+    const first = ws[0];
+    const dateW = ws.find(w => IT_DATE_RE.test(w.text));
+    const isArticleRow = first && /^\d+$/.test(first.text) && first.x < 60 && dateW;
     if (isArticleRow) {
-      const nums = row.items.filter(i => i.x >= cols.umX - 5 && !IT_DATE_RE.test(i.text)).map(i => parseItNumber(i.text)).filter(v => !isNaN(v));
+      const nums = ws.filter(w => w.x >= cols.umX - 5 && !IT_DATE_RE.test(w.text)).map(w => parseItNumber(w.text)).filter(v => !isNaN(v));
       if (nums.length < 3) { cur = null; continue; }
       const qty = nums[0], price = nums[1], amount = nums[nums.length - 1];
       let disc = 0;
       if (nums.length >= 4) disc = Math.abs(nums[2]);
       else if (qty * price > 0 && Math.abs(qty * price - amount) > 0.02) disc = Math.round((1 - amount / (qty * price)) * 10000) / 100;
-      const codeIt = row.items.slice(1).find(i => i.x < cols.descX - 3);
-      const code = codeIt && codeIt.text !== '-' ? codeIt.text : '';
-      const descItems = row.items.filter(i => i.x >= cols.descX - 5 && i.x < cols.descEnd);
+      const codeW = ws.slice(1).find(w => w.x < cols.descX - 3);
+      const code = codeW && codeW.text !== '-' ? codeW.text : '';
+      const descW = ws.filter(w => w.x >= cols.descX - 5 && w.x < cols.descEnd);
       const art = {
         code: code,
-        desc: descItems.map(i => i.text).join(' ').trim() || code || 'Articolo',
+        desc: descW.map(w => w.text).join(' ').trim() || code || 'Articolo',
         qty: qty > 0 ? qty : 1,
         price: Math.round(price * 10000) / 10000,
         tax: 22
       };
       if (disc > 0 && disc <= 100) art.discount = disc;
       items.push(art);
-      dates.push(itDateToIso(dateIt.text));
+      dates.push(itDateToIso(dateW.text));
       cur = { item: art, lastY: row.y };
-    } else if (cur && row.items.length && row.items.every(i => i.x >= cols.descX - 5 && i.x < cols.descEnd) && (cur.lastY - row.y) < 20 && (cur.lastY - row.y) > 0) {
-      cur.item.desc += ' ' + t.trim();
+    } else if (cur && ws.length && ws.every(w => w.x >= cols.descX - 5 && w.x < cols.descEnd) && (cur.lastY - row.y) < 20 && (cur.lastY - row.y) > 0) {
+      cur.item.desc += ' ' + ws.map(w => w.text).join(' ');
       cur.lastY = row.y;
     } else {
       cur = null;
@@ -2223,7 +2263,10 @@ async function extractArticlesFromArubaPdf(file) {
 
   // 0) Ordini di clienti riconosciuti (Sabelt, Omler): lettore dedicato
   try {
-    const sup = rows.length ? extractSupplierOrder(rows) : null;
+    const supKind = rows.length ? detectSupplierLayout(rows) : '';
+    if (supKind) console.log('[TEMPI-SGA] cliente riconosciuto: ' + supKind);
+    const sup = supKind ? extractSupplierOrder(rows) : null;
+    if (supKind && sup && sup.items.length === 0) console.log('[TEMPI-SGA] cliente riconosciuto ma nessuna riga letta: uso il lettore generico');
     if (sup && sup.items.length > 0) {
       console.log('[TEMPI-SGA] lettore cliente: ' + sup.items.length + ' articoli');
       const supMeta = {};
@@ -3365,7 +3408,7 @@ function addArticleRow() {
   if (!card) return;
   
   if (!Array.isArray(card.articles)) card.articles = [];
-  card.articles.push({ code: '', desc: '', qty: 1, price: 0, tax: 22, discount: 0 });
+  card.articles.push({ code: '', desc: '', qty: '', price: '', tax: 22, discount: 0 });
   
   renderArticlesTable(card);
   saveArticlesEdits(true);
