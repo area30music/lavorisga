@@ -1698,6 +1698,7 @@ async function extractArticlesArubaLegacy(file) {
     const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
     let items = [];
     let inProductsSection = false;
+    let lastItemY = null;
     
     for (let i = 1; i <= pdf.numPages; i++) {
       const page = await pdf.getPage(i);
@@ -1750,10 +1751,19 @@ async function extractArticlesArubaLegacy(file) {
             }
             
             let tax = 22;
-            let taxItem = rowItems.find(r => r.text.includes('%'));
+            // IVA = percentuale senza segno (lo sconto ha il segno: -60,00 %)
+            let taxItem = rowItems.filter(r => r.text.includes('%') && !/^[-+]/.test(r.text.trim())).pop();
             if (taxItem) {
               let taxMatch = taxItem.text.match(/(\d+)\s*%/);
               if (taxMatch) tax = parseInt(taxMatch[1]);
+            }
+            // Sconto (o maggiorazione) della riga: colonna SC/MG, es. -60,00 %
+            let rowDiscount = 0;
+            const scItem = rowItems.find(r => /^[-+]\s?\d+([.,]\d+)?\s*%$/.test(r.text.trim()));
+            if (scItem) {
+              const sv = parseFloat(scItem.text.replace('%', '').replace(/\s/g, '').replace(',', '.'));
+              if (isFinite(sv) && sv < 0 && sv >= -100) rowDiscount = Math.abs(sv);
+              else if (isFinite(sv) && sv > 0) priceVal = Math.round(priceVal * (1 + sv / 100) * 10000) / 10000;
             }
             
             let rightBoundX = possibleQtys.length > 0 ? possibleQtys[possibleQtys.length - 1].x : unitPriceItem.x;
@@ -1764,7 +1774,16 @@ async function extractArticlesArubaLegacy(file) {
             }
             
             let desc = descItems.map(r => r.text).join(' ').trim();
-            if (desc) items.push({ code: '', desc: desc, qty: qty, price: priceVal, tax: tax });
+            if (desc) {
+              const it = { code: '', desc: desc, qty: qty, price: priceVal, tax: tax };
+              if (rowDiscount > 0) it.discount = rowDiscount;
+              items.push(it);
+              lastItemY = parseFloat(yKey);
+            }
+          } else if (items.length > 0 && lastItemY !== null && (lastItemY - parseFloat(yKey)) < 22 && lastItemY - parseFloat(yKey) > 0 && !/^\d+$/.test(rowItems[0].text) && rowTextFull.length < 160 && !rowItems.some(r => r.text.includes('%'))) {
+            // riga di sola descrizione: continuazione dell'articolo precedente
+            items[items.length - 1].desc += ' ' + rowTextFull.trim();
+            lastItemY = parseFloat(yKey);
           }
         }
       }
@@ -1993,6 +2012,204 @@ function extractOrderMeta(rows) {
   return meta;
 }
 
+
+// ==========================================
+// LETTORI SPECIFICI PER CLIENTE (ordini): Sabelt e Omler
+// Si attivano solo se nel PDF si riconosce il cliente; altrimenti resta tutto come prima.
+// ==========================================
+const IT_DATE_RE = /^\d{1,2}\/\d{1,2}\/\d{2,4}$/;
+
+function itDateToIso(str) {
+  const m = String(str || '').match(/(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})/);
+  if (!m) return '';
+  const dd = parseInt(m[1], 10), mm = parseInt(m[2], 10);
+  const yy = m[3].length === 2 ? '20' + m[3] : m[3];
+  if (dd < 1 || dd > 31 || mm < 1 || mm > 12) return '';
+  return yy + '-' + String(mm).padStart(2, '0') + '-' + String(dd).padStart(2, '0');
+}
+
+function detectSupplierLayout(rows) {
+  const all = rows.map(r => r.text).join('\n');
+  if (/SABELT\s+S\.?\s?p\.?\s?A/i.test(all) && /Ordine fornitore/i.test(all)) return 'sabelt';
+  if (/O\.\s?M\.\s?LER/i.test(all) && /Ordine d['’`]acquisto/i.test(all)) return 'omler';
+  return '';
+}
+
+function minIsoDate(list) {
+  const ok = list.filter(Boolean).sort();
+  return ok.length ? ok[0] : '';
+}
+
+// SABELT: Riga | Articolo | Nome | Quantita' UM | Consegna | Valuta | Prezzo | Unita' di prezzo | Sconto | Importo
+function extractSabeltOrder(rows) {
+  const meta = {};
+  const items = [];
+  const dates = [];
+
+  // Riferimento ordine: "Ordine OF00049323 del 15/10/2026"
+  for (let i = 0; i < rows.length - 1; i++) {
+    const r = rows[i];
+    if (r.items.length && /^Ordine$/i.test(r.items[0].text) && r.items.some(x => /^Data$/i.test(x.text))) {
+      const nr = rows[i + 1];
+      const num = nr.items[0];
+      const dt = nr.items.find(x => IT_DATE_RE.test(x.text));
+      if (num) meta.orderRef = 'Ordine ' + num.text + (dt ? ' del ' + dt.text : '');
+      break;
+    }
+  }
+  if (!meta.orderRef) {
+    const all = rows.map(r => r.text).join('\n');
+    const m = all.match(/\b(OF\d{6,})\b/);
+    if (m) meta.orderRef = 'Ordine ' + m[1];
+  }
+
+  let started = false, ended = false;
+  let cur = null; // { item, qtyX, lastY }
+  for (const row of rows) {
+    const t = row.text;
+    if (!started) {
+      if (/\bRiga\b/.test(t) && /Articolo/.test(t) && /Importo/.test(t)) started = true;
+      continue;
+    }
+    if (/Vogliate indicare|^\s*Buyer\b/.test(t)) ended = true;
+    if (/\bTOTALE\b/.test(t)) {
+      const tot = t.match(/(\d{1,3}(?:\.\d{3})*,\d{2})\s*$/);
+      if (tot) meta.docNet = parseItNumber(tot[1]);
+      break;
+    }
+    if (ended) continue;
+
+    const head = row.items.filter(i => i.x < 150).map(i => i.text).join(' ');
+    const mh = head.match(/^(\d+)\s+([A-Za-z0-9][A-Za-z0-9\-_.\/]*)/);
+    const qtyIt = row.items.find(i => /^\d{1,3}(?:\.\d{3})*,\d{1,3}\s*[A-Za-z]{1,4}$/.test(i.text));
+    const dateIt = row.items.find(i => IT_DATE_RE.test(i.text));
+    if (mh && qtyIt) {
+      const qty = parseItNumber(qtyIt.text.replace(/\s*[A-Za-z]+$/, ''));
+      const eurIdx = row.items.findIndex(i => /^[A-Z]{3}$/.test(i.text));
+      const nums = (eurIdx >= 0 ? row.items.slice(eurIdx + 1) : []).map(i => parseItNumber(i.text)).filter(v => !isNaN(v));
+      let price = NaN, disc = 0, amount = NaN;
+      if (nums.length >= 4) {
+        price = nums[0] / (nums[1] > 0 ? nums[1] : 1);
+        disc = Math.abs(nums[2]);
+        amount = nums[3];
+      } else if (nums.length >= 1) {
+        price = nums[0];
+        amount = nums[nums.length - 1];
+      }
+      if (isNaN(price) && !isNaN(amount) && qty > 0) price = amount / qty;
+      if (isNaN(price)) continue;
+      const descItems = row.items.filter(i => i.x >= 150 && i.x < qtyIt.x - 2 && !/^\d+$/.test(i.text));
+      const art = {
+        code: mh[2],
+        desc: descItems.map(i => i.text).join(' ').trim() || mh[2],
+        qty: (isNaN(qty) || qty <= 0) ? 1 : qty,
+        price: Math.round(price * 10000) / 10000,
+        tax: 22
+      };
+      if (disc > 0 && disc <= 100) art.discount = disc;
+      items.push(art);
+      if (dateIt) dates.push(itDateToIso(dateIt.text));
+      cur = { item: art, qtyX: qtyIt.x, lastY: row.y };
+    } else if (cur && row.items.length && row.items.every(i => i.x >= 150 && i.x < cur.qtyX - 2) && (cur.lastY - row.y) < 20 && (cur.lastY - row.y) > 0) {
+      cur.item.desc += ' ' + t.trim();
+      cur.lastY = row.y;
+    } else {
+      cur = null;
+    }
+  }
+  meta.deliveryDate = minIsoDate(dates);
+  return { items: items, meta: meta };
+}
+
+// OMLER (O.M.LER 2000 s.r.l e O.M.LER s.r.l.): Pos. | Cod. Articolo | Descrizione | ... | U.M. | Quantita' | Prezzo | Sconti | Importo | Consegna
+function extractOmlerOrder(rows) {
+  const meta = {};
+  const items = [];
+  const dates = [];
+
+  // Riferimento ordine: "Ordine 3713/OF del 27/10/2026" (numero documento + data documento)
+  for (let i = 0; i < rows.length - 1; i++) {
+    const r = rows[i];
+    const hNum = r.items.find(x => /^Numero doc\.?$/i.test(x.text));
+    const hDat = r.items.find(x => /^Data doc\.?$/i.test(x.text));
+    if (hNum && hDat) {
+      // i valori possono stare su una o due righe sotto l'intestazione (es. il numero di pagina e' un po' piu' in alto)
+      const nr = { items: [] };
+      for (let k = 1; k <= 4 && rows[i + k]; k++) {
+        if (r.y - rows[i + k].y < 30) nr.items.push(...rows[i + k].items);
+      }
+      const closest = (hx, test) => nr.items.filter(test).sort((a, b) => Math.abs(a.x - hx) - Math.abs(b.x - hx))[0];
+      const num = closest(hNum.x, it => /\d/.test(it.text) && it.text.length <= 20 && !IT_DATE_RE.test(it.text));
+      const dat = closest(hDat.x, it => IT_DATE_RE.test(it.text));
+      if (num) meta.orderRef = 'Ordine ' + num.text + (dat ? ' del ' + dat.text : '');
+      break;
+    }
+  }
+
+  let cols = null; // { descX, descEnd, umX }
+  let cur = null;  // { item, lastY }
+  for (const row of rows) {
+    const t = row.text;
+    if (!cols) {
+      if (/\bPos\b/.test(t) && /Cod\.\s*Articolo/i.test(t) && /Importo/i.test(t)) {
+        const d = row.items.find(i => /^Descrizione/i.test(i.text));
+        const u = row.items.find(i => /^U\.?\s?M\.?$/i.test(i.text));
+        if (d && u) {
+          const next = row.items.filter(i => i.x > d.x + 20).sort((a, b) => a.x - b.x)[0];
+          cols = { descX: d.x, descEnd: (next ? next.x : u.x) - 3, umX: u.x };
+        }
+      }
+      continue;
+    }
+    if (/Totale documento/i.test(t)) {
+      const tot = t.match(/(\d{1,3}(?:\.\d{3})*,\d{2})\s*$/);
+      if (tot) meta.docNet = parseItNumber(tot[1]);
+      break;
+    }
+    if (/Sconti\/maggiorazioni|Spese di (trasporto|incasso|imballo)/i.test(t)) { cur = null; continue; }
+
+    const first = row.items[0];
+    const dateIt = row.items.find(i => IT_DATE_RE.test(i.text));
+    const isArticleRow = first && /^\d+$/.test(first.text) && first.x < 60 && dateIt;
+    if (isArticleRow) {
+      const nums = row.items.filter(i => i.x >= cols.umX - 5 && !IT_DATE_RE.test(i.text)).map(i => parseItNumber(i.text)).filter(v => !isNaN(v));
+      if (nums.length < 3) { cur = null; continue; }
+      const qty = nums[0], price = nums[1], amount = nums[nums.length - 1];
+      let disc = 0;
+      if (nums.length >= 4) disc = Math.abs(nums[2]);
+      else if (qty * price > 0 && Math.abs(qty * price - amount) > 0.02) disc = Math.round((1 - amount / (qty * price)) * 10000) / 100;
+      const codeIt = row.items.slice(1).find(i => i.x < cols.descX - 3);
+      const code = codeIt && codeIt.text !== '-' ? codeIt.text : '';
+      const descItems = row.items.filter(i => i.x >= cols.descX - 5 && i.x < cols.descEnd);
+      const art = {
+        code: code,
+        desc: descItems.map(i => i.text).join(' ').trim() || code || 'Articolo',
+        qty: qty > 0 ? qty : 1,
+        price: Math.round(price * 10000) / 10000,
+        tax: 22
+      };
+      if (disc > 0 && disc <= 100) art.discount = disc;
+      items.push(art);
+      dates.push(itDateToIso(dateIt.text));
+      cur = { item: art, lastY: row.y };
+    } else if (cur && row.items.length && row.items.every(i => i.x >= cols.descX - 5 && i.x < cols.descEnd) && (cur.lastY - row.y) < 20 && (cur.lastY - row.y) > 0) {
+      cur.item.desc += ' ' + t.trim();
+      cur.lastY = row.y;
+    } else {
+      cur = null;
+    }
+  }
+  meta.deliveryDate = minIsoDate(dates);
+  return { items: items, meta: meta };
+}
+
+function extractSupplierOrder(rows) {
+  const kind = detectSupplierLayout(rows);
+  if (kind === 'sabelt') return extractSabeltOrder(rows);
+  if (kind === 'omler') return extractOmlerOrder(rows);
+  return null;
+}
+
 async function extractArticlesFromArubaPdf(file) {
   const T0 = performance.now();
   // Lettura delle righe del PDF (serve per i layout non Aruba e per i dati dell'ordine)
@@ -2004,7 +2221,20 @@ async function extractArticlesFromArubaPdf(file) {
   } catch (e) { rows = []; }
   const T1 = performance.now();
 
-  // 1) Formato Aruba: logica originale, invariata
+  // 0) Ordini di clienti riconosciuti (Sabelt, Omler): lettore dedicato
+  try {
+    const sup = rows.length ? extractSupplierOrder(rows) : null;
+    if (sup && sup.items.length > 0) {
+      console.log('[TEMPI-SGA] lettore cliente: ' + sup.items.length + ' articoli');
+      const supMeta = {};
+      if (sup.meta.orderRef) supMeta.orderRef = sup.meta.orderRef;
+      if (sup.meta.deliveryDate) supMeta.deliveryDate = sup.meta.deliveryDate;
+      if (sup.meta.docNet !== undefined && !isNaN(sup.meta.docNet)) supMeta.docNet = sup.meta.docNet;
+      return { articles: sup.items.map(a => Object.assign({}, a)), meta: supMeta };
+    }
+  } catch (e) { console.error('Lettore cliente non riuscito, uso quello generico', e); }
+
+  // 1) Formato Aruba: logica originale (con sconto e descrizioni su piu' righe)
   const legacy = await extractArticlesArubaLegacy(file);
   console.log('[TEMPI-SGA] lettore: righe PDF ' + Math.round(T1 - T0) + ' ms | lettore Aruba ' + Math.round(performance.now() - T1) + ' ms');
   const isPlaceholder = legacy.length === 1 && String(legacy[0].desc || '').indexOf('Preventivo: ') === 0 && !legacy[0].price;
