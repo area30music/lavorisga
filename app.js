@@ -98,6 +98,8 @@ let COLUMNS_CONFIG = JSON.parse(JSON.stringify(DEFAULT_COLUMNS_CONFIG));
 let USER_ALARMS = []; 
 let CLIENTS_DB = [];
 let ARTICLES_DB = [];
+const JOB_TYPES_DEFAULT = ["Stampa Digitale / Banner", "Abbigliamento / Ricamo", "Insegne & Vetrofanie", "Etichette & Adesivi", "Grafica / Progettazione", "Altro"];
+let JOB_TYPES_DB = JOB_TYPES_DEFAULT.slice();
 let MACHINES_DB = ["Roland TrueVIS SG2-540", "Epson SureColor T7200", "Epson F1000 DTF", "Xerox PrimeLink C9200", "Happy Japan HCH Embroidery"];
 let masterFontSizePx = 24; 
 let appFontSizePx = 15;
@@ -614,6 +616,14 @@ function loadUserSettings() {
     } catch(e){}
   }
   
+  const savedJobTypes = localStorage.getItem('workflow_sga_jobtypes_db');
+  if (savedJobTypes) {
+    try {
+      const jt = JSON.parse(savedJobTypes);
+      if (Array.isArray(jt) && jt.length) JOB_TYPES_DB = jt.filter(x => typeof x === 'string' && x.trim());
+    } catch(e){}
+  }
+  
   const savedMasterFont = localStorage.getItem('workflow_sga_master_fontsize_px');
   if (savedMasterFont) masterFontSizePx = parseInt(savedMasterFont);
   applyMasterFontSize(masterFontSizePx);
@@ -624,6 +634,7 @@ function loadUserSettings() {
 
   loadCompanyLogo();
   populateMachinesDropdowns();
+  populateJobTypeSelects();
   populateGlobalFilterDropdown();
   populateClientSelectors();
 }
@@ -1028,6 +1039,25 @@ function openSubSettings(type) {
         </div>
         <textarea id="msgTemplateText" rows="10" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-xs text-slate-200 focus:outline-none focus:border-pink-500 font-sans leading-relaxed">${sharedMsgTemplate}</textarea>
       </div>`;
+  } else if (type === 'jobtypes') {
+    titleEl.innerHTML = `<i data-lucide="layers" class="w-5 h-5 text-orange-400"></i> Tipi di Lavorazione`;
+    contentEl.innerHTML = `
+      <div class="space-y-3">
+        <p class="text-xs text-slate-400">Questo elenco compare nel menu "Tipo Lavorazione" delle commesse. Puoi rinominare una voce scrivendoci sopra, aggiungerne di nuove o toglierle.</p>
+        <div class="flex gap-2">
+          <input type="text" id="newJobTypeInput" placeholder="Nuova lavorazione (es. Ricamo cappellini)..." onkeydown="if(event.key==='Enter'){event.preventDefault(); addJobType();}" class="flex-1 bg-slate-950 border border-slate-700 rounded px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-orange-500">
+          <button type="button" onclick="addJobType()" class="bg-orange-600 hover:bg-orange-500 text-white text-xs px-3 py-2 rounded font-semibold cursor-pointer">Aggiungi</button>
+        </div>
+        <div id="settingsJobTypesList" class="space-y-1.5 max-h-72 overflow-y-auto pr-1">
+          ${JOB_TYPES_DB.map((t, idx) => `
+            <div class="flex items-center gap-2 bg-slate-950 p-1.5 rounded border border-slate-800 text-xs">
+              <input type="text" value="${esc(t)}" onchange="renameJobType(${idx}, this.value)" class="flex-1 bg-slate-900 border border-slate-700 rounded px-2 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-orange-500">
+              <button onclick="removeJobType(${idx})" class="text-red-400 hover:text-red-300 p-1 cursor-pointer" title="Togli dall'elenco"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+            </div>
+          `).join('')}
+        </div>
+        <button type="button" onclick="resetJobTypes()" class="text-[11px] text-slate-400 hover:text-slate-200 underline cursor-pointer">Ripristina l'elenco originale</button>
+      </div>`;
   } else if (type === 'machines') {
     titleEl.innerHTML = `<i data-lucide="cpu" class="w-5 h-5 text-cyan-400"></i> Gestione Macchinari`;
     contentEl.innerHTML = `
@@ -1155,7 +1185,7 @@ function renderCrmSettingsList() {
         <span class="text-white font-bold">${esc(c.name)}</span> ${c.referent ? `<span class="text-indigo-300">(${esc(c.referent)})</span>` : ''}
         <div class="text-[10px] text-slate-400">${c.email ? 'Email: ' + esc(c.email) : ''} ${c.whatsapp ? '| WA: ' + esc(c.whatsapp) : ''}</div>
       </div>
-      <button onclick="event.stopPropagation(); removeClient('${c.id}')" class="text-slate-600 group-hover:text-red-400 hover:!text-red-300 p-1 cursor-pointer transition-colors"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+      <div class="flex items-center gap-0.5 shrink-0"><button onclick="event.stopPropagation(); openClientHistory('${c.id}')" class="text-slate-500 hover:text-indigo-300 p-1 cursor-pointer transition-colors" title="Storico lavori del cliente"><i data-lucide="history" class="w-4 h-4"></i></button><button onclick="event.stopPropagation(); removeClient('${c.id}')" class="text-slate-600 group-hover:text-red-400 hover:!text-red-300 p-1 cursor-pointer transition-colors"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button></div>
     </div>
   `).join('');
 }
@@ -1512,6 +1542,12 @@ function listenToCloudUpdates() {
         sharedCompanyLogo = data.companyLogo;
         localStorage.setItem('workflow_sga_company_logo', sharedCompanyLogo);
         loadCompanyLogo();
+      }
+      if (Array.isArray(data.jobTypes) && data.jobTypes.length && JSON.stringify(data.jobTypes) !== JSON.stringify(JOB_TYPES_DB)) {
+        JOB_TYPES_DB = data.jobTypes.filter(x => typeof x === 'string' && x.trim());
+        localStorage.setItem('workflow_sga_jobtypes_db', JSON.stringify(JOB_TYPES_DB));
+        populateJobTypeSelects();
+        if (activeSubSettingsType === 'jobtypes') openSubSettings('jobtypes');
       }
       if (data.msgTemplate !== undefined && data.msgTemplate !== sharedMsgTemplate) {
         sharedMsgTemplate = data.msgTemplate;
@@ -2731,6 +2767,13 @@ function createCardHTML(card) {
       </span>
     </div>` : '';
 
+  const notesBadgeHTML = (card.jobNotes && String(card.jobNotes).trim()) ? `
+    <div class="mt-1">
+      <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded border text-[10px] bg-amber-950 text-amber-300 border-amber-800">
+        <i data-lucide="sticky-note" class="w-3 h-3"></i> Note
+      </span>
+    </div>` : '';
+
   const uploadingBadgeHTML = isCardUploading(card) ? `
     <div class="mt-1">
       <span class="inline-flex items-center gap-1.5 px-1.5 py-0.5 rounded border border-indigo-500/40 bg-indigo-950/60 text-indigo-300 text-[10px] font-semibold">
@@ -2766,6 +2809,7 @@ function createCardHTML(card) {
       ${orderRefHTML}
       ${uploadingBadgeHTML}
       ${checklistBadgeHTML}
+      ${notesBadgeHTML}
       ${machineBadgeHTML}
       ${deliveryHTML}
       ${thumbnailHTML}
@@ -2821,7 +2865,21 @@ function getJobTypeClass(type) {
     case 'Insegne & Vetrofanie': return 'bg-amber-900/40 text-amber-300 border border-amber-800';
     case 'Etichette & Adesivi': return 'bg-teal-900/40 text-teal-300 border border-teal-800';
     case 'Grafica / Progettazione': return 'bg-rose-900/40 text-rose-300 border border-rose-800';
-    default: return 'bg-slate-800 text-slate-300 border border-slate-700';
+    case 'Altro': case '': case undefined: case null: return 'bg-slate-800 text-slate-300 border border-slate-700';
+    default: {
+      // tipi aggiunti da te: colore stabile scelto in base al nome
+      const pal = [
+        'bg-orange-900/40 text-orange-300 border border-orange-800',
+        'bg-lime-900/40 text-lime-300 border border-lime-800',
+        'bg-sky-900/40 text-sky-300 border border-sky-800',
+        'bg-fuchsia-900/40 text-fuchsia-300 border border-fuchsia-800',
+        'bg-emerald-900/40 text-emerald-300 border border-emerald-800',
+        'bg-red-900/40 text-red-300 border border-red-800'
+      ];
+      let h = 0; const s = String(type);
+      for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+      return pal[h % pal.length];
+    }
   }
 }
 
@@ -3138,6 +3196,8 @@ function saveCardEdits(silent = false) {
     newJobType = document.getElementById('editCustomJobType').value.trim() || card.jobType;
   }
   card.jobType = newJobType;
+  const jobNotesEl = document.getElementById('editJobNotes');
+  if (jobNotesEl) card.jobNotes = jobNotesEl.value;
   
   saveLocal();
   syncCardToCloud(card);
@@ -3463,6 +3523,10 @@ function openDetail(id) {
   document.getElementById('editDeliveryDate').value = card.deliveryDate || ''; 
   populateMachinesDropdowns(); 
   document.getElementById('editMachine').value = card.machine || '';
+  fillJobTypeSelect(document.getElementById('editJobType'), card.jobType || '', true);
+  checkEditCustomJobType('');
+  const editJobNotesEl = document.getElementById('editJobNotes');
+  if (editJobNotesEl) editJobNotesEl.value = card.jobNotes || '';
   
   const editOrderRefEl = document.getElementById('editOrderRef');
   if (editOrderRefEl) editOrderRefEl.value = card.orderRef || '';
@@ -3473,7 +3537,7 @@ function openDetail(id) {
   colorInput.value = card.customColor || defaultColor;
   colorInput.dataset.defaultColor = defaultColor; 
   
-  const editFields = ['editTitle', 'editReferent', 'editEmail', 'editWhatsapp', 'editDeliveryDate', 'editMachine', 'editOrderRef', 'editCustomJobType', 'editJobType', 'editClientSelector', 'editCardColor'];
+  const editFields = ['editTitle', 'editReferent', 'editEmail', 'editWhatsapp', 'editDeliveryDate', 'editMachine', 'editOrderRef', 'editJobNotes', 'editCustomJobType', 'editJobType', 'editClientSelector', 'editCardColor'];
   
   editFields.forEach(fieldId => {
     const el = document.getElementById(fieldId);
@@ -3624,6 +3688,7 @@ function doDuplicateCard(srcId) {
     orderRef: '',
     machine: src.machine || '',
     jobType: src.jobType || '',
+    jobNotes: src.jobNotes || '',
     deliveryDate: '',
     articles: JSON.parse(JSON.stringify(src.articles || [])),
     checklist: (src.checklist || []).map(i => ({ id: 'k' + Date.now().toString(36) + Math.random().toString(36).substring(2, 6), text: i.text, done: false })),
@@ -4403,6 +4468,7 @@ function printCard() {
             <div><label>Referente & Contatti</label><strong>${esc(card.client || 'N/D')} ${card.referent ? '(' + esc(card.referent) + ')' : ''}</strong></div>
             <div><label>Data di Consegna</label><strong style="color: #ea580c;">${deliveryStr}</strong></div>
           </div>
+          ${card.jobNotes && String(card.jobNotes).trim() ? `<div class="section-title">Note Commessa</div><div style="background: #fffbeb; border: 1px solid #fcd34d; border-radius: 6px; padding: 10px; font-size: 12px; color: #0f172a; white-space: pre-wrap; margin-bottom: 8px;">${esc(card.jobNotes)}</div>` : ''}
           <div class="section-title">Articoli & Specifiche Lavorazione</div>
           <table class="articles">
             <thead>
@@ -4441,6 +4507,411 @@ function printCard() {
     printWindow.focus();
     printWindow.print();
   }, 800);
+}
+
+// ==========================================
+// TIPI DI LAVORAZIONE MODIFICABILI
+// ==========================================
+function fillJobTypeSelect(sel, current, allowEmpty) {
+  if (!sel) return;
+  const list = JOB_TYPES_DB.slice();
+  if (current && !list.includes(current)) list.push(current);
+  let opts = '';
+  if (allowEmpty && !current) opts += '<option value="">Generico (nessuno)</option>';
+  opts += list.map(t => `<option value="${esc(t)}">${esc(t)}</option>`).join('');
+  opts += '<option value="custom">Personalizza...</option>';
+  const keep = current !== undefined && current !== null ? current : sel.value;
+  sel.innerHTML = opts;
+  if (keep === '' && allowEmpty && !current) sel.value = '';
+  else if (keep && list.includes(keep)) sel.value = keep;
+  else sel.selectedIndex = 0;
+}
+
+function populateJobTypeSelects() {
+  fillJobTypeSelect(document.getElementById('formJobType'), undefined, false);
+}
+
+function saveJobTypes() {
+  localStorage.setItem('workflow_sga_jobtypes_db', JSON.stringify(JOB_TYPES_DB));
+  populateJobTypeSelects();
+  populateGlobalFilterDropdown();
+  if (db) db.collection('workflow_sga_settings').doc('config').set({ jobTypes: JOB_TYPES_DB }, { merge: true }).catch(e => console.error(e));
+}
+
+function addJobType() {
+  const input = document.getElementById('newJobTypeInput');
+  if (!input) return;
+  const name = input.value.trim();
+  if (!name) return;
+  if (JOB_TYPES_DB.some(t => t.toLowerCase() === name.toLowerCase())) {
+    playSound('alert');
+    return showInAppNotice('Questa lavorazione è già nell\'elenco.');
+  }
+  JOB_TYPES_DB.push(name);
+  saveJobTypes();
+  playSound('success');
+  openSubSettings('jobtypes');
+}
+
+function renameJobType(idx, value) {
+  const oldName = JOB_TYPES_DB[idx];
+  const name = String(value || '').trim();
+  if (oldName === undefined || name === oldName) return;
+  if (!name) { openSubSettings('jobtypes'); return showInAppNotice('Il nome non può essere vuoto.'); }
+  if (JOB_TYPES_DB.some((t, i) => i !== idx && t.toLowerCase() === name.toLowerCase())) {
+    openSubSettings('jobtypes');
+    return showInAppNotice('Esiste già una lavorazione con questo nome.');
+  }
+  JOB_TYPES_DB[idx] = name;
+  // Le commesse in corso con il vecchio nome passano al nuovo
+  let changed = 0;
+  state.cards.forEach(c => {
+    if (c.jobType === oldName) { c.jobType = name; changed++; syncCardToCloud(c); }
+  });
+  if (changed) saveLocal();
+  saveJobTypes();
+  playSound('success');
+  showToast(changed ? `Rinominata anche su ${changed} commess${changed === 1 ? 'a' : 'e'}.` : 'Lavorazione rinominata.');
+  renderBoard();
+}
+
+function removeJobType(idx) {
+  const name = JOB_TYPES_DB[idx];
+  if (name === undefined) return;
+  confirmDeletion(`Lavorazione: ${name} (le commesse che la usano restano com'è)`, () => {
+    JOB_TYPES_DB.splice(idx, 1);
+    if (JOB_TYPES_DB.length === 0) JOB_TYPES_DB = ['Altro'];
+    saveJobTypes();
+    openSubSettings('jobtypes');
+  });
+}
+
+function resetJobTypes() {
+  showInAppConfirm("Rimettere l'elenco originale delle lavorazioni? Le voci aggiunte da te verranno tolte dal menu (le commesse già fatte non cambiano).", () => {
+    JOB_TYPES_DB = JOB_TYPES_DEFAULT.slice();
+    saveJobTypes();
+    openSubSettings('jobtypes');
+  }, 'Ripristina');
+}
+
+// ==========================================
+// STORICO LAVORI DEL CLIENTE
+// Ogni voce e' un documento a parte (collezione workflow_sga_settings, id "chist_...")
+// ==========================================
+let historyCtx = null;
+
+function historyKeyOf(name) { return String(name || '').trim().toLowerCase().replace(/\s+/g, ' '); }
+function histPad(n) { return String(n).padStart(2, '0'); }
+function histToday() { const d = new Date(); return d.getFullYear() + '-' + histPad(d.getMonth() + 1) + '-' + histPad(d.getDate()); }
+function histDateIt(iso) { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || ''); return m ? m[3] + '/' + m[2] + '/' + m[1] : (iso || ''); }
+
+function ensureHistoryModal() {
+  if (document.getElementById('clientHistoryModal')) return;
+  const el = document.createElement('div');
+  el.id = 'clientHistoryModal';
+  el.className = 'hidden fixed inset-0 bg-slate-950/85 backdrop-blur-sm z-[60] flex items-center justify-center p-4';
+  el.innerHTML = `
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-3xl max-h-[92vh] flex flex-col shadow-2xl">
+      <div class="p-4 border-b border-slate-800 flex items-center justify-between gap-3">
+        <h3 id="histTitle" class="font-bold text-base text-slate-100 flex items-center gap-2"></h3>
+        <button onclick="closeClientHistory()" class="text-slate-400 hover:text-white p-1.5 rounded-lg hover:bg-slate-800 cursor-pointer" title="Chiudi"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+      <div class="p-4 overflow-y-auto space-y-3 flex-1">
+        <div class="flex gap-2">
+          <input id="histSearch" type="text" autocomplete="off" placeholder="Cerca nello storico (titolo, note, data)..." oninput="renderHistoryList()" class="flex-1 bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">
+          <button onclick="openHistoryForm()" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs px-3 py-2 rounded-lg font-semibold cursor-pointer flex items-center gap-1.5"><i data-lucide="plus" class="w-3.5 h-3.5"></i> Nuova voce</button>
+        </div>
+        <div id="histForm" class="hidden bg-slate-950 border border-indigo-500/40 rounded-xl p-3 space-y-2">
+          <div class="grid grid-cols-3 gap-2">
+            <input id="histFormTitle" type="text" autocomplete="off" placeholder="Titolo del lavoro *" class="col-span-2 bg-slate-900 border border-slate-700 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">
+            <input id="histFormDate" type="date" class="bg-slate-900 border border-slate-700 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">
+          </div>
+          <textarea id="histFormNotes" rows="5" placeholder="Note: codici filo, posizione, quantità, prezzo, specifiche..." class="w-full bg-slate-900 border border-slate-700 rounded px-2.5 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 leading-relaxed"></textarea>
+          <div id="histFormPhotos" class="flex flex-wrap gap-2"></div>
+          <div class="flex items-center justify-between gap-2 flex-wrap">
+            <label class="bg-slate-800 hover:bg-slate-700 text-xs px-3 py-1.5 rounded-lg cursor-pointer flex items-center gap-1.5 text-slate-200">
+              <i data-lucide="camera" class="w-3.5 h-3.5"></i> Aggiungi foto
+              <input type="file" accept="image/*" multiple class="hidden" onchange="histAddFiles(event)">
+            </label>
+            <div class="flex gap-2">
+              <button onclick="cancelHistoryForm()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs px-3 py-1.5 rounded-lg font-semibold cursor-pointer">Annulla</button>
+              <button id="histSaveBtn" onclick="saveHistoryEntry()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs px-4 py-1.5 rounded-lg font-semibold cursor-pointer">Salva voce</button>
+            </div>
+          </div>
+        </div>
+        <div id="histList" class="space-y-2"></div>
+      </div>
+    </div>`;
+  document.body.appendChild(el);
+}
+
+async function openClientHistory(clientId, preset) {
+  const c = CLIENTS_DB.find(x => x.id === clientId);
+  if (!c) return;
+  ensureHistoryModal();
+  const ctx = { key: historyKeyOf(c.name), name: c.name, entries: [], editingId: null, formPhotos: [], fromCardId: null, loading: true };
+  historyCtx = ctx;
+  document.getElementById('histTitle').innerHTML = `<i data-lucide="history" class="w-5 h-5 text-indigo-400"></i> Storico lavori — ${esc(c.name)}`;
+  document.getElementById('histSearch').value = '';
+  document.getElementById('histForm').classList.add('hidden');
+  renderHistoryList();
+  openModal('clientHistoryModal');
+  lucide.createIcons();
+  try {
+    const snap = await db.collection('workflow_sga_settings').where('clientKey', '==', ctx.key).get();
+    ctx.entries = snap.docs.map(d => d.data()).filter(x => x && x.kind === 'client_history');
+    ctx.entries.sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')) || String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
+  } catch (e) {
+    console.error(e);
+    showInAppNotice('Non riesco a leggere lo storico di questo cliente. Controlla la connessione e riprova.\n\nDettaglio tecnico: ' + (e && e.message ? e.message : e));
+  }
+  if (historyCtx !== ctx) return;
+  ctx.loading = false;
+  renderHistoryList();
+  if (preset) openHistoryForm(null, preset);
+}
+
+function closeClientHistory() {
+  if (historyCtx) histRevokePreviews();
+  closeModal('clientHistoryModal');
+  historyCtx = null;
+}
+
+function histRevokePreviews() {
+  (historyCtx && historyCtx.formPhotos || []).forEach(p => { if (p.preview) { try { URL.revokeObjectURL(p.preview); } catch (e) {} } });
+}
+
+function renderHistoryList() {
+  const box = document.getElementById('histList');
+  if (!box || !historyCtx) return;
+  if (historyCtx.loading) { box.innerHTML = '<p class="text-xs text-slate-500 italic py-4 text-center">Carico lo storico...</p>'; return; }
+  const q = String((document.getElementById('histSearch') || {}).value || '').trim().toLowerCase();
+  const all = historyCtx.entries;
+  const list = q ? all.filter(e => (String(e.title || '') + ' ' + String(e.notes || '') + ' ' + histDateIt(e.date)).toLowerCase().includes(q)) : all;
+  if (all.length === 0) { box.innerHTML = '<p class="text-xs text-slate-500 italic py-4 text-center">Ancora nessun lavoro salvato per questo cliente. Premi "Nuova voce" oppure usa "Salva nello storico" dentro una commessa.</p>'; return; }
+  if (list.length === 0) { box.innerHTML = '<p class="text-xs text-slate-500 italic py-4 text-center">Nessun risultato.</p>'; return; }
+  box.innerHTML = list.map(e => `
+    <div class="bg-slate-950 border border-slate-800 rounded-xl p-3 space-y-2">
+      <div class="flex items-start justify-between gap-3">
+        <div class="min-w-0">
+          <div class="text-[11px] text-indigo-300 font-mono">${esc(histDateIt(e.date))}</div>
+          <div class="text-sm font-bold text-white break-words">${esc(e.title || 'Senza titolo')}</div>
+        </div>
+        <div class="flex gap-1 shrink-0">
+          <button onclick="openHistoryForm('${esc(e.id)}')" class="text-slate-400 hover:text-indigo-300 p-1.5 cursor-pointer" title="Modifica"><i data-lucide="pencil" class="w-3.5 h-3.5"></i></button>
+          <button onclick="deleteHistoryEntry('${esc(e.id)}')" class="text-slate-500 hover:text-red-400 p-1.5 cursor-pointer" title="Elimina"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+        </div>
+      </div>
+      ${e.notes ? `<div class="text-xs text-slate-300 whitespace-pre-wrap leading-relaxed">${esc(e.notes)}</div>` : ''}
+      ${(e.photos && e.photos.length) ? `<div class="flex flex-wrap gap-2">${e.photos.map((p, i) => `<img src="${esc(p.image)}" onclick="openHistLightbox('${esc(e.id)}', ${i})" class="h-20 w-20 object-cover rounded border border-slate-700 cursor-zoom-in bg-slate-900">`).join('')}</div>` : ''}
+    </div>`).join('');
+  lucide.createIcons();
+}
+
+function openHistLightbox(entryId, idx) {
+  if (!historyCtx) return;
+  const e = historyCtx.entries.find(x => x.id === entryId);
+  const p = e && e.photos && e.photos[idx];
+  if (!p) return;
+  const ov = document.createElement('div');
+  ov.className = 'fixed inset-0 bg-black/90 z-[70] flex items-center justify-center p-4 cursor-zoom-out';
+  const img = document.createElement('img');
+  img.src = p.image;
+  img.className = 'max-h-[94vh] max-w-[96vw] object-contain rounded';
+  ov.appendChild(img);
+  ov.onclick = () => ov.remove();
+  document.body.appendChild(ov);
+}
+
+function openHistoryForm(entryId, preset) {
+  if (!historyCtx) return;
+  histRevokePreviews();
+  const e = entryId ? historyCtx.entries.find(x => x.id === entryId) : null;
+  historyCtx.editingId = e ? e.id : null;
+  historyCtx.fromCardId = (preset && preset.fromCardId) || (e && e.fromCardId) || null;
+  const src = e ? e.photos : ((preset && preset.photos) || []);
+  historyCtx.formPhotos = (src || []).map(p => ({ kind: 'saved', image: p.image }));
+  document.getElementById('histFormTitle').value = e ? (e.title || '') : ((preset && preset.title) || '');
+  document.getElementById('histFormDate').value = e ? (e.date || histToday()) : ((preset && preset.date) || histToday());
+  document.getElementById('histFormNotes').value = e ? (e.notes || '') : ((preset && preset.notes) || '');
+  document.getElementById('histSaveBtn').textContent = e ? 'Aggiorna voce' : 'Salva voce';
+  document.getElementById('histSaveBtn').disabled = false;
+  document.getElementById('histForm').classList.remove('hidden');
+  renderHistFormPhotos();
+  const f = document.getElementById('histForm');
+  if (f.scrollIntoView) f.scrollIntoView({ block: 'nearest' });
+  document.getElementById('histFormTitle').focus();
+}
+
+function cancelHistoryForm() {
+  if (historyCtx) { histRevokePreviews(); historyCtx.formPhotos = []; historyCtx.editingId = null; }
+  document.getElementById('histForm').classList.add('hidden');
+}
+
+function renderHistFormPhotos() {
+  const box = document.getElementById('histFormPhotos');
+  if (!box || !historyCtx) return;
+  box.innerHTML = historyCtx.formPhotos.map((p, i) => `
+    <div class="relative">
+      <img src="${esc(p.kind === 'saved' ? p.image : p.preview)}" class="h-16 w-16 object-cover rounded border border-slate-700 bg-slate-900">
+      <button onclick="removeHistFormPhoto(${i})" class="absolute -top-1.5 -right-1.5 bg-red-600 hover:bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-[11px] leading-none cursor-pointer" title="Togli foto">&times;</button>
+    </div>`).join('');
+}
+
+function histAddFiles(event) {
+  if (!historyCtx) return;
+  Array.from(event.target.files || []).forEach(file => {
+    if (!file.type || !file.type.startsWith('image/')) return;
+    historyCtx.formPhotos.push({ kind: 'new', file: file, preview: URL.createObjectURL(file) });
+  });
+  event.target.value = '';
+  renderHistFormPhotos();
+}
+
+function removeHistFormPhoto(i) {
+  if (!historyCtx) return;
+  const p = historyCtx.formPhotos[i];
+  if (p && p.preview) { try { URL.revokeObjectURL(p.preview); } catch (e) {} }
+  historyCtx.formPhotos.splice(i, 1);
+  renderHistFormPhotos();
+}
+
+// Invia una foto a ImgBB; se non riesce la tiene dentro la voce (alta qualita')
+async function histUploadImage(dataUrl) {
+  const key = IMGBB_API_KEY && IMGBB_API_KEY !== "INSERISCI_QUI_LA_TUA_CHIAVE_IMGBB" ? IMGBB_API_KEY : null;
+  if (!key) return { image: dataUrl, failed: false };
+  try {
+    const fd = new FormData();
+    fd.append('image', dataUrl.split(',')[1]);
+    const r = await fetch('https://api.imgbb.com/1/upload?key=' + key, { method: 'POST', body: fd });
+    let data = null;
+    try { data = await r.json(); } catch (je) {}
+    if (data && data.success) return { image: data.data.url, failed: false };
+    throw new Error('Risposta ImgBB: stato ' + r.status);
+  } catch (e) {
+    console.error(e);
+    return { image: dataUrl, failed: true, reason: (e && e.message) ? e.message : String(e) };
+  }
+}
+
+async function saveHistoryEntry() {
+  if (!historyCtx) return;
+  const ctx = historyCtx;
+  const title = document.getElementById('histFormTitle').value.trim();
+  if (!title) return showInAppNotice('Scrivi un titolo per il lavoro (es. "Ricamo logo cappellini").');
+  const btn = document.getElementById('histSaveBtn');
+  btn.disabled = true;
+
+  const photos = [];
+  const failures = [];
+  const toSend = ctx.formPhotos.filter(p => p.kind === 'new').length;
+  let sent = 0;
+  for (const fp of ctx.formPhotos) {
+    if (fp.kind === 'saved') { photos.push({ image: fp.image }); continue; }
+    sent++;
+    btn.textContent = `Carico foto ${sent}/${toSend}...`;
+    try {
+      const data = await compressImage(fp.file, 2400, 2400, 0.90);
+      const up = await histUploadImage(data);
+      photos.push({ image: up.image });
+      if (up.failed) failures.push(up.reason);
+    } catch (e) { console.error(e); failures.push('foto non leggibile'); }
+  }
+
+  const nowIso = new Date().toISOString();
+  const old = ctx.editingId ? ctx.entries.find(x => x.id === ctx.editingId) : null;
+  const entry = {
+    id: old ? old.id : 'h' + Date.now().toString(36) + Math.random().toString(36).substring(2, 6),
+    kind: 'client_history',
+    clientKey: ctx.key,
+    clientName: ctx.name,
+    title: title,
+    date: document.getElementById('histFormDate').value || histToday(),
+    notes: document.getElementById('histFormNotes').value.trim(),
+    photos: photos,
+    createdAt: old ? (old.createdAt || nowIso) : nowIso,
+    updatedAt: nowIso
+  };
+  if (ctx.fromCardId) entry.fromCardId = ctx.fromCardId;
+
+  if (JSON.stringify(entry).length > 900000) {
+    btn.disabled = false;
+    btn.textContent = old ? 'Aggiorna voce' : 'Salva voce';
+    return showInAppNotice('Le foto sono troppo pesanti per essere tenute dentro la voce (ImgBB non ha risposto). Riprova tra poco, oppure metti meno foto.', 'Voce non salvata');
+  }
+  try {
+    await db.collection('workflow_sga_settings').doc('chist_' + entry.id).set(entry);
+  } catch (e) {
+    console.error(e);
+    btn.disabled = false;
+    btn.textContent = old ? 'Aggiorna voce' : 'Salva voce';
+    return showInAppNotice('Salvataggio non riuscito. Controlla la connessione e riprova.\n\nDettaglio tecnico: ' + (e && e.message ? e.message : e), 'Voce non salvata');
+  }
+  if (historyCtx !== ctx) return;
+  const i = ctx.entries.findIndex(x => x.id === entry.id);
+  if (i >= 0) ctx.entries[i] = entry; else ctx.entries.push(entry);
+  ctx.entries.sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')) || String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
+  histRevokePreviews();
+  ctx.formPhotos = [];
+  ctx.editingId = null;
+  document.getElementById('histForm').classList.add('hidden');
+  renderHistoryList();
+  playSound('success');
+  showToast('Voce salvata nello storico.');
+  if (failures.length) {
+    showInAppNotice(failures.length + ' foto non sono state caricate su ImgBB: sono state salvate comunque dentro la voce, in alta qualità.\n\nDettaglio tecnico: ' + failures[0], 'Caricamento su ImgBB non riuscito');
+  }
+}
+
+function deleteHistoryEntry(entryId) {
+  if (!historyCtx) return;
+  const ctx = historyCtx;
+  const e = ctx.entries.find(x => x.id === entryId);
+  if (!e) return;
+  confirmDeletion(`Voce dello storico: ${e.title || 'Senza titolo'}`, async () => {
+    try {
+      await db.collection('workflow_sga_settings').doc('chist_' + e.id).delete();
+      ctx.entries = ctx.entries.filter(x => x.id !== e.id);
+      if (historyCtx === ctx) renderHistoryList();
+    } catch (err) {
+      console.error(err);
+      showInAppNotice('Eliminazione non riuscita. Controlla la connessione e riprova.');
+    }
+  });
+}
+
+// Dalla commessa aperta: apre lo storico del cliente con la voce gia' compilata
+function saveCardToClientHistory() {
+  const card = state.cards.find(c => c.id === activeCardId);
+  if (!card) return;
+  saveCardEdits(true);
+  const nm = historyKeyOf(card.title);
+  const client = CLIENTS_DB.find(x => historyKeyOf(x.name) === nm) ||
+    CLIENTS_DB.find(x => { const k = historyKeyOf(x.name); return k && nm && (k.includes(nm) || nm.includes(k)); });
+  if (!client) {
+    playSound('alert');
+    return showInAppNotice('Il cliente "' + (card.title || 'senza nome') + '" non è nel database clienti.\n\nAggiungilo da Impostazioni → Clienti e poi riprova: lo storico si salva dentro la scheda del cliente.', 'Cliente non trovato');
+  }
+  const arts = (card.articles || []).filter(a => a && a.desc && String(a.desc).trim());
+  const lines = [];
+  if (card.orderRef) lines.push(card.orderRef);
+  arts.forEach(a => {
+    const q = parseFloat(a.qty), p = parseFloat(a.price), d = parseFloat(a.discount);
+    let l = (isFinite(q) && q > 0 ? q + ' x ' : '') + String(a.desc).trim();
+    if (isFinite(p) && p > 0) l += ' — ' + p.toFixed(2).replace('.', ',') + ' € cad.';
+    if (isFinite(d) && d > 0) l += ' (sconto ' + d + '%)';
+    lines.push(l);
+  });
+  if (card.machine) lines.push('Macchina: ' + card.machine);
+  if (card.jobNotes && String(card.jobNotes).trim()) { lines.push(''); lines.push('Note: ' + String(card.jobNotes).trim()); }
+  const firstDesc = arts.length ? String(arts[0].desc).trim() : '';
+  openClientHistory(client.id, {
+    title: (firstDesc || card.jobType || card.title || 'Lavoro').substring(0, 80),
+    date: card.deliveryDate || histToday(),
+    notes: lines.join('\n'),
+    photos: (card.photos || []).filter(p => p && p.image).map(p => ({ image: p.image })),
+    fromCardId: card.id
+  });
 }
 
 // ============================================
@@ -4811,7 +5282,7 @@ function removeArticleFromDB(idx) {
   }
   function isBusy() {
     if (isMasterMode) return false; // il proiettore si aggiorna subito
-    const ids = ['detailModal','addCardModal','settingsModal','subSettingsModal','labelPrintModal','clientNotifyModal','cloudModal','galleryModal','deleteConfirmModal'];
+    const ids = ['detailModal','addCardModal','settingsModal','subSettingsModal','clientHistoryModal','labelPrintModal','clientNotifyModal','cloudModal','galleryModal','deleteConfirmModal'];
     return ids.some(id => { const el = document.getElementById(id); return el && !el.classList.contains('hidden'); });
   }
   async function check() {
