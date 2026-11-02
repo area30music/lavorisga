@@ -1,4 +1,4 @@
-// ===========================================
+// ==========================================
 // CONFIGURAZIONE FIREBASE HARDCODED
 // ==========================================
 const firebaseConfig = {
@@ -104,8 +104,69 @@ html[data-view="phone"] #articlesTableBody td:nth-child(7)::before { content: 'I
 html[data-view="phone"] #articlesTableBody td:nth-child(8)::before { content: 'Tot. netto'; }
 html[data-view="phone"] #articlesTableBody td:nth-child(9)::before { content: 'Un. ivato'; }
 html[data-view="phone"] #articlesTableBody td:nth-child(10)::before { content: 'Tot. ivato'; }
+
+/* Elenchi delle impostazioni: niente altezza fissa, usano tutto lo schermo */
+html[data-view="phone"] #settingsClientsList, html[data-view="phone"] #settingsArticlesList, html[data-view="phone"] #settingsJobTypesList, html[data-view="phone"] #settingsMachinesList, html[data-view="phone"] #archiveSettingsList { max-height: none !important; overflow: visible !important; }
 `;
 document.head.appendChild(phoneStyles);
+
+// ==========================================
+// TABELLA ARTICOLI su iPad e PC: ogni articolo su due righe (codice e descrizione larghi, sotto i numeri)
+// Solo la tabella della scheda commessa cambia; il resto delle schermate resta come prima.
+// ==========================================
+(function () {
+  const sel = (suffix) => ['tablet', 'pc'].map(m => 'html[data-view="' + m + '"] ' + suffix).join(', ');
+  const labels = [[2, 'Codice'], [3, 'Descrizione'], [4, 'Q.tà'], [5, 'Prezzo un.'], [6, 'Sconto %'], [7, 'IVA %'], [8, 'Tot. netto'], [9, 'Un. ivato'], [10, 'Tot. ivato']];
+  const base = `
+${sel('#articlesTable')} { min-width: 0 !important; width: 100%; display: block; }
+${sel('#articlesTableHead')} { display: none; }
+${sel('#articlesTableBody')} { display: block; }
+${sel('#articlesTableBody tr')} { display: grid; gap: 6px 10px; padding: 10px 4px; align-items: end; border-bottom: 1px solid rgba(51, 65, 85, 0.6); }
+${sel('#articlesTableBody td')} { display: block; padding: 0 !important; text-align: left !important; min-width: 0; }
+${sel('#articlesTableBody td:nth-child(n+2):nth-child(-n+10)::before')} { display: block; font-size: 10px; line-height: 1.2; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 2px; font-family: ui-sans-serif, system-ui, sans-serif; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+${sel('#articlesTableBody td:nth-child(8), #articlesTableBody td:nth-child(9), #articlesTableBody td:nth-child(10)')} { padding-bottom: 5px !important; }
+${labels.map(l => sel('#articlesTableBody td:nth-child(' + l[0] + ')::before') + " { content: '" + l[1] + "'; }").join('\n')}
+`;
+  // schermo largo (PC, iPad in orizzontale): 12 colonne
+  const place = (n, col, span, row, extra) => sel('#articlesTableBody td:nth-child(' + n + ')') + ' { grid-column: ' + col + ' / span ' + span + '; grid-row: ' + row + ';' + (extra || '') + ' }';
+  const wide = `
+@media (min-width: 861px) {
+${sel('#articlesTableBody tr')} { grid-template-columns: repeat(12, minmax(0, 1fr)); }
+${place(1, 1, 1, 1)}
+${place(2, 2, 3, 1)}
+${place(3, 5, 7, 1)}
+${place(11, 12, 1, 1, ' text-align: right !important;')}
+${place(4, 1, 1, 2)}
+${place(5, 2, 2, 2)}
+${place(6, 4, 1, 2)}
+${place(7, 5, 1, 2)}
+${place(8, 6, 2, 2, ' text-align: right !important;')}
+${place(9, 8, 2, 2, ' text-align: right !important;')}
+${place(10, 10, 3, 2, ' text-align: right !important;')}
+}
+`;
+  // schermo piu stretto (iPad in verticale): descrizione a tutta larghezza, numeri su due righe
+  const narrow = `
+@media (max-width: 860px) {
+${sel('#articlesTableBody tr')} { grid-template-columns: repeat(12, minmax(0, 1fr)); }
+${place(1, 1, 2, 1)}
+${place(2, 3, 9, 1)}
+${place(11, 12, 1, 1, ' text-align: right !important;')}
+${sel('#articlesTableBody td:nth-child(3)')} { grid-column: 1 / -1; grid-row: 2; }
+${place(4, 1, 2, 3)}
+${place(5, 3, 3, 3)}
+${place(6, 6, 2, 3)}
+${place(7, 8, 2, 3)}
+${place(8, 10, 3, 3, ' text-align: right !important;')}
+${place(9, 7, 3, 4, ' text-align: right !important;')}
+${place(10, 10, 3, 4, ' text-align: right !important;')}
+}
+`;
+  const st = document.createElement('style');
+  st.id = 'articleTableStyles';
+  st.textContent = base + wide + narrow;
+  document.head.appendChild(st);
+})();
 
 // ==========================================
 // MODALITA' DI VISIONE (per dispositivo): Automatico, iPhone, iPad, PC
@@ -119,7 +180,10 @@ function resolveViewMode() {
   const w = window.innerWidth || document.documentElement.clientWidth || 1200;
   return w <= 640 ? 'phone' : (w <= 1100 ? 'tablet' : 'pc');
 }
-function applyViewMode() { document.documentElement.setAttribute('data-view', resolveViewMode()); }
+function applyViewMode() {
+  document.documentElement.setAttribute('data-view', resolveViewMode());
+  if (typeof autoGrowAllDescs === 'function') setTimeout(autoGrowAllDescs, 60);
+}
 function setViewMode(mode) {
   try { localStorage.setItem('sga_view_mode', mode); } catch (e) {}
   applyViewMode();
@@ -1071,6 +1135,10 @@ function openSubSettings(type) {
           </div>
           <button type="button" id="btnSaveCrmClient" onclick="addClientFromSettings()" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs px-3 py-2 rounded font-semibold w-full cursor-pointer transition-colors">Salva Cliente in Archivio</button>
         </div>
+        <div class="relative w-full">
+          <i data-lucide="search" class="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-slate-400"></i>
+          <input type="text" id="settingsClientsSearch" autocomplete="off" oninput="filterSettingsClients()" placeholder="Cerca cliente (nome, referente, email)..." class="w-full bg-slate-950 border border-slate-700 rounded-lg pl-8 pr-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">
+        </div>
         <div id="settingsClientsList" class="space-y-1.5 max-h-44 overflow-y-auto pr-1">
           ${renderCrmSettingsList()}
         </div>
@@ -1089,6 +1157,10 @@ function openSubSettings(type) {
             <input type="number" step="any" id="artModalPrice" placeholder="Prezzo € *" class="col-span-1 bg-slate-900 border border-slate-700 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-emerald-500 text-right">
           </div>
           <button type="button" id="btnSaveArticle" onclick="addArticleFromSettings()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs px-3 py-2 rounded font-semibold w-full cursor-pointer transition-colors">Salva Articolo nel Database</button>
+        </div>
+        <div class="relative w-full">
+          <i data-lucide="search" class="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-slate-400"></i>
+          <input type="text" id="settingsArticlesSearch" autocomplete="off" oninput="filterSettingsArticles()" placeholder="Cerca articolo (codice o descrizione)..." class="w-full bg-slate-950 border border-slate-700 rounded-lg pl-8 pr-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-emerald-500">
         </div>
         <div id="settingsArticlesList" class="space-y-1.5 max-h-44 overflow-y-auto pr-1">
           ${renderArticlesSettingsList()}
@@ -1286,9 +1358,20 @@ function closeSubSettings() {
   activeSubSettingsType = null;
 }
 
+function filterSettingsClients() {
+  const box = document.getElementById('settingsClientsList');
+  if (!box) return;
+  box.innerHTML = renderCrmSettingsList();
+  lucide.createIcons();
+}
+
 function renderCrmSettingsList() {
-  return CLIENTS_DB.length === 0 ? '<p class="text-xs text-slate-500 italic py-2">Nessun cliente in archivio.</p>' : 
-  CLIENTS_DB.map(c => `
+  const qEl = document.getElementById('settingsClientsSearch');
+  const q = qEl ? qEl.value.trim().toLowerCase() : '';
+  const list = q ? CLIENTS_DB.filter(c => [c.name, c.referent, c.email, c.whatsapp].some(v => String(v || '').toLowerCase().includes(q))) : CLIENTS_DB;
+  if (CLIENTS_DB.length === 0) return '<p class="text-xs text-slate-500 italic py-2">Nessun cliente in archivio.</p>';
+  if (list.length === 0) return '<p class="text-xs text-slate-500 italic py-2">Nessun cliente trovato.</p>';
+  return list.map(c => `
     <div onclick="loadClientForEdit('${c.id}')" class="flex items-center justify-between bg-slate-950 p-2.5 rounded border border-slate-800 text-xs hover:border-indigo-500/50 cursor-pointer transition-colors group">
       <div>
         <span class="text-white font-bold">${esc(c.name)}</span> ${c.referent ? `<span class="text-indigo-300">(${esc(c.referent)})</span>` : ''}
@@ -3357,6 +3440,20 @@ function normalizeArticleDiscount(input) {
   updateArticleField(input);
 }
 
+// La descrizione dell'articolo si allarga da sola in altezza: si vede sempre tutto il testo
+function autoGrowDesc(el) {
+  if (!el || !el.offsetWidth) return;
+  el.style.height = 'auto';
+  el.style.height = (el.scrollHeight + 2) + 'px';
+}
+function autoGrowAllDescs() {
+  document.querySelectorAll('#articlesTableBody textarea[data-field="desc"]').forEach(autoGrowDesc);
+}
+(function () {
+  let t = null;
+  window.addEventListener('resize', () => { clearTimeout(t); t = setTimeout(autoGrowAllDescs, 150); });
+})();
+
 function renderArticlesTable(card) {
   const tbody = document.getElementById('articlesTableBody');
   tbody.innerHTML = '';
@@ -3386,7 +3483,7 @@ function renderArticlesTable(card) {
         <div id="articleCodeSuggestions-${idx}" class="hidden absolute left-0 right-0 top-full mt-1 bg-slate-800 border border-slate-600 rounded shadow-xl z-50 max-h-32 overflow-y-auto min-w-[200px]"></div>
       </td>
       <td class="py-1.5 px-1 relative">
-        <input type="text" value="${esc(art.desc || '')}" data-field="desc" data-index="${idx}" autocomplete="off" oninput="updateArticleField(this); handleArticleAutocomplete(this.value, ${idx})" onchange="saveArticlesEdits(true)" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-xs focus:outline-none focus:border-indigo-500">
+        <textarea rows="1" spellcheck="false" data-field="desc" data-index="${idx}" autocomplete="off" oninput="updateArticleField(this); autoGrowDesc(this); handleArticleAutocomplete(this.value, ${idx})" onkeydown="if(event.key==='Enter'){event.preventDefault();}" onchange="saveArticlesEdits(true)" class="block w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-xs leading-snug focus:outline-none focus:border-indigo-500 resize-none overflow-hidden" style="min-height:28px">${esc(art.desc || '')}</textarea>
         <div id="articleSuggestions-${idx}" class="hidden absolute left-0 right-0 top-full mt-1 bg-slate-800 border border-slate-600 rounded shadow-xl z-50 max-h-32 overflow-y-auto min-w-[250px]"></div>
       </td>
       <td class="py-1.5 px-1">
@@ -3419,6 +3516,7 @@ function renderArticlesTable(card) {
   
   calculateGrandTotals();
   lucide.createIcons();
+  requestAnimationFrame(autoGrowAllDescs);
 }
 
 function handleArticleCodeAutocomplete(query, idx) {
@@ -3697,6 +3795,7 @@ function openDetail(id) {
   }
   
   openModal('detailModal');
+  setTimeout(autoGrowAllDescs, 30);
 }
 
 // ==========================================
@@ -5288,9 +5387,21 @@ function printArchiveReport() {
 // ============================================
 // GESTIONE DATABASE ARTICOLI BASE
 // ============================================
+function filterSettingsArticles() {
+  const box = document.getElementById('settingsArticlesList');
+  if (!box) return;
+  box.innerHTML = renderArticlesSettingsList();
+  lucide.createIcons();
+}
+
 function renderArticlesSettingsList() {
-  return ARTICLES_DB.length === 0 ? '<p class="text-xs text-slate-500 italic py-2">Nessun articolo salvato.</p>' : 
-  ARTICLES_DB.map((a, idx) => `
+  const qEl = document.getElementById('settingsArticlesSearch');
+  const q = qEl ? qEl.value.trim().toLowerCase() : '';
+  // si tiene l'indice vero dell'articolo anche filtrando, cosi modifica ed elimina colpiscono quello giusto
+  const entries = ARTICLES_DB.map((a, idx) => ({ a: a, idx: idx })).filter(e => !q || (String(e.a.code || '') + ' ' + String(e.a.desc || '')).toLowerCase().includes(q));
+  if (ARTICLES_DB.length === 0) return '<p class="text-xs text-slate-500 italic py-2">Nessun articolo salvato.</p>';
+  if (entries.length === 0) return '<p class="text-xs text-slate-500 italic py-2">Nessun articolo trovato.</p>';
+  return entries.map(({ a, idx }) => `
     <div class="flex items-center justify-between bg-slate-950 p-2.5 rounded border border-slate-800 text-xs hover:border-indigo-500/50 transition-colors">
       <div>
         <span class="text-white font-bold">${esc(a.desc)}</span>
