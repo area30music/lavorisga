@@ -1,4 +1,4 @@
-// ===========================================
+// ==========================================
 // CONFIGURAZIONE FIREBASE HARDCODED
 // ==========================================
 const firebaseConfig = {
@@ -36,6 +36,98 @@ zoomStyles.innerHTML = `
   .card-dropzone > div .py-0\\.5 { padding-top: 0.2em !important; padding-bottom: 0.2em !important; }
 `;
 document.head.appendChild(zoomStyles);
+
+const phoneStyles = document.createElement('style');
+phoneStyles.id = 'phoneStyles';
+// Tutte le regole sono limitate a html[data-view="phone"]: su iPad e PC non si attivano mai.
+phoneStyles.textContent = `
+html[data-view="phone"] body { height: 100dvh; }
+
+/* Intestazione compatta */
+html[data-view="phone"] header { padding: 6px 10px; gap: 6px; }
+html[data-view="phone"] header > div:nth-child(1) { order: 1; }
+html[data-view="phone"] header > div:nth-child(3) { order: 2; margin-left: auto; }
+html[data-view="phone"] header > div:nth-child(2) { order: 3; flex: 1 1 100%; max-width: none; margin: 0; }
+html[data-view="phone"] #companyLogoContainer { width: 84px !important; height: 36px !important; }
+html[data-view="phone"] #liveClockWidget { display: none; }
+html[data-view="phone"] header .w-px { display: none; }
+html[data-view="phone"] header > div:nth-child(3) { gap: 6px; flex-wrap: nowrap; }
+html[data-view="phone"] header > div:nth-child(3) > * { margin: 0 !important; }
+html[data-view="phone"] header > div:nth-child(3) > button { padding: 8px 10px; }
+html[data-view="phone"] header > div:nth-child(3) > button:not(:last-child) { font-size: 0; gap: 0; }
+
+/* Bacheca: una colonna per schermata, scorri col dito */
+html[data-view="phone"] #board { padding: 8px; gap: 10px; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; }
+html[data-view="phone"] #board > * { flex: 0 0 90vw; width: 90vw !important; min-width: 0 !important; max-width: 90vw !important; scroll-snap-align: center; }
+
+/* Finestre a tutto schermo */
+html[data-view="phone"] #detailModal,
+html[data-view="phone"] #addCardModal,
+html[data-view="phone"] #settingsModal,
+html[data-view="phone"] #subSettingsModal,
+html[data-view="phone"] #clientHistoryModal { padding: 0 !important; }
+html[data-view="phone"] #detailModal > div,
+html[data-view="phone"] #addCardModal > div,
+html[data-view="phone"] #settingsModal > div,
+html[data-view="phone"] #subSettingsModal > div,
+html[data-view="phone"] #clientHistoryModal > div { width: 100% !important; max-width: 100% !important; height: 100dvh; max-height: 100dvh !important; border-radius: 0 !important; }
+
+/* Pulsanti in fondo alla commessa: su due righe, tutti raggiungibili */
+html[data-view="phone"] #detailFooter { flex-direction: column; padding: 10px; gap: 8px; }
+html[data-view="phone"] #detailFooter > div { width: 100%; flex-wrap: wrap; gap: 8px; }
+html[data-view="phone"] #detailFooter button { flex: 1 1 calc(50% - 8px); justify-content: center; padding: 10px 8px; white-space: nowrap; }
+
+/* Articoli: ogni riga diventa una scheda con i campi uno sotto l'altro */
+html[data-view="phone"] #articlesTable { min-width: 0 !important; width: 100%; display: block; }
+html[data-view="phone"] #articlesTableHead { display: none; }
+html[data-view="phone"] #articlesTableBody { display: block; }
+html[data-view="phone"] #articlesTableBody tr { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px 8px; padding: 10px 2px; align-items: end; border-bottom: 1px solid rgba(51, 65, 85, 0.6); }
+html[data-view="phone"] #articlesTableBody td { display: block; padding: 0 !important; text-align: left !important; min-width: 0; }
+html[data-view="phone"] #articlesTableBody td:nth-child(1) { order: 1; grid-column: span 2; }
+html[data-view="phone"] #articlesTableBody td:nth-child(2) { order: 2; grid-column: span 3; }
+html[data-view="phone"] #articlesTableBody td:nth-child(11) { order: 3; grid-column: span 1; text-align: right !important; }
+html[data-view="phone"] #articlesTableBody td:nth-child(3) { order: 4; grid-column: 1 / -1; }
+html[data-view="phone"] #articlesTableBody td:nth-child(4) { order: 5; grid-column: span 2; }
+html[data-view="phone"] #articlesTableBody td:nth-child(5) { order: 6; grid-column: span 2; }
+html[data-view="phone"] #articlesTableBody td:nth-child(6) { order: 7; grid-column: span 2; }
+html[data-view="phone"] #articlesTableBody td:nth-child(7) { order: 8; grid-column: span 2; }
+html[data-view="phone"] #articlesTableBody td:nth-child(8) { order: 9; grid-column: span 2; }
+html[data-view="phone"] #articlesTableBody td:nth-child(9) { order: 10; grid-column: span 2; }
+html[data-view="phone"] #articlesTableBody td:nth-child(10) { order: 11; grid-column: 1 / -1; text-align: right !important; }
+html[data-view="phone"] #articlesTableBody td:nth-child(n+2):nth-child(-n+10)::before { display: block; font-size: 10px; line-height: 1.2; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 2px; font-family: ui-sans-serif, system-ui, sans-serif; font-weight: 600; }
+html[data-view="phone"] #articlesTableBody td:nth-child(2)::before { content: 'Codice'; }
+html[data-view="phone"] #articlesTableBody td:nth-child(3)::before { content: 'Descrizione'; }
+html[data-view="phone"] #articlesTableBody td:nth-child(4)::before { content: 'Q.tà'; }
+html[data-view="phone"] #articlesTableBody td:nth-child(5)::before { content: 'Prezzo un.'; }
+html[data-view="phone"] #articlesTableBody td:nth-child(6)::before { content: 'Sconto %'; }
+html[data-view="phone"] #articlesTableBody td:nth-child(7)::before { content: 'IVA %'; }
+html[data-view="phone"] #articlesTableBody td:nth-child(8)::before { content: 'Tot. netto'; }
+html[data-view="phone"] #articlesTableBody td:nth-child(9)::before { content: 'Un. ivato'; }
+html[data-view="phone"] #articlesTableBody td:nth-child(10)::before { content: 'Tot. ivato'; }
+`;
+document.head.appendChild(phoneStyles);
+
+// ==========================================
+// MODALITA' DI VISIONE (per dispositivo): Automatico, iPhone, iPad, PC
+// ==========================================
+function getViewMode() {
+  try { const m = localStorage.getItem('sga_view_mode'); return ['auto', 'phone', 'tablet', 'pc'].indexOf(m) >= 0 ? m : 'auto'; } catch (e) { return 'auto'; }
+}
+function resolveViewMode() {
+  const m = getViewMode();
+  if (m !== 'auto') return m;
+  const w = window.innerWidth || document.documentElement.clientWidth || 1200;
+  return w <= 640 ? 'phone' : (w <= 1100 ? 'tablet' : 'pc');
+}
+function applyViewMode() { document.documentElement.setAttribute('data-view', resolveViewMode()); }
+function setViewMode(mode) {
+  try { localStorage.setItem('sga_view_mode', mode); } catch (e) {}
+  applyViewMode();
+  playSound('success');
+  if (typeof activeSubSettingsType !== 'undefined' && activeSubSettingsType === 'viewmode') openSubSettings('viewmode');
+}
+applyViewMode();
+window.addEventListener('resize', () => { if (getViewMode() === 'auto') applyViewMode(); });
 
 if (!firebase.apps.length) {
   firebase.initializeApp(firebaseConfig);
@@ -1038,6 +1130,23 @@ function openSubSettings(type) {
           <div><strong class="text-pink-400 text-xs">{ARTICOLI}</strong> -> Elenco articoli in lista</div>
         </div>
         <textarea id="msgTemplateText" rows="10" class="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-xs text-slate-200 focus:outline-none focus:border-pink-500 font-sans leading-relaxed">${sharedMsgTemplate}</textarea>
+      </div>`;
+  } else if (type === 'viewmode') {
+    titleEl.innerHTML = `<i data-lucide="smartphone" class="w-5 h-5 text-teal-400"></i> Modalità di visione`;
+    const cur = getViewMode();
+    const names = { phone: 'iPhone', tablet: 'iPad', pc: 'PC / Mac' };
+    const opt = (id, label, desc) => `
+      <button type="button" onclick="setViewMode('${id}')" class="w-full text-left p-3 rounded-xl border ${cur === id ? 'border-teal-500 bg-teal-950/40' : 'border-slate-800 bg-slate-950 hover:border-slate-600'} cursor-pointer flex items-start gap-3">
+        <span class="mt-0.5 w-4 h-4 rounded-full border-2 shrink-0 ${cur === id ? 'border-teal-400 bg-teal-400' : 'border-slate-600'}"></span>
+        <span><span class="block text-sm font-bold text-slate-100">${label}</span><span class="block text-xs text-slate-400">${desc}</span></span>
+      </button>`;
+    contentEl.innerHTML = `
+      <div class="space-y-2">
+        <p class="text-xs text-slate-400">La scelta vale solo per questo dispositivo: sull'iPhone la fai una volta e resta. Gli altri dispositivi non cambiano.</p>
+        ${opt('auto', 'Automatico', 'Si adatta alla larghezza dello schermo (ora: ' + names[resolveViewMode()] + ')')}
+        ${opt('phone', 'iPhone', 'Una colonna alla volta, finestre a tutto schermo, articoli uno sotto l\'altro.')}
+        ${opt('tablet', 'iPad', 'Come la versione PC (nessuna differenza per ora).')}
+        ${opt('pc', 'PC / Mac', 'La versione completa a schermo largo.')}
       </div>`;
   } else if (type === 'jobtypes') {
     titleEl.innerHTML = `<i data-lucide="layers" class="w-5 h-5 text-orange-400"></i> Tipi di Lavorazione`;
@@ -4622,8 +4731,8 @@ function ensureHistoryModal() {
           <button onclick="openHistoryForm()" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs px-3 py-2 rounded-lg font-semibold cursor-pointer flex items-center gap-1.5"><i data-lucide="plus" class="w-3.5 h-3.5"></i> Nuova voce</button>
         </div>
         <div id="histForm" class="hidden bg-slate-950 border border-indigo-500/40 rounded-xl p-3 space-y-2">
-          <div class="grid grid-cols-3 gap-2">
-            <input id="histFormTitle" type="text" autocomplete="off" placeholder="Titolo del lavoro *" class="col-span-2 bg-slate-900 border border-slate-700 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <input id="histFormTitle" type="text" autocomplete="off" placeholder="Titolo del lavoro *" class="sm:col-span-2 bg-slate-900 border border-slate-700 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">
             <input id="histFormDate" type="date" class="bg-slate-900 border border-slate-700 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">
           </div>
           <textarea id="histFormNotes" rows="5" placeholder="Note: codici filo, posizione, quantità, prezzo, specifiche..." class="w-full bg-slate-900 border border-slate-700 rounded px-2.5 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 leading-relaxed"></textarea>
