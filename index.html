@@ -244,6 +244,14 @@
       <select id="globalFilterType" onchange="handleGlobalFilterChange()" class="bg-slate-900 border border-slate-700 text-slate-300 text-[11px] rounded px-2 py-1 focus:outline-none focus:border-indigo-500">
         <option value="">Tutte le lavorazioni</option>
       </select>
+      <select id="globalFilterDeadline" onchange="handleGlobalDeadlineChange()" class="w-[5.5rem] shrink-0 bg-slate-900 border border-slate-700 text-slate-300 text-[11px] rounded px-2 py-1 focus:outline-none focus:border-indigo-500">
+        <option value="">Scadenze</option>
+        <option value="scadute">Scadute</option>
+        <option value="oggi">Scadono oggi</option>
+        <option value="settimana">Entro questa settimana</option>
+        <option value="7giorni">Prossimi 7 giorni</option>
+        <option value="senza">Senza data</option>
+      </select>
       <button onclick="clearGlobalSearch()" id="btnClearSearch" class="hidden text-slate-400 hover:text-white p-0.5"><i data-lucide="x" class="w-3.5 h-3.5"></i></button>
     </div>
     <div class="flex space-x-2 md:space-x-3 items-center flex-wrap">
@@ -266,6 +274,8 @@
     </div>
   </header>
 
+  <div id="boardWarning" class="hidden hide-in-master px-3 md:px-4 pt-2"></div>
+
   <!-- WORKSPACE A SCORRIMENTO ORIZZONTALE -->
   <main id="board" class="flex-1 overflow-x-auto overflow-y-hidden flex gap-4 p-3 md:p-4 items-start select-none relative scroll-smooth">
     <!-- Colonne generate via JS -->
@@ -277,6 +287,7 @@
       <div class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-850">
         <h3 class="font-bold text-base text-slate-100 flex items-center gap-2">
           <i data-lucide="sliders" class="w-5 h-5 text-indigo-400"></i> Impostazioni Generali
+          <span class="ml-2 text-[11px] font-normal text-slate-400"><span id="appVersionLabel"></span> <span id="appVersionStatus"></span></span>
         </h3>
         <button onclick="playSound('close'); closeModal('settingsModal');" class="text-slate-400 hover:text-slate-200 bg-slate-800 rounded-full p-1 cursor-pointer">
           <i data-lucide="x" class="w-4 h-4"></i>
@@ -328,6 +339,24 @@
             <div>
               <h4 class="font-bold text-slate-200 text-sm">Macchinari Utilizzati</h4>
               <p class="text-xs text-slate-400 mt-0.5">Aggiungi o rimuovi stampanti, plotter e attrezzature.</p>
+            </div>
+          </div>
+          <div onclick="playSound('click'); closeModal('settingsModal'); printDailySummary();" class="bg-slate-950 hover:bg-slate-850 border border-slate-800 hover:border-sky-500/50 p-4 rounded-xl cursor-pointer transition-all flex items-start gap-3.5 group">
+            <div class="bg-sky-600/20 text-sky-400 p-3 rounded-lg border border-sky-500/30 group-hover:scale-105 transition-transform">
+              <i data-lucide="clipboard-list" class="w-6 h-6"></i>
+            </div>
+            <div>
+              <h4 class="font-bold text-slate-200 text-sm">Riepilogo giornata (stampa)</h4>
+              <p class="text-xs text-slate-400 mt-0.5">Foglio A4 con le commesse da lavorare, per macchina.</p>
+            </div>
+          </div>
+          <div onclick="playSound('click'); openSubSettings('trash');" class="bg-slate-950 hover:bg-slate-850 border border-slate-800 hover:border-red-500/50 p-4 rounded-xl cursor-pointer transition-all flex items-start gap-3.5 group">
+            <div class="bg-red-600/20 text-red-400 p-3 rounded-lg border border-red-500/30 group-hover:scale-105 transition-transform">
+              <i data-lucide="trash-2" class="w-6 h-6"></i>
+            </div>
+            <div>
+              <h4 class="font-bold text-slate-200 text-sm">Cestino</h4>
+              <p class="text-xs text-slate-400 mt-0.5">Recupera le commesse eliminate negli ultimi 30 giorni.</p>
             </div>
           </div>
           <div onclick="playSound('click'); openSubSettings('jobtypes');" class="bg-slate-950 hover:bg-slate-850 border border-slate-800 hover:border-orange-500/50 p-4 rounded-xl cursor-pointer transition-all flex items-start gap-3.5 group">
@@ -776,8 +805,12 @@
       <div class="space-y-4 text-sm">
         <div class="bg-slate-950 p-3 rounded-lg border border-slate-800">
           <h4 class="text-xs font-bold text-emerald-400 mb-1 uppercase tracking-wider">1. ImgBB (Immagini 4K Gratuite)</h4>
-          <p class="text-[10px] text-slate-400 mb-2">Salva le immagini in cloud in alta risoluzione (opzionale).</p>
-          <input type="text" id="cfgImgbbKey" placeholder="ImgBB API Key (Opzionale)" class="w-full bg-slate-900 border border-slate-700 rounded px-3 py-2 text-slate-200 focus:outline-none focus:border-emerald-500 font-mono text-xs">
+          <p class="text-[10px] text-slate-400 mb-2">Inseriscila una volta sola: si salva nel cloud e vale per tutti i dispositivi.</p>
+          <div class="flex gap-2">
+            <input type="password" id="cfgImgbbKey" autocomplete="off" placeholder="Incolla qui la chiave ImgBB" class="flex-1 min-w-0 bg-slate-900 border border-slate-700 rounded px-3 py-2 text-slate-200 focus:outline-none focus:border-emerald-500 font-mono text-xs">
+            <button type="button" onclick="toggleImgbbKeyVisible()" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs px-3 rounded cursor-pointer">Mostra</button>
+          </div>
+          <p id="cfgImgbbStatus" class="text-[10px] mt-2"></p>
         </div>
 
         <div class="bg-slate-950 p-3 rounded-lg border border-slate-800">
