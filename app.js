@@ -8,12 +8,17 @@ const firebaseConfig = {
   storageBucket: "workflow-sga.firebasestorage.app"
 };
 
-// (L'aggiornamento automatico e' in fondo a questo file: nessun numero di versione da incrementare)
+// Numero di versione: lo aumento io a ogni consegna. Si vede in Impostazioni Generali.
+const APP_VERSION = 1;
+const APP_VERSION_DATE = "03/11/2026";
 
 // ==========================================
 // CHIAVE IMGBB (FOTO 4K)
+// La chiave NON e' piu' scritta nel codice: si inserisce una volta sola in Impostazioni Cloud
+// e viene salvata su Firebase (workflow_sga_settings/config, campo imgbbKey), cosi' tutti i dispositivi la leggono da li'.
 // ==========================================
-const IMGBB_API_KEY = "4452dd184d4f0efb701cba820e8c8f81";
+let IMGBB_API_KEY = "";
+try { IMGBB_API_KEY = localStorage.getItem('workflow_sga_imgbb_key') || ""; } catch (e) {}
 
 // ==========================================
 // STILI DINAMICI PER ZOOM TESTO FLUIDO
@@ -110,61 +115,58 @@ html[data-view="phone"] #settingsClientsList, html[data-view="phone"] #settingsA
 `;
 document.head.appendChild(phoneStyles);
 
+const masterAlertStyles = document.createElement('style');
+masterAlertStyles.id = 'masterAlertStyles';
+// Avviso scadenze molto piu' grande SOLO in Master View (proiettore). Altrove resta identico.
+masterAlertStyles.textContent = `
+body.master-mode #arcadeAlertModal > div { max-width: min(94vw, 3500px) !important; padding: clamp(1rem, 2vw, 5rem) !important; max-height: 96vh; overflow-y: auto; }
+body.master-mode #arcadeAlertModal h2 { font-size: clamp(2rem, 3.6vw, 9rem); line-height: 1.1; }
+body.master-mode #arcadeAlertModal p.uppercase { font-size: clamp(1.1rem, 1.8vw, 4.8rem); }
+body.master-mode #arcadeAlertModal svg { width: clamp(3rem, 5vw, 13rem); height: clamp(3rem, 5vw, 13rem); }
+body.master-mode #arcadeAlertModal button svg { width: clamp(1.5rem, 2.4vw, 6rem); height: clamp(1.5rem, 2.4vw, 6rem); }
+body.master-mode #arcadeAlertList { max-height: 44vh; }
+body.master-mode #arcadeAlertList h4 { font-size: clamp(1.4rem, 2.3vw, 6rem); line-height: 1.2; }
+body.master-mode #arcadeAlertList p, body.master-mode #arcadeAlertList span.font-mono { font-size: clamp(1rem, 1.5vw, 4rem); line-height: 1.25; }
+body.master-mode #arcadeAlertList > div { padding: clamp(0.6rem, 1vw, 2.6rem); }
+body.master-mode #arcadeAlertModal button.uppercase { font-size: clamp(1.2rem, 2vw, 5.2rem); }
+html[data-view="phone"] #trashList { max-height: none !important; overflow: visible !important; }
+html[data-view="phone"] #globalFilterType, html[data-view="phone"] #globalFilterDeadline { min-width: 0; max-width: 30%; text-overflow: ellipsis; flex-shrink: 1; }
+html[data-view="phone"] #globalSearchInput { min-width: 0; }
+`;
+document.head.appendChild(masterAlertStyles);
+
 // ==========================================
-// TABELLA ARTICOLI su iPad e PC: ogni articolo su due righe (codice e descrizione larghi, sotto i numeri)
-// Solo la tabella della scheda commessa cambia; il resto delle schermate resta come prima.
+// TABELLA ARTICOLI su iPad e PC: tutto su una riga; codice e descrizione vanno a capo e la riga cresce in altezza
+// Su iPhone resta il layout a schede (regole in phoneStyles).
 // ==========================================
 (function () {
   const sel = (suffix) => ['tablet', 'pc'].map(m => 'html[data-view="' + m + '"] ' + suffix).join(', ');
-  const labels = [[2, 'Codice'], [3, 'Descrizione'], [4, 'Q.tà'], [5, 'Prezzo un.'], [6, 'Sconto %'], [7, 'IVA %'], [8, 'Tot. netto'], [9, 'Un. ivato'], [10, 'Tot. ivato']];
-  const base = `
-${sel('#articlesTable')} { min-width: 0 !important; width: 100%; display: block; }
-${sel('#articlesTableHead')} { display: none; }
-${sel('#articlesTableBody')} { display: block; }
-${sel('#articlesTableBody tr')} { display: grid; gap: 6px 10px; padding: 10px 4px; align-items: end; border-bottom: 1px solid rgba(51, 65, 85, 0.6); }
-${sel('#articlesTableBody td')} { display: block; padding: 0 !important; text-align: left !important; min-width: 0; }
-${sel('#articlesTableBody td:nth-child(n+2):nth-child(-n+10)::before')} { display: block; font-size: 10px; line-height: 1.2; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 2px; font-family: ui-sans-serif, system-ui, sans-serif; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-${sel('#articlesTableBody td:nth-child(8), #articlesTableBody td:nth-child(9), #articlesTableBody td:nth-child(10)')} { padding-bottom: 5px !important; }
-${labels.map(l => sel('#articlesTableBody td:nth-child(' + l[0] + ')::before') + " { content: '" + l[1] + "'; }").join('\n')}
-`;
-  // schermo largo (PC, iPad in orizzontale): 12 colonne
-  const place = (n, col, span, row, extra) => sel('#articlesTableBody td:nth-child(' + n + ')') + ' { grid-column: ' + col + ' / span ' + span + '; grid-row: ' + row + ';' + (extra || '') + ' }';
-  const wide = `
-@media (min-width: 861px) {
-${sel('#articlesTableBody tr')} { grid-template-columns: repeat(12, minmax(0, 1fr)); }
-${place(1, 1, 1, 1)}
-${place(2, 2, 3, 1)}
-${place(3, 5, 7, 1)}
-${place(11, 12, 1, 1, ' text-align: right !important;')}
-${place(4, 1, 1, 2)}
-${place(5, 2, 2, 2)}
-${place(6, 4, 1, 2)}
-${place(7, 5, 1, 2)}
-${place(8, 6, 2, 2, ' text-align: right !important;')}
-${place(9, 8, 2, 2, ' text-align: right !important;')}
-${place(10, 10, 3, 2, ' text-align: right !important;')}
-}
-`;
-  // schermo piu stretto (iPad in verticale): descrizione a tutta larghezza, numeri su due righe
-  const narrow = `
-@media (max-width: 860px) {
-${sel('#articlesTableBody tr')} { grid-template-columns: repeat(12, minmax(0, 1fr)); }
-${place(1, 1, 2, 1)}
-${place(2, 3, 9, 1)}
-${place(11, 12, 1, 1, ' text-align: right !important;')}
-${sel('#articlesTableBody td:nth-child(3)')} { grid-column: 1 / -1; grid-row: 2; }
-${place(4, 1, 2, 3)}
-${place(5, 3, 3, 3)}
-${place(6, 6, 2, 3)}
-${place(7, 8, 2, 3)}
-${place(8, 10, 3, 3, ' text-align: right !important;')}
-${place(9, 7, 3, 4, ' text-align: right !important;')}
-${place(10, 10, 3, 4, ' text-align: right !important;')}
-}
+  const css = `
+${sel('#articlesTable')} { min-width: 0 !important; width: 100%; table-layout: fixed; }
+${sel('#articlesTableHead th:nth-child(1)')} { width: 46px; padding-left: 2px; padding-right: 2px; }
+${sel('#articlesTableHead th:nth-child(2)')} { width: 15%; }
+${sel('#articlesTableHead th:nth-child(4)')} { width: 52px; }
+${sel('#articlesTableHead th:nth-child(5)')} { width: 76px; }
+${sel('#articlesTableHead th:nth-child(6)')} { width: 56px; }
+${sel('#articlesTableHead th:nth-child(7)')} { width: 46px; }
+${sel('#articlesTableHead th:nth-child(8)')} { width: 78px; }
+${sel('#articlesTableHead th:nth-child(9)')} { width: 78px; }
+${sel('#articlesTableHead th:nth-child(10)')} { width: 86px; }
+${sel('#articlesTableHead th:nth-child(11)')} { width: 56px; }
+${sel('#articlesTableHead th')} { padding-left: 4px; padding-right: 4px; }
+${sel('#articlesTableBody td')} { padding-left: 2px !important; padding-right: 2px !important; vertical-align: top; }
+${sel('#articlesTableBody td:nth-child(n+4)')} { vertical-align: middle; }
+${sel('#articlesTableBody td:nth-child(8), #articlesTableBody td:nth-child(9), #articlesTableBody td:nth-child(10)')} { white-space: nowrap; font-size: 11px; }
 `;
   const st = document.createElement('style');
   st.id = 'articleTableStyles';
-  st.textContent = base + wide + narrow;
+  // righe alternate: una un po' piu chiara dell'altra, uguale su tutti i dispositivi (il colore al passaggio del mouse resta)
+  const zebra = `
+html[data-view] #articlesTableBody tr { border-radius: 8px; }
+html[data-view] #articlesTableBody tr:nth-child(even):not(:hover) { background-color: rgba(148, 163, 184, 0.10); }
+html[data-view="phone"] #articlesTableBody tr { padding-left: 8px !important; padding-right: 8px !important; }
+`;
+  st.textContent = css + zebra;
   document.head.appendChild(st);
 })();
 
@@ -240,8 +242,7 @@ const DEFAULT_COLUMNS_CONFIG = [
   { id: "prev-inviato", label: "Prev. inviato", color: "bg-amber-600/20 border-amber-500/50 text-amber-400", border: "border-l-4 border-l-amber-500", hexDefault: "#d97706" },
   { id: "da-ordinare", label: "Da ordinare", color: "bg-rose-600/20 border-rose-500/50 text-rose-400", border: "border-l-4 border-l-rose-500", hexDefault: "#e11d48" },
   { id: "ordinato", label: "Ordinato", color: "bg-pink-600/20 border-pink-500/50 text-pink-400", border: "border-l-4 border-l-pink-500", hexDefault: "#db2777" },
-  { id: "magazzino", label: "In magazzino", color: "bg-fuchsia-600/20 border-fuchsia-500/50 text-fuchsia-400", border: "border-l-4 border-l-fuchsia-500", hexDefault: "#c026d3" },
-  { id: "da-lavorare", label: "Da lavorare", color: "bg-violet-600/20 border-violet-500/50 text-violet-400", border: "border-l-4 border-l-violet-500", hexDefault: "#7c3aed" },
+  { id: "da-lavorare", label: "Magazzino / Da lavorare", color: "bg-violet-600/20 border-violet-500/50 text-violet-400", border: "border-l-4 border-l-violet-500", hexDefault: "#7c3aed" },
   { id: "in-lavorazione", label: "In lavorazione", color: "bg-cyan-600/20 border-cyan-500/50 text-cyan-400", border: "border-l-4 border-l-cyan-500", hexDefault: "#0891b2" },
   { id: "lavorato-da-bollettare", label: "Lavorato da bollettare", color: "bg-emerald-600/20 border-emerald-500/50 text-emerald-400", border: "border-l-4 border-l-emerald-500", hexDefault: "#059669" },
   { id: "bollettato-da-consegnare", label: "Bollettato da consegnare", color: "bg-teal-600/20 border-teal-500/50 text-teal-400", border: "border-l-4 border-l-teal-500", hexDefault: "#0d9488" },
@@ -264,6 +265,7 @@ let sharedMsgTemplate = "";
 let activeSubSettingsType = null;
 let globalSearchQuery = "";
 let globalFilterJobType = "";
+let globalFilterDeadline = "";
 let activeNotifyCard = null;
 
 // ==========================================
@@ -305,40 +307,311 @@ function logoutApp() {
   showInAppConfirm("Vuoi disconnetterti da SGA Workflow?", () => { auth.signOut(); }, 'Disconnetti');
 }
 
-// Controllo Archivio Automatico
+// Controllo Archivio Automatico (prudente)
+// Archivia solo se la commessa e' DAVVERO in Fatturato da piu' di 7 giorni, contando dall'ultimo passaggio in Fatturato.
+// Se manca la data del passaggio, non archivia: la registra adesso e riparte il conteggio.
 function checkAutoArchive() {
   const now = Date.now();
   const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;
-  let localMigrated = false;
-  
+  let changed = false;
+  let archivedCount = 0;
+
   state.cards.forEach(card => {
-    if (card.stage === 'fatturato') {
-      let fatturatoTime = card.createdAt; 
-      
-      if (card.history && card.history.length > 0) {
-        const lastFatturato = [...card.history].reverse().find(h => h.stage === 'fatturato');
-        if (lastFatturato && lastFatturato.timestamp) {
-          fatturatoTime = lastFatturato.timestamp;
-        }
-      }
-      
-      if ((now - new Date(fatturatoTime).getTime()) > SEVEN_DAYS) {
-        card.stage = 'archiviato';
-        if (!card.history) card.history = [];
-        card.history.push({
-          stage: 'archiviato',
-          label: 'Archiviata automaticamente (7+ giorni in Fatturato)',
-          timestamp: new Date().toISOString()
-        });
-        localMigrated = true;
-        syncCardToCloud(card);
-      }
+    if (!card || card.stage !== 'fatturato') return;
+    if (!Array.isArray(card.history)) card.history = [];
+    const last = [...card.history].reverse().find(h => h && h.stage === 'fatturato' && h.timestamp);
+    if (!last) {
+      card.history.push({ stage: 'fatturato', label: 'Data di ingresso in Fatturato registrata', timestamp: new Date().toISOString() });
+      changed = true;
+      syncCardToCloud(card);
+      return;
+    }
+    const t = new Date(last.timestamp).getTime();
+    if (isNaN(t)) return;
+    if ((now - t) > SEVEN_DAYS) {
+      card.stage = 'archiviato';
+      card.history.push({ stage: 'archiviato', label: 'Archiviata automaticamente (7+ giorni in Fatturato)', timestamp: new Date().toISOString() });
+      changed = true;
+      archivedCount++;
+      syncCardToCloud(card);
     }
   });
-  
-  if (localMigrated) {
-    saveLocal();
+
+  if (changed) saveLocal();
+  if (archivedCount > 0) showToast(archivedCount + (archivedCount === 1 ? ' commessa archiviata' : ' commesse archiviate') + ' (dopo 7 giorni in Fatturato)');
+}
+
+// Riporta una commessa dall'archivio a "Fatturato"
+function restoreArchivedCard(cardId) {
+  const card = state.cards.find(c => c && c.id === cardId);
+  if (!card) return;
+  card.stage = 'fatturato';
+  if (!Array.isArray(card.history)) card.history = [];
+  card.history.push({ stage: 'fatturato', label: 'Ripristinata dall\'archivio', timestamp: new Date().toISOString() });
+  saveLocal();
+  syncCardToCloud(card);
+  const list = document.getElementById('archiveSettingsList');
+  if (list) { const si = document.getElementById('archiveSearchInput'); list.innerHTML = renderArchiveList(si ? si.value : ''); lucide.createIcons(); }
+  renderBoard();
+  showToast('Commessa ripristinata in Fatturato');
+}
+
+// ==========================================
+// FILTRO SCADENZE, AVVISI SULLA LAVAGNA
+// ==========================================
+function localIsoDate(d) {
+  const y = d.getFullYear(), m = String(d.getMonth() + 1).padStart(2, '0'), g = String(d.getDate()).padStart(2, '0');
+  return y + '-' + m + '-' + g;
+}
+
+function cardMatchesDeadline(c) {
+  const mode = globalFilterDeadline;
+  if (!mode) return true;
+  if (mode === 'senza') return !c.deliveryDate;
+  if (!c.deliveryDate) return false;
+  if (c.stage === 'bollettato-da-consegnare' || c.stage === 'fatturato') return false;
+  const d = new Date(c.deliveryDate); d.setHours(0, 0, 0, 0);
+  if (isNaN(d.getTime())) return false;
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const diff = Math.round((d - today) / 86400000);
+  if (mode === 'scadute') return diff < 0;
+  if (mode === 'oggi') return diff === 0;
+  if (mode === '7giorni') return diff >= 0 && diff <= 7;
+  if (mode === 'settimana') {
+    const dow = (today.getDay() + 6) % 7; // lunedi = 0
+    const toSunday = 6 - dow;
+    return diff >= 0 && diff <= toSunday;
   }
+  return true;
+}
+
+function handleGlobalDeadlineChange() {
+  const el = document.getElementById('globalFilterDeadline');
+  globalFilterDeadline = el ? el.value : '';
+  renderBoard();
+}
+
+function resetAllFilters() {
+  globalSearchQuery = ''; globalFilterJobType = ''; globalFilterDeadline = '';
+  const s = document.getElementById('globalSearchInput'); if (s) s.value = '';
+  const t = document.getElementById('globalFilterType'); if (t) t.value = '';
+  const d = document.getElementById('globalFilterDeadline'); if (d) d.value = '';
+  const cb = document.getElementById('btnClearSearch'); if (cb) cb.classList.add('hidden');
+  renderBoard();
+}
+
+function rescueOrphanCards() {
+  const known = new Set(COLUMNS_CONFIG.map(c => c.id));
+  let n = 0;
+  state.cards.forEach(c => {
+    if (c && c.stage && c.stage !== 'archiviato' && !known.has(c.stage)) {
+      c.stage = COLUMNS_CONFIG[0].id;
+      if (!Array.isArray(c.history)) c.history = [];
+      c.history.push({ stage: c.stage, label: 'Recuperata: la fase originale non esisteva piu\'', timestamp: new Date().toISOString() });
+      syncCardToCloud(c);
+      n++;
+    }
+  });
+  if (n) { saveLocal(); renderBoard(); showToast(n + (n === 1 ? ' commessa recuperata' : ' commesse recuperate')); }
+}
+
+function updateBoardWarning(renderedCount) {
+  const box = document.getElementById('boardWarning');
+  if (!box) return;
+  if (isMasterMode) { box.classList.add('hidden'); box.innerHTML = ''; return; }
+  const known = new Set(COLUMNS_CONFIG.map(c => c.id));
+  const active = state.cards.filter(c => c && c.stage !== 'archiviato' && known.has(c.stage));
+  const orphans = state.cards.filter(c => c && c.stage && c.stage !== 'archiviato' && !known.has(c.stage));
+  const filtersOn = !!(globalSearchQuery || globalFilterJobType || globalFilterDeadline);
+  const hidden = filtersOn ? Math.max(0, active.length - renderedCount) : 0;
+  let html = '';
+  if (hidden > 0) {
+    html += `<div class="flex items-center justify-between gap-2 bg-amber-950/60 border border-amber-700/60 text-amber-200 text-xs rounded-lg px-3 py-2">
+      <span><b>${hidden}</b> ${hidden === 1 ? 'commessa nascosta' : 'commesse nascoste'} dai filtri attivi.</span>
+      <button onclick="resetAllFilters()" class="shrink-0 bg-amber-600 hover:bg-amber-500 text-white font-semibold px-2.5 py-1 rounded cursor-pointer">Mostra tutte</button>
+    </div>`;
+  }
+  if (orphans.length > 0) {
+    html += `<div class="flex items-center justify-between gap-2 bg-red-950/60 border border-red-700/60 text-red-200 text-xs rounded-lg px-3 py-2 ${html ? 'mt-2' : ''}">
+      <span><b>${orphans.length}</b> ${orphans.length === 1 ? 'commessa non appare' : 'commesse non appaiono'} in nessuna colonna.</span>
+      <button onclick="rescueOrphanCards()" class="shrink-0 bg-red-600 hover:bg-red-500 text-white font-semibold px-2.5 py-1 rounded cursor-pointer">Recupera</button>
+    </div>`;
+  }
+  box.innerHTML = html;
+  box.classList.toggle('hidden', !html);
+}
+
+// ==========================================
+// COMMESSE FERME
+// ==========================================
+function getStaleDays() {
+  let v = 7;
+  try { v = parseInt(localStorage.getItem('sga_stale_days'), 10); } catch (e) {}
+  return (isNaN(v) || v < 1) ? 7 : v;
+}
+
+function staleInfo(card) {
+  if (!card || ['fatturato', 'bollettato-da-consegnare', 'archiviato'].includes(card.stage)) return 0;
+  let ref = card.createdAt;
+  if (Array.isArray(card.history) && card.history.length) {
+    const last = card.history[card.history.length - 1];
+    if (last && last.timestamp) ref = last.timestamp;
+  }
+  const t = new Date(ref).getTime();
+  if (isNaN(t)) return 0;
+  const days = Math.floor((Date.now() - t) / 86400000);
+  return days >= getStaleDays() ? days : 0;
+}
+
+// ==========================================
+// CESTINO (le commesse eliminate restano 30 giorni)
+// ==========================================
+function moveCardToTrash(card) {
+  if (!db || !card) return;
+  const entry = { kind: 'trash_card', cardId: card.id, cardTitle: card.title || 'Senza titolo', clientName: card.client || '', deletedAt: new Date().toISOString(), card: card };
+  const size = JSON.stringify(entry).length;
+  if (size > 900000) {
+    entry.card = Object.assign({}, card, { attachments: [], photos: [] });
+    entry.photosTrimmed = true;
+  }
+  db.collection('workflow_sga_settings').doc('trash_' + card.id).set(entry).catch(e => {
+    console.error(e);
+    showToast('⚠️ Non sono riuscito a mettere la commessa nel cestino');
+  });
+}
+
+async function loadTrashList() {
+  const el = document.getElementById('trashList');
+  if (!el) return;
+  if (!db) { el.innerHTML = '<p class="text-xs text-slate-500 italic py-4 text-center">Cestino non disponibile in modalità locale.</p>'; return; }
+  try {
+    const snap = await db.collection('workflow_sga_settings').where('kind', '==', 'trash_card').get();
+    const now = Date.now(); const THIRTY = 30 * 86400000;
+    const items = [];
+    snap.docs.forEach(d => {
+      const x = d.data();
+      const t = new Date(x.deletedAt).getTime();
+      if (!isNaN(t) && now - t > THIRTY) { d.ref.delete().catch(() => {}); return; }
+      items.push(x);
+    });
+    items.sort((a, b) => new Date(b.deletedAt) - new Date(a.deletedAt));
+    window.__trashItems = items;
+    renderTrashList();
+  } catch (e) {
+    console.error(e);
+    el.innerHTML = '<p class="text-xs text-red-400 py-4 text-center">Impossibile leggere il cestino.</p>';
+  }
+}
+
+function renderTrashList() {
+  const el = document.getElementById('trashList');
+  if (!el) return;
+  const items = window.__trashItems || [];
+  if (!items.length) { el.innerHTML = '<p class="text-xs text-slate-500 italic py-4 text-center">Il cestino è vuoto.</p>'; return; }
+  el.innerHTML = items.map(x => {
+    const left = Math.max(0, 30 - Math.floor((Date.now() - new Date(x.deletedAt).getTime()) / 86400000));
+    return `<div class="bg-slate-950 p-3 rounded-lg border border-slate-800 flex justify-between items-center gap-2">
+      <div class="min-w-0">
+        <h5 class="text-sm font-bold text-slate-200 truncate">${esc(x.cardTitle)}</h5>
+        <div class="text-[10px] text-slate-400 mt-0.5">Cliente: <span class="text-indigo-300 font-semibold">${esc(x.clientName || 'N/D')}</span> | Eliminata il ${new Date(x.deletedAt).toLocaleDateString('it-IT')} | ancora ${left} gg${x.photosTrimmed ? ' | senza foto' : ''}</div>
+      </div>
+      <div class="flex items-center gap-1 shrink-0">
+        <button onclick="restoreFromTrash('${esc(x.cardId)}')" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs px-2.5 py-1.5 rounded font-semibold cursor-pointer">Ripristina</button>
+        <button onclick="purgeTrashItem('${esc(x.cardId)}')" class="text-slate-600 hover:text-red-400 p-1.5 cursor-pointer" title="Elimina definitivamente"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+      </div>
+    </div>`;
+  }).join('');
+  lucide.createIcons();
+}
+
+async function restoreFromTrash(cardId) {
+  const x = (window.__trashItems || []).find(i => i.cardId === cardId);
+  if (!x || !x.card) return;
+  const card = sanitizeCard(x.card);
+  if (!card) { showToast('Commessa nel cestino non valida'); return; }
+  if (!Array.isArray(card.history)) card.history = [];
+  card.history.push({ stage: card.stage, label: 'Ripristinata dal cestino', timestamp: new Date().toISOString() });
+  try {
+    await db.collection('workflow_sga_cards').doc(card.id).set(card);
+    await db.collection('workflow_sga_settings').doc('trash_' + cardId).delete();
+  } catch (e) { console.error(e); showToast('⚠️ Ripristino non riuscito'); return; }
+  if (!state.cards.find(c => c.id === card.id) && card.stage !== 'archiviato') { state.cards.push(card); saveLocal(); renderBoard(); }
+  window.__trashItems = (window.__trashItems || []).filter(i => i.cardId !== cardId);
+  renderTrashList();
+  showToast('Commessa ripristinata');
+}
+
+function purgeTrashItem(cardId) {
+  showInAppConfirm('Eliminare definitivamente questa commessa? Non si potrà più recuperare.', async () => {
+    try { await db.collection('workflow_sga_settings').doc('trash_' + cardId).delete(); } catch (e) { console.error(e); }
+    window.__trashItems = (window.__trashItems || []).filter(i => i.cardId !== cardId);
+    renderTrashList();
+  }, 'Elimina');
+}
+
+// ==========================================
+// PROMEMORIA BACKUP SETTIMANALE
+// ==========================================
+function markBackupDone() {
+  const iso = new Date().toISOString();
+  try { localStorage.setItem('sga_last_backup', iso); } catch (e) {}
+  if (db) db.collection('workflow_sga_settings').doc('config').set({ lastBackupAt: iso }, { merge: true }).catch(() => {});
+}
+
+function maybeRemindBackup() {
+  if (isMasterMode || getViewMode() === 'phone' || resolveViewMode() === 'phone') return;
+  try { if (sessionStorage.getItem('sga_backup_asked')) return; } catch (e) {}
+  let last = 0, snooze = 0;
+  try { last = new Date(localStorage.getItem('sga_last_backup') || 0).getTime() || 0; snooze = parseInt(localStorage.getItem('sga_backup_snooze') || '0', 10) || 0; } catch (e) {}
+  const now = Date.now();
+  if (now < snooze) return;
+  if (now - last < 7 * 86400000) return;
+  try { sessionStorage.setItem('sga_backup_asked', '1'); } catch (e) {}
+  const days = last ? Math.floor((now - last) / 86400000) : null;
+  showInAppConfirm(days === null ? 'Non risulta nessun backup. Scarico adesso una copia di sicurezza di tutte le commesse?' : 'L\'ultimo backup è di ' + days + ' giorni fa. Scarico adesso una copia di sicurezza?', () => { exportBackup(); }, 'Scarica backup', 'Backup settimanale');
+  try { localStorage.setItem('sga_backup_snooze', String(now + 24 * 3600000)); } catch (e) {}
+}
+
+// ==========================================
+// RIEPILOGO DELLA GIORNATA (stampa)
+// ==========================================
+function printDailySummary() {
+  const NONE = 'Nessuna macchina assegnata';
+  const cards = state.cards.filter(c => c && (c.stage === 'da-lavorare' || c.stage === 'in-lavorazione'));
+  const groups = {};
+  cards.forEach(c => { const k = c.machine || NONE; (groups[k] = groups[k] || []).push(c); });
+  const keys = Object.keys(groups).sort((a, b) => a === NONE ? 1 : b === NONE ? -1 : a.localeCompare(b));
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const stageName = (id) => { const s = COLUMNS_CONFIG.find(x => x.id === id); return s ? s.label : id; };
+  const rows = (list) => list.slice().sort((a, b) => {
+    const da = a.deliveryDate ? new Date(a.deliveryDate).getTime() : Infinity;
+    const db_ = b.deliveryDate ? new Date(b.deliveryDate).getTime() : Infinity;
+    return da - db_;
+  }).map(c => {
+    let cons = '—', flag = '';
+    if (c.deliveryDate) {
+      const d = new Date(c.deliveryDate); d.setHours(0, 0, 0, 0);
+      cons = d.toLocaleDateString('it-IT');
+      const diff = Math.round((d - today) / 86400000);
+      if (diff < 0) flag = ' <b style="color:#b91c1c">SCADUTA</b>'; else if (diff === 0) flag = ' <b style="color:#b45309">OGGI</b>';
+    }
+    const arts = (c.articles || []).filter(a => a && (a.desc || a.code)).map(a => esc((a.qty || '') + ' x ' + (a.desc || a.code))).join('<br>');
+    return `<tr><td>${cons}${flag}</td><td>${esc(c.client || '')}</td><td>${esc(c.orderRef || '')}</td><td><b>${esc(c.title || '')}</b><br><small>${esc(c.jobType || '')}</small></td><td>${arts}</td><td>${esc(c.jobNotes || '')}</td><td>${esc(stageName(c.stage))}</td></tr>`;
+  }).join('');
+  const body = keys.length ? keys.map(k => `<h2>${esc(k)} <small>(${groups[k].length})</small></h2><table><thead><tr><th>Consegna</th><th>Cliente</th><th>Rif. ordine</th><th>Lavorazione</th><th>Articoli</th><th>Note</th><th>Stato</th></tr></thead><tbody>${rows(groups[k])}</tbody></table>`).join('') : '<p>Nessuna commessa in "Da lavorare" o "In lavorazione".</p>';
+  const w = window.open('', '_blank');
+  if (!w) { showToast('Il browser ha bloccato la finestra di stampa'); return; }
+  w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Riepilogo giornata</title><style>
+    @page { size: A4 landscape; margin: 10mm; }
+    body { font-family: Arial, sans-serif; font-size: 11px; color: #111; }
+    h1 { font-size: 18px; margin: 0 0 4px; } h2 { font-size: 14px; margin: 14px 0 4px; border-bottom: 2px solid #111; padding-bottom: 2px; }
+    small { color: #555; font-weight: normal; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
+    th, td { border: 1px solid #999; padding: 4px 5px; text-align: left; vertical-align: top; }
+    th { background: #eee; } tr { page-break-inside: avoid; }
+  </style></head><body><h1>Riepilogo della giornata</h1><div>${today.toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })} — ${cards.length} commesse da lavorare</div>${body}</body></html>`);
+  w.document.close();
+  setTimeout(() => { try { w.focus(); w.print(); } catch (e) {} }, 400);
 }
 
 function patchSettingsMenu() {
@@ -387,6 +660,12 @@ function init() {
       c.stage = 'bollettato-da-consegnare'; 
       localMigrated = true; 
     } 
+    if (c.stage === 'magazzino') {
+      c.stage = 'da-lavorare';
+      if (!Array.isArray(c.history)) c.history = [];
+      c.history.push({ stage: 'da-lavorare', label: 'Spostata da "In magazzino" a "Magazzino / Da lavorare" (colonne unite)', timestamp: new Date().toISOString() });
+      localMigrated = true;
+    }
   });
   
   state.cards.sort((a,b) => (a.order || 0) - (b.order || 0));
@@ -715,6 +994,14 @@ function removeCompanyLogo() {
   });
 }
 
+// Colonna "In magazzino" unita a "Da lavorare": toglie la vecchia colonna dalle impostazioni salvate sul dispositivo
+function normalizeColumnsConfig(cols) {
+  if (!Array.isArray(cols) || !cols.length) return JSON.parse(JSON.stringify(DEFAULT_COLUMNS_CONFIG));
+  const out = cols.filter(c => c && c.id !== 'magazzino');
+  out.forEach(c => { if (c.id === 'da-lavorare' && (!c.label || c.label === 'Da lavorare')) c.label = 'Magazzino / Da lavorare'; });
+  return out;
+}
+
 function loadUserSettings() {
   const localLogo = localStorage.getItem('workflow_sga_company_logo');
   if (localLogo) sharedCompanyLogo = localLogo;
@@ -730,7 +1017,7 @@ function loadUserSettings() {
   if (savedCols) {
     try {
       const parsedCols = JSON.parse(savedCols);
-      COLUMNS_CONFIG = parsedCols;
+      COLUMNS_CONFIG = normalizeColumnsConfig(parsedCols);
     } catch(e) {
       COLUMNS_CONFIG = JSON.parse(JSON.stringify(DEFAULT_COLUMNS_CONFIG));
     }
@@ -1008,6 +1295,7 @@ function clearGlobalSearch() {
 function openSettingsModal() {
   patchSettingsMenu();
   openModal('settingsModal');
+  updateVersionLabel();
 }
 
 function renderArchiveList(query = '') {
@@ -1015,7 +1303,7 @@ function renderArchiveList(query = '') {
   let archived = state.cards.filter(c => c.stage === 'archiviato');
   
   if (q) {
-    archived = archived.filter(c => (c.title||'').toLowerCase().includes(q) || (c.client||'').toLowerCase().includes(q));
+    archived = archived.filter(c => (c.title||'').toLowerCase().includes(q) || (c.client||'').toLowerCase().includes(q) || (c.jobType||'').toLowerCase().includes(q) || (c.orderRef||'').toLowerCase().includes(q));
   }
   
   archived.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
@@ -1025,11 +1313,15 @@ function renderArchiveList(query = '') {
   return archived.map(c => `
     <div class="bg-slate-950 p-3 rounded-lg border border-slate-800 hover:border-slate-500/50 transition-colors group flex justify-between items-center">
       <div onclick="openDetail('${c.id}')" class="flex-1 cursor-pointer">
-        <h5 class="text-sm font-bold text-slate-200 group-hover:text-white transition-colors">${esc(c.title)}</h5>
-        <div class="text-[10px] text-slate-400 mt-0.5">Cliente: <span class="text-indigo-300 font-semibold">${esc(c.client || 'N/D')}</span> | Inserimento: ${new Date(c.createdAt).toLocaleDateString('it-IT')}</div>
+        <h5 class="text-sm font-bold text-slate-200 group-hover:text-white transition-colors flex items-center gap-2 flex-wrap">${esc(c.title)}
+          ${c.jobType ? `<span class="px-1.5 py-0.5 rounded text-[10px] font-medium ${getJobTypeClass(c.jobType)}">${esc(c.jobType)}</span>` : ''}
+          ${c.orderRef ? `<span class="px-1.5 py-0.5 rounded text-[10px] font-mono bg-slate-800 text-slate-300 border border-slate-700">Rif. ${esc(c.orderRef)}</span>` : ''}
+        </h5>
+        <div class="text-[10px] text-slate-400 mt-0.5">Inserimento: ${new Date(c.createdAt).toLocaleDateString('it-IT')}</div>
       </div>
       <div class="flex items-center gap-2">
         <button onclick="openDetail('${c.id}')" class="text-slate-600 hover:text-indigo-400 p-1.5 transition-colors cursor-pointer" title="Apri Dettaglio"><i data-lucide="external-link" class="w-4 h-4"></i></button>
+        <button onclick="restoreArchivedCard('${c.id}')" class="text-slate-600 hover:text-emerald-400 p-1.5 transition-colors cursor-pointer" title="Riporta in Fatturato"><i data-lucide="undo-2" class="w-4 h-4"></i></button>
         <button onclick="deleteArchivedCard('${c.id}')" class="text-slate-600 hover:text-red-400 p-1.5 transition-colors cursor-pointer" title="Elimina Definitivamente"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
       </div>
     </div>
@@ -1220,6 +1512,14 @@ function openSubSettings(type) {
         ${opt('tablet', 'iPad', 'Come la versione PC (nessuna differenza per ora).')}
         ${opt('pc', 'PC / Mac', 'La versione completa a schermo largo.')}
       </div>`;
+  } else if (type === 'trash') {
+    titleEl.innerHTML = `<i data-lucide="trash-2" class="w-5 h-5 text-red-400"></i> Cestino`;
+    contentEl.innerHTML = `
+      <div class="space-y-3">
+        <p class="text-xs text-slate-400">Le commesse eliminate restano qui per 30 giorni: puoi ripristinarle.</p>
+        <div id="trashList" class="space-y-2 max-h-[420px] overflow-y-auto pr-1"><p class="text-xs text-slate-500 italic py-4 text-center">Caricamento...</p></div>
+      </div>`;
+    setTimeout(loadTrashList, 30);
   } else if (type === 'jobtypes') {
     titleEl.innerHTML = `<i data-lucide="layers" class="w-5 h-5 text-orange-400"></i> Tipi di Lavorazione`;
     contentEl.innerHTML = `
@@ -1741,6 +2041,12 @@ function listenToCloudUpdates() {
         populateJobTypeSelects();
         if (activeSubSettingsType === 'jobtypes') openSubSettings('jobtypes');
       }
+      if (typeof data.imgbbKey === 'string' && data.imgbbKey.trim() !== IMGBB_API_KEY) {
+        IMGBB_API_KEY = data.imgbbKey.trim();
+        try { localStorage.setItem('workflow_sga_imgbb_key', IMGBB_API_KEY); } catch (e) {}
+        updateCloudStatus(true);
+      }
+      if (data.lastBackupAt) { try { localStorage.setItem('sga_last_backup', data.lastBackupAt); } catch (e) {} }
       if (data.msgTemplate !== undefined && data.msgTemplate !== sharedMsgTemplate) {
         sharedMsgTemplate = data.msgTemplate;
         localStorage.setItem('workflow_sga_msg_template', sharedMsgTemplate);
@@ -1783,11 +2089,13 @@ function listenToCloudUpdates() {
   
   db.collection('workflow_sga_cards').where('stage', '!=', 'archiviato').onSnapshot((snapshot) => {
     let needsMigration = false;
+    const magMigrated = new Set();
     const activeMap = new Map();
 
     snapshot.docs.forEach((d) => {
       let docData = d.data();
       if (!docData.id) docData.id = d.id;
+      if (docData.stage === 'magazzino') magMigrated.add(docData.id);
       if (docData.stage === 'lavorato') {
         docData.stage = 'lavorato-da-bollettare';
         needsMigration = true;
@@ -1818,9 +2126,15 @@ function listenToCloudUpdates() {
     if (needsMigration) {
       state.cards.forEach(c => syncCardToCloud(c));
     }
+    if (magMigrated.size) {
+      // colonne unite: le commesse che erano "In magazzino" passano a "Magazzino / Da lavorare" nel cloud
+      state.cards.filter(c => magMigrated.has(c.id)).forEach(c => syncCardToCloud(c));
+      showToast(magMigrated.size + (magMigrated.size === 1 ? ' commessa spostata' : ' commesse spostate') + ' in "Magazzino / Da lavorare"');
+    }
     if (!window.__firstCardsSnapshotDone) {
       window.__firstCardsSnapshotDone = true;
       checkAutoArchive();
+      setTimeout(maybeRemindBackup, 6000);
     }
 
     populateGlobalFilterDropdown();
@@ -2524,11 +2838,39 @@ async function extractArticlesFromArubaPdf(file) {
 
   let meta = {};
   try { meta = extractOrderMeta(rows); } catch (e) { meta = {}; }
-  return { articles: items.map(a => Object.assign({}, a)), meta: meta };
+  const star = applyStarCodes(items.map(a => Object.assign({}, a)));
+  if (star.warn) meta.starWarn = star.warn;
+  return { articles: star.items, meta: meta };
+}
+
+// Preventivi Aruba fatti da noi: la descrizione inizia con *CODICE* - descrizione
+// Il codice (anche con spazi: *Tarvisio Man*) va nella colonna codice, il resto resta descrizione.
+// Se la riga ha il formato incompleto (asterisco senza chiusura) resta com'e' e viene segnalata.
+function applyStarCodes(items) {
+  let warn = 0;
+  const re = /^\s*\*\s*([^*\n]{1,30}?)\s*\*\s*[-\u2013\u2014\u2212]\s*([\s\S]+)$/;
+  const out = items.map(a => {
+    const d = String(a.desc || '');
+    if (!/^\s*\*/.test(d)) return a;
+    const m = d.match(re);
+    if (m && m[1].trim() && m[2].trim()) return Object.assign({}, a, { code: m[1].trim(), desc: m[2].trim() });
+    warn++;
+    return a;
+  });
+  return { items: out, warn };
 }
 
 // Confronta il totale imponibile letto dal PDF con la somma degli articoli importati
 function checkImportTotals(items, meta) {
+  const base = checkImportTotalsBase(items, meta);
+  if (meta && meta.starWarn) {
+    const w = '⚠️ ' + meta.starWarn + (meta.starWarn === 1 ? ' riga inizia' : ' righe iniziano') + ' con un asterisco ma il codice non è nel formato *CODICE* - descrizione (massimo 30 caratteri tra gli asterischi). Le ho lasciate come sono.';
+    return base ? w + '\n\n' + base : w;
+  }
+  return base;
+}
+
+function checkImportTotalsBase(items, meta) {
   const m = meta;
   if (!m || m.docNet === undefined || isNaN(m.docNet)) return '';
   if (!items.some(a => a.price > 0)) return '';
@@ -2728,6 +3070,10 @@ function sanitizeCard(card) {
   
   if (card.stage === 'lavorato') card.stage = 'lavorato-da-bollettare';
   if (card.stage === 'consegnato') card.stage = 'bollettato-da-consegnare';
+  if (card.stage === 'magazzino') {
+    card.stage = 'da-lavorare';
+    card.history.push({ stage: 'da-lavorare', label: 'Spostata da "In magazzino" a "Magazzino / Da lavorare" (colonne unite)', timestamp: new Date().toISOString() });
+  }
   
   if (!Array.isArray(card.articles)) {
     card.articles = [];
@@ -2779,6 +3125,7 @@ async function exportBackup() {
   document.body.appendChild(downloadAnchorNode);
   downloadAnchorNode.click();
   downloadAnchorNode.remove();
+  markBackupDone();
 }
 
 function importBackup(event) {
@@ -2839,6 +3186,7 @@ function renderBoard() {
     }
   }
   
+  let renderedCount = 0;
   columnsToRender.forEach(col => {
     let colCards = state.cards.filter(c => c && c.stage === col.id);
     
@@ -2859,6 +3207,8 @@ function renderBoard() {
     if (globalFilterJobType) {
       colCards = colCards.filter(c => c.jobType === globalFilterJobType);
     }
+    if (globalFilterDeadline) colCards = colCards.filter(cardMatchesDeadline);
+    renderedCount += colCards.length;
     
     colCards.sort((a,b) => (a.order || 0) - (b.order || 0));
     
@@ -2877,6 +3227,7 @@ function renderBoard() {
     board.appendChild(colEl);
   });
   
+  updateBoardWarning(renderedCount);
   lucide.createIcons();
 }
 
@@ -2966,6 +3317,14 @@ function createCardHTML(card) {
       </span>
     </div>` : '';
 
+  const staleDays = staleInfo(card);
+  const staleBadgeHTML = staleDays ? `
+    <div class="mt-1">
+      <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded border text-[10px] bg-yellow-950 text-yellow-300 border-yellow-700" title="Nessun movimento da ${staleDays} giorni">
+        <i data-lucide="hourglass" class="w-3 h-3"></i> Ferma da ${staleDays} gg
+      </span>
+    </div>` : '';
+
   const uploadingBadgeHTML = isCardUploading(card) ? `
     <div class="mt-1">
       <span class="inline-flex items-center gap-1.5 px-1.5 py-0.5 rounded border border-indigo-500/40 bg-indigo-950/60 text-indigo-300 text-[10px] font-semibold">
@@ -3002,6 +3361,7 @@ function createCardHTML(card) {
       ${uploadingBadgeHTML}
       ${checklistBadgeHTML}
       ${notesBadgeHTML}
+      ${staleBadgeHTML}
       ${machineBadgeHTML}
       ${deliveryHTML}
       ${thumbnailHTML}
@@ -3447,7 +3807,7 @@ function autoGrowDesc(el) {
   el.style.height = (el.scrollHeight + 2) + 'px';
 }
 function autoGrowAllDescs() {
-  document.querySelectorAll('#articlesTableBody textarea[data-field="desc"]').forEach(autoGrowDesc);
+  document.querySelectorAll('#articlesTableBody textarea[data-field="desc"], #articlesTableBody textarea[data-field="code"]').forEach(autoGrowDesc);
 }
 (function () {
   let t = null;
@@ -3479,11 +3839,11 @@ function renderArticlesTable(card) {
         </div>
       </td>
       <td class="py-1.5 px-1 relative">
-        <input type="text" value="${esc(art.code || '')}" data-field="code" data-index="${idx}" autocomplete="off" oninput="updateArticleField(this); handleArticleCodeAutocomplete(this.value, ${idx})" onchange="saveArticlesEdits(true)" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-xs font-mono focus:outline-none focus:border-indigo-500">
+        <textarea rows="1" spellcheck="false" data-field="code" data-index="${idx}" autocomplete="off" oninput="updateArticleField(this); autoGrowDesc(this); handleArticleCodeAutocomplete(this.value, ${idx})" onkeydown="if(event.key===\'Enter\'){event.preventDefault();}" onchange="saveArticlesEdits(true); refreshSaveArticleIcons()" class="block w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-xs leading-snug focus:outline-none focus:border-indigo-500 resize-none overflow-hidden" style="min-height:28px;word-break:break-word">${esc(art.code || '')}</textarea>
         <div id="articleCodeSuggestions-${idx}" class="hidden absolute left-0 right-0 top-full mt-1 bg-slate-800 border border-slate-600 rounded shadow-xl z-50 max-h-32 overflow-y-auto min-w-[200px]"></div>
       </td>
       <td class="py-1.5 px-1 relative">
-        <textarea rows="1" spellcheck="false" data-field="desc" data-index="${idx}" autocomplete="off" oninput="updateArticleField(this); autoGrowDesc(this); handleArticleAutocomplete(this.value, ${idx})" onkeydown="if(event.key==='Enter'){event.preventDefault();}" onchange="saveArticlesEdits(true)" class="block w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-xs leading-snug focus:outline-none focus:border-indigo-500 resize-none overflow-hidden" style="min-height:28px">${esc(art.desc || '')}</textarea>
+        <textarea rows="1" spellcheck="false" data-field="desc" data-index="${idx}" autocomplete="off" oninput="updateArticleField(this); autoGrowDesc(this); handleArticleAutocomplete(this.value, ${idx})" onkeydown="if(event.key==='Enter'){event.preventDefault();}" onchange="saveArticlesEdits(true); refreshSaveArticleIcons()" class="block w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-slate-200 text-xs leading-snug focus:outline-none focus:border-indigo-500 resize-none overflow-hidden" style="min-height:28px">${esc(art.desc || '')}</textarea>
         <div id="articleSuggestions-${idx}" class="hidden absolute left-0 right-0 top-full mt-1 bg-slate-800 border border-slate-600 rounded shadow-xl z-50 max-h-32 overflow-y-auto min-w-[250px]"></div>
       </td>
       <td class="py-1.5 px-1">
@@ -3508,7 +3868,10 @@ function renderArticlesTable(card) {
         <span id="row-total-${idx}">€ ${rowTotalTaxed.toFixed(2)}</span>
       </td>
       <td class="py-1.5 px-1 text-center align-middle">
-        <button onclick="removeArticleRow(${idx})" class="text-red-400 hover:text-red-300 p-1 cursor-pointer"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+        <div class="flex items-center justify-center gap-0.5 flex-wrap">
+          <button type="button" data-saveart="${idx}" onclick="saveArticleToDb(${idx})" class="text-emerald-400 hover:text-emerald-300 p-1 cursor-pointer" title="Salva negli Articoli base" style="display:none"><i data-lucide="bookmark-plus" class="w-3.5 h-3.5"></i></button>
+          <button onclick="removeArticleRow(${idx})" class="text-red-400 hover:text-red-300 p-1 cursor-pointer"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+        </div>
       </td>
     `;
     tbody.appendChild(tr);
@@ -3516,7 +3879,45 @@ function renderArticlesTable(card) {
   
   calculateGrandTotals();
   lucide.createIcons();
+  refreshSaveArticleIcons();
   requestAnimationFrame(autoGrowAllDescs);
+}
+
+// Icona "salva negli Articoli base": compare solo se codice/descrizione non sono ancora nel database
+function isArticleKnown(art) {
+  const c = String(art.code || '').trim().toLowerCase();
+  const d = String(art.desc || '').trim().toLowerCase();
+  return ARTICLES_DB.some(a => (c && a.code && String(a.code).trim().toLowerCase() === c) || (d && a.desc && String(a.desc).trim().toLowerCase() === d));
+}
+
+function refreshSaveArticleIcons() {
+  const card = state.cards.find(c => c.id === activeCardId);
+  if (!card || !card.articles) return;
+  document.querySelectorAll('#articlesTableBody button[data-saveart]').forEach(btn => {
+    const art = card.articles[parseInt(btn.dataset.saveart, 10)];
+    const show = !!(art && String(art.desc || '').trim() && !isArticleKnown(art));
+    btn.style.display = show ? '' : 'none';
+  });
+}
+
+function saveArticleToDb(idx) {
+  const card = state.cards.find(c => c.id === activeCardId);
+  if (!card || !card.articles || !card.articles[idx]) return;
+  const art = card.articles[idx];
+  const code = String(art.code || '').trim();
+  const desc = String(art.desc || '').trim();
+  if (!desc) return showInAppNotice("Scrivi almeno la descrizione dell'articolo.");
+  const dup = code ? ARTICLES_DB.find(a => a.code && String(a.code).trim().toLowerCase() === code.toLowerCase()) : null;
+  if (dup) { showInAppNotice('Esiste già un articolo base con il codice "' + code + '" (' + dup.desc + '). Non l\'ho duplicato.'); refreshSaveArticleIcons(); return; }
+  const price = parseFloat(art.price);
+  ARTICLES_DB.push({ code, desc, price: Number.isFinite(price) ? price : 0 });
+  ARTICLES_DB.sort((a, b) => String(a.desc).localeCompare(String(b.desc)));
+  try { localStorage.setItem('workflow_sga_articles_db', JSON.stringify(ARTICLES_DB)); } catch (e) {}
+  syncArticlesToCloud();
+  playSound('success');
+  if (!(price > 0)) showInAppNotice('Articolo salvato negli Articoli base con prezzo 0 €. Correggi il prezzo da Impostazioni > Gestione Articoli.', 'Salvato', 'ok');
+  else showToast('Articolo salvato negli Articoli base');
+  refreshSaveArticleIcons();
 }
 
 function handleArticleCodeAutocomplete(query, idx) {
@@ -3976,6 +4377,32 @@ function renderAttachments(card) {
   }
 }
 
+// Domanda dopo la lettura di un PDF allegato: importare gli articoli o solo allegare il file
+function askImportChoice(fileName, count, hasOwnArticles) {
+  return new Promise((resolve) => {
+    const old = document.getElementById('sgaImportChoice');
+    if (old) old.remove();
+    const box = document.createElement('div');
+    box.id = 'sgaImportChoice';
+    box.className = 'fixed inset-0 z-[450] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4';
+    const btn = (label, value, cls) => `<button type="button" data-v="${value}" class="${cls} text-sm font-semibold px-4 py-2.5 rounded-lg cursor-pointer transition-colors">${label}</button>`;
+    const buttons = hasOwnArticles
+      ? btn('Aggiungi in coda agli articoli', 'append', 'bg-indigo-600 hover:bg-indigo-500 text-white') + btn('Sostituisci gli articoli', 'replace', 'bg-amber-600 hover:bg-amber-500 text-white') + btn('Solo allega il file', 'attach', 'bg-slate-700 hover:bg-slate-600 text-slate-100')
+      : btn('Importa gli articoli', 'import', 'bg-indigo-600 hover:bg-indigo-500 text-white') + btn('Solo allega il file', 'attach', 'bg-slate-700 hover:bg-slate-600 text-slate-100');
+    box.innerHTML = `<div class="max-w-md w-full bg-slate-900 border border-indigo-500/40 rounded-2xl shadow-2xl p-5 space-y-3">
+      <div class="text-indigo-300 font-bold text-base">Importare i dati del documento?</div>
+      <div class="text-sm text-slate-300"><span class="font-mono text-xs text-slate-400 break-all">${esc(fileName)}</span><br>Ho trovato <b>${count}</b> ${count === 1 ? 'articolo' : 'articoli'}. ${hasOwnArticles ? 'La commessa ha già degli articoli: cosa faccio?' : 'Li importo nel dettaglio articoli (con riferimento ordine e data di consegna) oppure alleghi solo il file?'}</div>
+      <div class="flex flex-col gap-2 pt-1">${buttons}</div></div>`;
+    box.addEventListener('click', (e) => {
+      const b = e.target.closest('button[data-v]');
+      if (!b) return;
+      box.remove();
+      resolve(b.dataset.v);
+    });
+    document.body.appendChild(box);
+  });
+}
+
 async function handleDocumentUpload(event) {
   const files = Array.from(event.target.files);
   if (!files || files.length === 0) return;
@@ -3985,6 +4412,7 @@ async function handleDocumentUpload(event) {
   if (!card.photos) card.photos = [];
   
   let imgbbKey = IMGBB_API_KEY && IMGBB_API_KEY !== "INSERISCI_QUI_LA_TUA_CHIAVE_IMGBB" ? IMGBB_API_KEY : null;
+  warnNoImgbbOnce();
   
   const uploadNotes = [];
   const pendingImages = [];
@@ -3994,9 +4422,16 @@ async function handleDocumentUpload(event) {
       if (file.type === 'application/pdf') {
         const imgPromise = convertPdfToImage(file, imgbbKey ? 3.0 : 2.0, imgbbKey ? 0.90 : 0.8).catch(() => "");
         const exRes = await extractArticlesSafe(file);
-        const extractedArticles = exRes.articles;
+        let extractedArticles = exRes.articles;
         const exMeta = exRes.meta || {};
-        if (extractedArticles && extractedArticles.length) {
+        const isPlaceholderOnly = extractedArticles.length === 1 && String(extractedArticles[0].desc || '').indexOf('Preventivo: ') === 0 && !extractedArticles[0].price;
+        if (isPlaceholderOnly) extractedArticles = [];
+        let choice = 'attach';
+        if (extractedArticles.length > 0) {
+          const hasOwn = card.articles && card.articles.some(a => a && (String(a.desc || '').trim() || String(a.code || '').trim()));
+          choice = await askImportChoice(file.name, extractedArticles.length, hasOwn);
+        }
+        if (choice === 'replace' || choice === 'append' || choice === 'import') {
           if (!card.orderRef && exMeta.orderRef) {
             card.orderRef = exMeta.orderRef;
             const oe = document.getElementById('editOrderRef');
@@ -4009,13 +4444,9 @@ async function handleDocumentUpload(event) {
           }
           const note = checkImportTotals(extractedArticles, exMeta);
           if (note) uploadNotes.push(note);
-        }
-        if (extractedArticles && extractedArticles.length > 0) {
-          if (!card.articles || card.articles.length === 0 || (card.articles.length === 1 && !card.articles[0].desc)) {
-            card.articles = extractedArticles;
-          } else {
-            card.articles.push(...extractedArticles);
-          }
+          const empty = !card.articles || card.articles.length === 0 || card.articles.every(a => !a || (!String(a.desc || '').trim() && !String(a.code || '').trim()));
+          if (choice === 'replace' || empty) card.articles = extractedArticles;
+          else card.articles.push(...extractedArticles);
         }
         imgData = await imgPromise;
       } else {
@@ -4121,6 +4552,7 @@ function deleteCurrentCard() {
   if (!card) return;
   
   confirmDeletion(`Commessa: ${card.title || 'Senza Nome'}`, () => {
+    moveCardToTrash(card);
     state.cards = state.cards.filter(c => c.id !== activeCardId);
     saveLocal();
     syncDeleteToCloud(activeCardId);
@@ -4604,14 +5036,14 @@ function printCard() {
       
       articlesRowsHtml += `
         <tr style="border-bottom: 1px solid #e2e8f0;">
-          <td style="padding: 8px; font-family: monospace; font-size: 11px; color: #334155;">${esc(art.code || '-')}</td>
-          <td style="padding: 8px; font-size: 11px; color: #0f172a;">${esc(art.desc || '-')}</td>
-          <td style="padding: 8px; text-align: center; font-size: 11px; color: #334155;">${art.qty !== undefined && art.qty !== '' ? art.qty : '-'}</td>
-          <td style="padding: 8px; text-align: right; font-size: 11px; color: #334155;">${art.price !== undefined && art.price !== '' ? '€ ' + parseFloat(art.price).toFixed(2) : '-'}</td>
-          <td style="padding: 8px; text-align: center; font-size: 11px; color: #334155;">${amounts.discountRate}%</td>
-          <td style="padding: 8px; text-align: center; font-size: 11px; color: #334155;">${amounts.taxRate}%</td>
-          <td style="padding: 8px; text-align: right; font-size: 11px; color: #334155;">${(art.qty !== undefined && art.price !== undefined && art.qty !== '' && art.price !== '') ? '€ ' + amounts.unitTaxPrice.toFixed(2) : '-'}</td>
-          <td style="padding: 8px; text-align: right; font-size: 11px; font-weight: bold; color: #0f172a;">${(art.qty !== undefined && art.price !== undefined && art.qty !== '' && art.price !== '') ? '€ ' + amounts.rowTotalTaxed.toFixed(2) : '-'}</td>
+          <td style="padding: 6px 4px; font-size: 11px; color: #0f172a; word-break: break-word;">${esc(art.code || '-')}</td>
+          <td style="padding: 6px 4px; font-size: 11px; color: #0f172a;">${esc(art.desc || '-')}</td>
+          <td class="n" style="text-align: center; font-size: 11px; color: #334155;">${art.qty !== undefined && art.qty !== '' ? art.qty : '-'}</td>
+          <td class="n" style="text-align: right; font-size: 11px; color: #334155;">${art.price !== undefined && art.price !== '' ? '€ ' + parseFloat(art.price).toFixed(2) : '-'}</td>
+          <td class="n" style="text-align: center; font-size: 11px; color: #334155;">${amounts.discountRate}%</td>
+          <td class="n" style="text-align: center; font-size: 11px; color: #334155;">${amounts.taxRate}%</td>
+          <td class="n" style="text-align: right; font-size: 11px; color: #334155;">${(art.qty !== undefined && art.price !== undefined && art.qty !== '' && art.price !== '') ? '€ ' + amounts.unitTaxPrice.toFixed(2) : '-'}</td>
+          <td class="n" style="text-align: right; font-size: 11px; font-weight: bold; color: #0f172a;">${(art.qty !== undefined && art.price !== undefined && art.qty !== '' && art.price !== '') ? '€ ' + amounts.rowTotalTaxed.toFixed(2) : '-'}</td>
         </tr>`;
     });
   } else {
@@ -4649,7 +5081,10 @@ function printCard() {
         .details label { font-size: 9px; color: #64748b; font-weight: bold; display: block; text-transform: uppercase; margin-bottom: 2px; }
         .details strong { font-size: 12px; color: #0f172a; }
         table.articles { width: 100%; border-collapse: collapse; margin-top: 5px; }
-        table.articles th { background: #f1f5f9; color: #334155; font-size: 10px; text-transform: uppercase; padding: 6px 8px; text-align: left; border-bottom: 2px solid #cbd5e1; }
+        table.articles th { background: #f1f5f9; color: #334155; font-size: 10px; text-transform: uppercase; padding: 6px 4px; text-align: left; border-bottom: 2px solid #cbd5e1; }
+        table.articles th.n { width: 1%; white-space: nowrap; padding-left: 8px; padding-right: 8px; }
+        table.articles td.n { width: 1%; white-space: nowrap; padding: 6px 8px; }
+        table.articles td { vertical-align: top; }
         .print-page { page-break-before: always; break-before: page; width: 100%; height: 98vh; display: block; text-align: center; padding: 0; margin: 0; box-sizing: border-box; }
         .print-page img { max-width: 100%; max-height: 100%; object-fit: contain; display: block; margin: 0 auto; }
       </style>
@@ -4681,14 +5116,14 @@ function printCard() {
           <table class="articles">
             <thead>
               <tr>
-                <th style="width: 20%;">Codice</th>
+                <th style="width: 15%;">Codice</th>
                 <th>Descrizione</th>
-                <th style="width: 10%; text-align: center;">Q.tà</th>
-                <th style="width: 13%; text-align: right;">Prezzo Un.</th>
-                <th style="width: 8%; text-align: center;">Sconto %</th>
-                <th style="width: 8%; text-align: center;">IVA</th>
-                <th style="width: 13%; text-align: right;">Pr. Ivato</th>
-                <th style="width: 15%; text-align: right;">Tot. Ivato</th>
+                <th class="n" style="text-align: center;">Q.tà</th>
+                <th class="n" style="text-align: right;">Prezzo Un.</th>
+                <th class="n" style="text-align: center;">Sconto %</th>
+                <th class="n" style="text-align: center;">IVA</th>
+                <th class="n" style="text-align: right;">Pr. Ivato</th>
+                <th class="n" style="text-align: right;">Tot. Ivato</th>
               </tr>
             </thead>
             <tbody>${articlesRowsHtml}</tbody>
@@ -5220,6 +5655,74 @@ function renderAlarmsList() {
 
 function openModal(modalId) {
   document.getElementById(modalId).classList.remove('hidden');
+  if (modalId === 'cloudModal') prepareCloudModal();
+}
+
+function prepareCloudModal() {
+  const f = document.getElementById('cfgImgbbKey');
+  if (f) { f.value = IMGBB_API_KEY || ''; f.type = 'password'; }
+  const st = document.getElementById('cfgImgbbStatus');
+  if (st) st.innerHTML = IMGBB_API_KEY ? '<span class="text-emerald-400">Chiave impostata: le foto vanno su ImgBB.</span>' : '<span class="text-amber-400">Nessuna chiave: gli allegati restano dentro le commesse (alta qualità).</span>';
+}
+
+function toggleImgbbKeyVisible() {
+  const f = document.getElementById('cfgImgbbKey');
+  if (f) f.type = f.type === 'password' ? 'text' : 'password';
+}
+
+function saveImgbbConfig() {
+  const f = document.getElementById('cfgImgbbKey');
+  const v = f ? f.value.trim() : '';
+  if (!v) {
+    showInAppConfirm('Il campo è vuoto: tolgo la chiave ImgBB da tutti i dispositivi? Le foto già caricate restano visibili.', () => {
+      IMGBB_API_KEY = '';
+      try { localStorage.removeItem('workflow_sga_imgbb_key'); } catch (e) {}
+      if (db) db.collection('workflow_sga_settings').doc('config').set({ imgbbKey: '' }, { merge: true }).catch(e => console.error(e));
+      updateCloudStatus(true); prepareCloudModal(); showToast('Chiave ImgBB rimossa');
+    }, 'Rimuovi');
+    return;
+  }
+  if (!/^[A-Za-z0-9]{24,48}$/.test(v)) {
+    showInAppNotice('La chiave non sembra corretta (deve essere una sola parola di lettere e numeri, senza spazi). Controlla di averla copiata intera.');
+    return;
+  }
+  IMGBB_API_KEY = v;
+  try { localStorage.setItem('workflow_sga_imgbb_key', v); } catch (e) {}
+  if (db) db.collection('workflow_sga_settings').doc('config').set({ imgbbKey: v }, { merge: true }).then(() => showToast('Chiave ImgBB salvata per tutti i dispositivi')).catch(e => { console.error(e); showToast('⚠️ Salvataggio sul cloud non riuscito'); });
+  updateCloudStatus(true);
+  prepareCloudModal();
+  closeModal('cloudModal');
+}
+
+function warnNoImgbbOnce() {
+  if (IMGBB_API_KEY) return;
+  if (window.__noImgbbWarned) return;
+  window.__noImgbbWarned = true;
+  showToast('ℹ️ Chiave ImgBB non impostata: l\'allegato resta dentro la commessa. La inserisci in Impostazioni Cloud (clic su "Cloud Attivo").');
+}
+
+// Versione del software (Impostazioni Generali)
+async function updateVersionLabel() {
+  const el = document.getElementById('appVersionLabel');
+  const st = document.getElementById('appVersionStatus');
+  if (el) el.textContent = 'Versione ' + APP_VERSION + ' · ' + APP_VERSION_DATE;
+  if (!st) return;
+  st.innerHTML = '<span class="text-slate-500">controllo...</span>';
+  try {
+    const r = await fetch('./app.js?_=' + Date.now(), { cache: 'no-store', headers: { Range: 'bytes=0-6000' } });
+    const t = await r.text();
+    const m = t.match(/const APP_VERSION = (\d+);/);
+    if (!m) { st.innerHTML = ''; return; }
+    const pub = parseInt(m[1], 10);
+    if (pub === APP_VERSION) st.innerHTML = '<span class="text-emerald-400">✓ è l\'ultima versione pubblicata</span>';
+    else st.innerHTML = '<span class="text-amber-400">⚠ Pubblicata la versione ' + pub + '.</span> <button onclick="reloadAppNow()" class="underline text-amber-300 cursor-pointer">Ricarica ora</button>';
+  } catch (e) { st.innerHTML = ''; }
+}
+
+function reloadAppNow() {
+  const u = new URL(location.href);
+  u.searchParams.set('_v', Date.now());
+  location.replace(u.toString());
 }
 
 function closeModal(modalId) {
