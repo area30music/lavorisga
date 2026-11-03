@@ -275,6 +275,7 @@
   </header>
 
   <div id="boardWarning" class="hidden hide-in-master px-3 md:px-4 pt-2"></div>
+  <div id="masterCounter" class="show-in-master flex-wrap items-center gap-2 px-3 md:px-4 pt-2"></div>
 
   <!-- WORKSPACE A SCORRIMENTO ORIZZONTALE -->
   <main id="board" class="flex-1 overflow-x-auto overflow-y-hidden flex gap-4 p-3 md:p-4 items-start select-none relative scroll-smooth">
@@ -552,9 +553,14 @@
         <div class="space-y-3 bg-slate-950 p-3.5 rounded-lg border border-slate-800">
           <div class="flex justify-between items-center">
             <label class="text-xs text-indigo-400 font-bold uppercase tracking-wider block">Dettagli Articoli & Preventivo</label>
-            <button onclick="playSound('click'); addArticleRow();" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs px-2.5 py-1 rounded font-semibold flex items-center gap-1 active:scale-95 transition-transform shadow cursor-pointer">
-              <i data-lucide="plus" class="w-3.5 h-3.5"></i> Aggiungi Riga
-            </button>
+            <div class="flex items-center gap-2 flex-wrap justify-end">
+              <button onclick="playSound('click'); openCopyArticles();" class="bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-200 text-xs px-2.5 py-1 rounded font-semibold flex items-center gap-1 active:scale-95 transition-transform shadow cursor-pointer">
+                <i data-lucide="copy" class="w-3.5 h-3.5"></i> Copia da commessa precedente
+              </button>
+              <button onclick="playSound('click'); addArticleRow();" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs px-2.5 py-1 rounded font-semibold flex items-center gap-1 active:scale-95 transition-transform shadow cursor-pointer">
+                <i data-lucide="plus" class="w-3.5 h-3.5"></i> Aggiungi Riga
+              </button>
+            </div>
           </div>
           
           <!-- CONTENITORE TABELLA: overflow-visible permette alla tendina di uscire e coprire i totali -->
