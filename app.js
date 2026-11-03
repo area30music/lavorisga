@@ -9,7 +9,7 @@ const firebaseConfig = {
 };
 
 // Numero di versione: lo aumento io a ogni consegna. Si vede in Impostazioni Generali.
-const APP_VERSION = 1;
+const APP_VERSION = 2;
 const APP_VERSION_DATE = "03/11/2026";
 
 // ==========================================
@@ -129,6 +129,14 @@ body.master-mode #arcadeAlertList h4 { font-size: clamp(1.4rem, 2.3vw, 6rem); li
 body.master-mode #arcadeAlertList p, body.master-mode #arcadeAlertList span.font-mono { font-size: clamp(1rem, 1.5vw, 4rem); line-height: 1.25; }
 body.master-mode #arcadeAlertList > div { padding: clamp(0.6rem, 1vw, 2.6rem); }
 body.master-mode #arcadeAlertModal button.uppercase { font-size: clamp(1.2rem, 2vw, 5.2rem); }
+body.master-mode #liveClockWidget { font-size: clamp(1.3rem, 2.3vw, 6rem); padding: 0.3em 0.7em; gap: 0.5em; }
+body.master-mode #liveClockWidget svg { width: 1.1em; height: 1.1em; }
+body.master-mode #masterCounter { font-size: clamp(1rem, 1.5vw, 4rem); }
+body.master-mode #masterCounter .mc-pill { background: #0f172a; border: 1px solid #334155; color: #cbd5e1; border-radius: 0.6em; padding: 0.2em 0.7em; white-space: nowrap; }
+body.master-mode #masterCounter .mc-pill b { color: #fff; margin-left: 0.3em; }
+body.master-mode #masterCounter .mc-alert { color: #64748b; }
+body.master-mode #masterCounter .mc-red { background: #7f1d1d; border-color: #ef4444; color: #fecaca; }
+body.master-mode #masterCounter .mc-amber { background: #78350f; border-color: #f59e0b; color: #fde68a; }
 html[data-view="phone"] #trashList { max-height: none !important; overflow: visible !important; }
 html[data-view="phone"] #globalFilterType, html[data-view="phone"] #globalFilterDeadline { min-width: 0; max-width: 30%; text-overflow: ellipsis; flex-shrink: 1; }
 html[data-view="phone"] #globalSearchInput { min-width: 0; }
@@ -796,10 +804,10 @@ function triggerAlarmAlert() {
     return diffDays <= 7;
   });
   
-  const cardsToDisplay = urgentCards.length > 0 ? urgentCards : state.cards.filter(card => card.stage !== 'bollettato-da-consegnare' && card.stage !== 'fatturato' && card.stage !== 'archiviato');
-  
-  if (cardsToDisplay.length > 0) {
-    showArcadeAlert(cardsToDisplay);
+  // Solo commesse con una data di consegna (scadute, oggi, entro 7 giorni). Se non ce ne sono, l'avviso non compare.
+  urgentCards.sort((a, b) => new Date(a.deliveryDate) - new Date(b.deliveryDate));
+  if (urgentCards.length > 0) {
+    showArcadeAlert(urgentCards);
   }
 }
 
@@ -1863,6 +1871,7 @@ function showArcadeAlert(cards) {
   
   document.getElementById('arcadeAlertModal').classList.remove('hidden');
   lucide.createIcons();
+  startAlertListScroll();
   
   const progressBar = document.getElementById('arcadeProgressBar');
   if (progressBar) {
@@ -1880,7 +1889,42 @@ function showArcadeAlert(cards) {
   }, 60000); 
 }
 
+// Scorrimento automatico dell'elenco nell'avviso quando le commesse non ci stanno tutte
+// (pausa agli estremi; si ferma se tocchi, usi la rotella o trascini)
+let alertScrollRaf = null;
+function stopAlertListScroll() {
+  if (alertScrollRaf) cancelAnimationFrame(alertScrollRaf);
+  alertScrollRaf = null;
+}
+function startAlertListScroll() {
+  stopAlertListScroll();
+  const list = document.getElementById('arcadeAlertList');
+  if (!list) return;
+  list.scrollTop = 0;
+  let dir = 1, pause = 2500, last = 0, stopped = false;
+  const halt = () => { stopped = true; stopAlertListScroll(); };
+  ['wheel', 'touchstart', 'pointerdown', 'keydown'].forEach(ev => list.addEventListener(ev, halt, { once: true, passive: true }));
+  const speed = isMasterMode ? 0.07 : 0.04; // px per ms
+  function step(ts) {
+    if (stopped) return;
+    if (!last) last = ts;
+    const dt = Math.min(ts - last, 100);
+    last = ts;
+    if (list.scrollHeight > list.clientHeight + 2) {
+      if (pause > 0) { pause -= dt; }
+      else {
+        list.scrollTop += speed * dt * dir;
+        if (dir === 1 && list.scrollTop >= list.scrollHeight - list.clientHeight - 1) { dir = -1; pause = 2000; }
+        else if (dir === -1 && list.scrollTop <= 0) { dir = 1; pause = 2500; }
+      }
+    }
+    alertScrollRaf = requestAnimationFrame(step);
+  }
+  alertScrollRaf = requestAnimationFrame(step);
+}
+
 function closeArcadeAlert() {
+  stopAlertListScroll();
   playSound('close');
   if (sirenInterval) {
     clearInterval(sirenInterval);
@@ -3163,9 +3207,32 @@ function importBackup(event) {
   event.target.value = ''; 
 }
 
+// Contatore in alto, solo Master View: commesse per colonna + scadute/oggi
+function updateMasterCounter() {
+  const box = document.getElementById('masterCounter');
+  if (!box) return;
+  if (!isMasterMode) { box.innerHTML = ''; return; }
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  let overdue = 0, dueToday = 0;
+  const active = (state.cards || []).filter(c => c && c.stage !== 'archiviato');
+  active.forEach(c => {
+    if (!c.deliveryDate || c.stage === 'bollettato-da-consegnare' || c.stage === 'fatturato') return;
+    const d = new Date(c.deliveryDate); d.setHours(0, 0, 0, 0);
+    if (isNaN(d.getTime())) return;
+    const diff = Math.round((d - today) / 86400000);
+    if (diff < 0) overdue++; else if (diff === 0) dueToday++;
+  });
+  const pills = COLUMNS_CONFIG.map(col => ({ col, n: active.filter(c => c.stage === col.id).length })).filter(x => x.n > 0)
+    .map(x => `<span class="mc-pill">${esc(x.col.label)} <b>${x.n}</b></span>`).join('');
+  box.innerHTML = pills
+    + `<span class="mc-pill mc-alert ${overdue ? 'mc-red' : ''}">Scadute <b>${overdue}</b></span>`
+    + `<span class="mc-pill mc-alert ${dueToday ? 'mc-amber' : ''}">Oggi <b>${dueToday}</b></span>`;
+}
+
 function renderBoard() {
   const board = document.getElementById('board');
   if (!board) return;
+  updateMasterCounter();
   board.innerHTML = '';
   
   if (!state || !Array.isArray(state.cards)) {
@@ -3610,6 +3677,60 @@ function handleFormFileSelect(event) {
   previewEl.classList.remove('hidden');
 }
 
+// ==========================================
+// CONTROLLO DUPLICATI: stesso cliente + stesso riferimento ordine
+// ==========================================
+function normKey(s) { return String(s || '').trim().toLowerCase().replace(/\s+/g, ' '); }
+
+function findDuplicateOrder(clientName, orderRef, excludeId) {
+  const c = normKey(clientName), r = normKey(orderRef);
+  if (!c || !r) return null;
+  return state.cards.find(x => x && x.id !== excludeId && x.stage !== 'archiviato' && normKey(x.title || x.client) === c && normKey(x.orderRef) === r) || null;
+}
+
+function askDuplicateRef(ref, other) {
+  return new Promise((resolve) => {
+    const old = document.getElementById('sgaDupChoice');
+    if (old) old.remove();
+    const box = document.createElement('div');
+    box.id = 'sgaDupChoice';
+    box.className = 'fixed inset-0 z-[460] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4';
+    const stage = (COLUMNS_CONFIG.find(c => c.id === other.stage) || {}).label || other.stage;
+    box.innerHTML = `<div class="max-w-md w-full bg-slate-900 border border-amber-500/50 rounded-2xl shadow-2xl p-5 space-y-3">
+      <div class="text-amber-300 font-bold text-base">⚠️ Attenzione: due commesse con lo stesso riferimento ordine</div>
+      <div class="text-sm text-slate-300">Per <b>${esc(other.title || other.client)}</b> esiste già una commessa aperta con riferimento <b class="font-mono">${esc(other.orderRef)}</b> (in "${esc(stage)}", inserita il ${other.createdAt ? new Date(other.createdAt).toLocaleDateString('it-IT') : '-'}).<br>Se l'ordine è lo stesso puoi cambiare il riferimento qui sotto: la nuova commessa nascerà già con quello.</div>
+      <input id="dupRefInput" type="text" value="${esc(ref)}" class="w-full bg-slate-950 border border-slate-600 rounded-lg px-3 py-2 text-slate-100 font-mono text-sm focus:outline-none focus:border-amber-400">
+      <div class="flex flex-col gap-2 pt-1">
+        <button type="button" data-v="confirm" class="bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold px-4 py-2.5 rounded-lg cursor-pointer">Conferma con il riferimento scritto sopra</button>
+        <button type="button" data-v="force" class="bg-slate-700 hover:bg-slate-600 text-slate-100 text-sm font-semibold px-4 py-2.5 rounded-lg cursor-pointer">Crea comunque con quello uguale</button>
+        <button type="button" data-v="cancel" class="bg-transparent border border-slate-600 hover:bg-slate-800 text-slate-300 text-sm font-semibold px-4 py-2.5 rounded-lg cursor-pointer">Annulla</button>
+      </div></div>`;
+    box.addEventListener('click', (e) => {
+      const b = e.target.closest('button[data-v]');
+      if (!b) return;
+      const val = document.getElementById('dupRefInput').value.trim();
+      box.remove();
+      resolve({ action: b.dataset.v, ref: val });
+    });
+    document.body.appendChild(box);
+    setTimeout(() => { const i = document.getElementById('dupRefInput'); if (i) { i.focus(); i.setSelectionRange(i.value.length, i.value.length); } }, 50);
+  });
+}
+
+// Restituisce il riferimento da usare, oppure null se l'utente annulla
+async function resolveOrderRefDuplicate(clientName, orderRef, excludeId) {
+  let ref = orderRef;
+  for (let guard = 0; guard < 10; guard++) {
+    const other = findDuplicateOrder(clientName, ref, excludeId);
+    if (!other) return ref;
+    const r = await askDuplicateRef(ref, other);
+    if (r.action === 'cancel') return null;
+    if (r.action === 'force') return ref;
+    ref = r.ref;   // confermato: il controllo riparte sul nuovo riferimento
+  }
+  return ref;
+}
+
 async function createNewCard(event) {
   event.preventDefault();
   if (window.__creatingCard) return;
@@ -3678,6 +3799,12 @@ async function createNewCardInner() {
     if (!orderRef && extractedMeta.orderRef) orderRef = extractedMeta.orderRef;
     if (!deliveryDate && extractedMeta.deliveryDate) deliveryDate = extractedMeta.deliveryDate;
     importNote = checkImportTotals(extractedArticles, extractedMeta);
+  }
+
+  if (orderRef) {
+    const okRef = await resolveOrderRefDuplicate(title, orderRef, null);
+    if (okRef === null) return;   // annullato: il modulo resta com'e'
+    orderRef = okRef;
   }
 
   if (extractedArticles.length === 0) {
@@ -4377,6 +4504,71 @@ function renderAttachments(card) {
   }
 }
 
+// Copia gli articoli da una commessa precedente dello stesso cliente
+async function openCopyArticles() {
+  const card = state.cards.find(c => c.id === activeCardId);
+  if (!card) return;
+  await loadArchivedCards();
+  const key = normKey(card.title || card.client);
+  const list = state.cards.filter(c => c && c.id !== card.id && normKey(c.title || c.client) === key && Array.isArray(c.articles) && c.articles.some(a => a && String(a.desc || '').trim()))
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 8);
+  if (!list.length) { showInAppNotice('Non ci sono altre commesse di questo cliente con articoli da copiare.'); return; }
+  const old = document.getElementById('sgaCopyArt');
+  if (old) old.remove();
+  const box = document.createElement('div');
+  box.id = 'sgaCopyArt';
+  box.className = 'fixed inset-0 z-[450] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4';
+  box.innerHTML = `<div class="max-w-lg w-full max-h-[85vh] flex flex-col bg-slate-900 border border-indigo-500/40 rounded-2xl shadow-2xl p-5 space-y-3">
+    <div class="text-indigo-300 font-bold text-base">Copia articoli da una commessa di ${esc(card.title || card.client)}</div>
+    <div class="overflow-y-auto space-y-2 pr-1">${list.map(c => {
+      const arts = c.articles.filter(a => a && String(a.desc || '').trim());
+      return `<button type="button" data-id="${esc(c.id)}" class="w-full text-left bg-slate-950 hover:bg-slate-800 border border-slate-700 hover:border-indigo-500 rounded-lg p-3 cursor-pointer">
+        <div class="text-xs text-slate-400">${c.createdAt ? new Date(c.createdAt).toLocaleDateString('it-IT') : ''}${c.orderRef ? ' · Rif. ' + esc(c.orderRef) : ''}${c.stage === 'archiviato' ? ' · archivio' : ''} · ${arts.length} ${arts.length === 1 ? 'articolo' : 'articoli'}</div>
+        <div class="text-sm text-slate-100 font-semibold">${esc(c.jobType || 'Commessa')}</div>
+        <div class="text-xs text-slate-300 truncate">${arts.slice(0, 3).map(a => esc(String(a.desc).slice(0, 60))).join(' · ')}</div></button>`;
+    }).join('')}</div>
+    <button type="button" data-id="" class="bg-transparent border border-slate-600 hover:bg-slate-800 text-slate-300 text-sm font-semibold px-4 py-2 rounded-lg cursor-pointer">Annulla</button></div>`;
+  box.addEventListener('click', async (e) => {
+    const b = e.target.closest('button[data-id]');
+    if (!b) return;
+    box.remove();
+    if (!b.dataset.id) return;
+    const src = state.cards.find(c => c.id === b.dataset.id);
+    if (src) applyCopiedArticles(card, src);
+  });
+  document.body.appendChild(box);
+}
+
+async function applyCopiedArticles(card, src) {
+  const copy = JSON.parse(JSON.stringify(src.articles.filter(a => a && (String(a.desc || '').trim() || String(a.code || '').trim()))));
+  const hasOwn = card.articles && card.articles.some(a => a && (String(a.desc || '').trim() || String(a.code || '').trim()));
+  let mode = 'replace';
+  if (hasOwn) mode = await askCopyMode();
+  if (!mode) return;
+  if (mode === 'append') card.articles = (card.articles || []).filter(a => a && (String(a.desc || '').trim() || String(a.code || '').trim())).concat(copy);
+  else card.articles = copy;
+  renderArticlesTable(card);
+  saveLocal();
+  syncCardToCloud(card);
+  playSound('success');
+  showToast(copy.length + (copy.length === 1 ? ' articolo copiato' : ' articoli copiati'));
+}
+
+function askCopyMode() {
+  return new Promise((resolve) => {
+    const box = document.createElement('div');
+    box.className = 'fixed inset-0 z-[460] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4';
+    box.innerHTML = `<div class="max-w-sm w-full bg-slate-900 border border-indigo-500/40 rounded-2xl shadow-2xl p-5 space-y-3">
+      <div class="text-sm text-slate-200">Questa commessa ha già degli articoli. Cosa faccio?</div>
+      <div class="flex flex-col gap-2">
+        <button type="button" data-v="append" class="bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold px-4 py-2.5 rounded-lg cursor-pointer">Aggiungi in coda</button>
+        <button type="button" data-v="replace" class="bg-amber-600 hover:bg-amber-500 text-white text-sm font-semibold px-4 py-2.5 rounded-lg cursor-pointer">Sostituisci gli articoli</button>
+        <button type="button" data-v="" class="bg-transparent border border-slate-600 text-slate-300 text-sm font-semibold px-4 py-2.5 rounded-lg cursor-pointer">Annulla</button></div></div>`;
+    box.addEventListener('click', (e) => { const b = e.target.closest('button[data-v]'); if (!b) return; box.remove(); resolve(b.dataset.v); });
+    document.body.appendChild(box);
+  });
+}
+
 // Domanda dopo la lettura di un PDF allegato: importare gli articoli o solo allegare il file
 function askImportChoice(fileName, count, hasOwnArticles) {
   return new Promise((resolve) => {
@@ -4433,9 +4625,12 @@ async function handleDocumentUpload(event) {
         }
         if (choice === 'replace' || choice === 'append' || choice === 'import') {
           if (!card.orderRef && exMeta.orderRef) {
-            card.orderRef = exMeta.orderRef;
-            const oe = document.getElementById('editOrderRef');
-            if (oe) oe.value = card.orderRef;
+            const okRef = await resolveOrderRefDuplicate(card.title || card.client, exMeta.orderRef, card.id);
+            if (okRef !== null) {
+              card.orderRef = okRef;
+              const oe = document.getElementById('editOrderRef');
+              if (oe) oe.value = card.orderRef;
+            }
           }
           if (!card.deliveryDate && exMeta.deliveryDate) {
             card.deliveryDate = exMeta.deliveryDate;
