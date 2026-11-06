@@ -9,7 +9,7 @@ const firebaseConfig = {
 };
 
 // Numero di versione: lo aumento io a ogni consegna. Si vede in Impostazioni Generali.
-const APP_VERSION = 2;
+const APP_VERSION = 3;
 const APP_VERSION_DATE = "03/11/2026";
 
 // ==========================================
@@ -6229,4 +6229,31 @@ function removeArticleFromDB(idx) {
   setInterval(check, CHECK_EVERY_MS);
   document.addEventListener('visibilitychange', () => { if (!document.hidden) check(); });
   window.addEventListener('online', check);
+})();
+
+
+// ==========================================
+// Il browser a volte compila da solo la barra di ricerca (es. con l'email salvata del login)
+// e nasconde le commesse. Se il testo non l'ha scritto l'utente, lo tolgo e azzero il filtro.
+// ==========================================
+(function guardSearchAutofill() {
+  let userTyped = false;
+  const mark = () => { userTyped = true; };
+  function init() {
+    const inp = document.getElementById('globalSearchInput');
+    if (!inp) return;
+    inp.addEventListener('keydown', mark);
+    inp.addEventListener('paste', mark);
+    const wipe = () => {
+      if (userTyped) return;
+      if (document.activeElement === inp) return;
+      if (inp.value || globalSearchQuery) {
+        inp.value = '';
+        handleGlobalSearch('');
+      }
+    };
+    [100, 600, 1500, 3000, 6000, 10000, 15000].forEach(ms => setTimeout(wipe, ms));
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
 })();
