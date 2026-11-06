@@ -240,7 +240,7 @@
     </div>
     <div class="hide-in-master flex items-center gap-2 bg-slate-950 border border-slate-800 px-3 py-1.5 rounded-xl shadow-inner flex-1 max-w-md mx-2">
       <i data-lucide="search" class="w-4 h-4 text-slate-400 shrink-0"></i>
-      <input type="text" id="globalSearchInput" oninput="handleGlobalSearch(this.value)" placeholder="Cerca commessa, cliente, referente..." class="w-full bg-transparent border-0 text-xs text-slate-200 focus:outline-none">
+      <input type="text" id="globalSearchInput" name="sga_cerca_commesse" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" data-lpignore="true" data-form-type="other" readonly onfocus="this.removeAttribute('readonly')" onpointerdown="this.removeAttribute('readonly')" oninput="handleGlobalSearch(this.value)" placeholder="Cerca commessa, cliente, referente..." class="w-full bg-transparent border-0 text-xs text-slate-200 focus:outline-none">
       <select id="globalFilterType" onchange="handleGlobalFilterChange()" class="bg-slate-900 border border-slate-700 text-slate-300 text-[11px] rounded px-2 py-1 focus:outline-none focus:border-indigo-500">
         <option value="">Tutte le lavorazioni</option>
       </select>
